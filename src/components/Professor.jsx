@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   User,
   Award,
-  AlertCircle,
   Edit3,
   PlusCircle,
 } from "lucide-react";
@@ -38,12 +37,6 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Função auxiliar ajustada para não invalidar nem apagar as respostas ao editar simulados
-  const verificarSeRegistoEstaDesatualizado = (registo) => {
-    if (!registo) return false;
-    return false; // Mantém sempre o registo anterior acessível para edição e atualização
-  };
-
   // Avançar para a turma
   const handleEntrarNaTurma = (e) => {
     e.preventDefault();
@@ -72,9 +65,11 @@ export default function Professor({
 
     const respostaExistente = respostasAlunos.find(
       (r) =>
-        r.simuladoId === simuladoSelecionadoId &&
-        r.turma === turmaAtiva?.nome &&
-        r.nomeAluno === nomeAluno,
+        String(r.simuladoId) === String(simuladoSelecionadoId) &&
+        String(r.turma).trim().toUpperCase() ===
+          String(turmaAtiva?.nome).trim().toUpperCase() &&
+        String(r.nomeAluno).trim().toUpperCase() ===
+          String(nomeAluno).trim().toUpperCase(),
     );
 
     if (respostaExistente && respostaExistente.gabaritoBruto) {
@@ -143,7 +138,7 @@ export default function Professor({
     }
   };
 
-  // Salvar respostas do aluno utilizando a função unificada recebida do App
+  // Salvar respostas do aluno com busca robusta do registo existente
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
 
@@ -191,9 +186,11 @@ export default function Professor({
 
     const registoExistente = respostasAlunos.find(
       (r) =>
-        r.simuladoId === simuladoAtivo.id &&
-        r.turma === turmaAtiva.nome &&
-        r.nomeAluno === alunoAtivo,
+        String(r.simuladoId) === String(simuladoAtivo.id) &&
+        String(r.turma).trim().toUpperCase() ===
+          String(turmaAtiva.nome).trim().toUpperCase() &&
+        String(r.nomeAluno).trim().toUpperCase() ===
+          String(alunoAtivo).trim().toUpperCase(),
     );
 
     try {
@@ -216,7 +213,6 @@ export default function Professor({
         dadosRegisto.id = registoExistente.id;
       }
 
-      // Executa a função de salvamento centralizada no Firebase
       await onSalvarResposta(dadosRegisto);
 
       alert(
@@ -233,13 +229,11 @@ export default function Professor({
 
   return (
     <div className="bg-white rounded-sm shadow-sm p-6 border border-gray-200">
-      {/* Cabeçalho do Painel */}
       <h2 className="text-xl font-bold text-gray-800 uppercase flex items-center gap-2 pb-2 border-b border-gray-100 mb-6">
         <UserCheck className="text-gray-700 w-6 h-6" /> APLICAÇÃO E CORREÇÃO DE{" "}
         <span className="text-red-600">SIMULADOS</span>
       </h2>
 
-      {/* ---------------- PASSO 1: Seleção ---------------- */}
       {passo === 1 && (
         <form onSubmit={handleEntrarNaTurma} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -307,10 +301,8 @@ export default function Professor({
         </form>
       )}
 
-      {/* ---------------- PASSO 2: Painel da Turma ---------------- */}
       {passo === 2 && (
         <div className="space-y-6">
-          {/* Cabeçalho da Turma */}
           <div className="border-b border-gray-100 pb-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-xl font-bold text-gray-800 uppercase">
@@ -385,13 +377,14 @@ export default function Professor({
                       {turmaAtiva.alunos.map((aluno, idx) => {
                         const registo = respostasAlunos.find(
                           (r) =>
-                            r.simuladoId === simuladoAtivo.id &&
-                            r.turma === turmaAtiva.nome &&
-                            r.nomeAluno === aluno,
+                            String(r.simuladoId) === String(simuladoAtivo.id) &&
+                            String(r.turma).trim().toUpperCase() ===
+                              String(turmaAtiva.nome).trim().toUpperCase() &&
+                            String(r.nomeAluno).trim().toUpperCase() ===
+                              String(aluno).trim().toUpperCase(),
                         );
 
-                        const temRespostas = registo !== undefined;
-                        const concluido = temRespostas; // Considera concluído/registado se houver dados salvos
+                        const concluido = registo !== undefined;
 
                         return (
                           <tr
