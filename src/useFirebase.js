@@ -64,7 +64,6 @@ export function useFirebase() {
 
   // --- Operações para Turmas ---
   const salvarTurma = async (turmasAtualizadas) => {
-    // Se o componente passar um array completo de turmas, guardamos cada uma delas individualmente no Firestore
     if (Array.isArray(turmasAtualizadas)) {
       for (const turma of turmasAtualizadas) {
         const turmaRef = doc(db, "turmas", String(turma.id));
@@ -78,7 +77,6 @@ export function useFirebase() {
         );
       }
     } else if (turmasAtualizadas && turmasAtualizadas.id) {
-      // Se for apenas uma turma isolada
       const turmaRef = doc(db, "turmas", String(turmasAtualizadas.id));
       await setDoc(
         turmaRef,
@@ -97,12 +95,28 @@ export function useFirebase() {
 
   // --- Operações para Respostas dos Alunos ---
   const salvarRespostaAluno = async (registo) => {
-    // Gera um ID único baseado no simulado, turma e aluno para evitar duplicados
-    const docId = `${registo.simuladoId}_${registo.turma}_${registo.nomeAluno}`
-      .replace(/\s+/g, "_")
-      .toLowerCase();
+    try {
+      // Limpa e remove acentos ou caracteres especiais do ID para evitar rejeição do Firestore
+      const idLimpo =
+        `${registo.simuladoId}_${registo.turma}_${registo.nomeAluno}`
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9_]/g, "_")
+          .toLowerCase();
 
-    await setDoc(doc(db, "respostas_alunos", docId), registo);
+      // Remove valores 'undefined' recursivamente para o Firestore aceitar o objeto
+      const dadosSanitizados = JSON.parse(JSON.stringify(registo));
+
+      // Salva ou atualiza na coleção 'respostas_alunos'
+      const docRef = doc(db, "respostas_alunos", idLimpo);
+      await setDoc(docRef, dadosSanitizados, { merge: true });
+
+      console.log("Sucesso absoluto! Gravado no Firestore com ID:", idLimpo);
+    } catch (error) {
+      console.error("Erro detalhado ao salvar no Firebase:", error);
+      alert("Erro ao gravar no Firebase: " + error.message);
+      throw error;
+    }
   };
 
   return {
