@@ -30,10 +30,10 @@ export default function Professor({
   const simuladoAtivo = simulados.find((s) => s.id === simuladoSelecionadoId);
   const turmaAtiva = turmas.find((t) => t.id === turmaSelecionadaId);
 
-  // Cálculo do total de questões de todas as disciplinas do simulado
+  // Cálculo dinâmico do total de questões com base no gabarito atualizado das disciplinas
   const totalQuestoesSimulado =
     simuladoAtivo?.disciplinas?.reduce(
-      (acc, d) => acc + (d.qtdQuestoes || d.gabarito?.length || 0),
+      (acc, d) => acc + (d.gabarito?.length || d.qtdQuestoes || 0),
       0,
     ) || 0;
 
@@ -92,17 +92,30 @@ export default function Professor({
     }
   }, [alunoAtivo, simuladoAtivo]);
 
-  // Tratar entradas do gabarito, navegação por teclas
+  // Tratar entradas do gabarito aceitando estritamente apenas A, B, C, D e E
   const handleRespostaProfessor = (disciplinaNome, index, valor, e) => {
     const val = valor.toUpperCase();
 
+    // Se apagar o caractere
     if (e?.nativeEvent?.inputType === "deleteContentBackward" && !val) {
+      setRespostasProfessor((prev) => ({
+        ...prev,
+        [disciplinaNome]: {
+          ...(prev[disciplinaNome] || {}),
+          [index]: "",
+        },
+      }));
       if (index > 0) {
         const campoAnterior = document.getElementById(
           `prof-q-${disciplinaNome}-${index - 1}`,
         );
         if (campoAnterior) campoAnterior.focus();
       }
+      return;
+    }
+
+    // Se não for A, B, C, D ou E, bloqueia e não faz nada
+    if (val && !["A", "B", "C", "D", "E"].includes(val)) {
       return;
     }
 
@@ -114,6 +127,7 @@ export default function Professor({
       },
     }));
 
+    // Navegação automática para o próximo campo se preencheu uma letra válida
     if (["A", "B", "C", "D", "E"].includes(val)) {
       const proximoCampo = document.getElementById(
         `prof-q-${disciplinaNome}-${index + 1}`,
@@ -138,7 +152,7 @@ export default function Professor({
     }
   };
 
-  // Salvar respostas do aluno com busca robusta do registo existente
+  // Salvar respostas do aluno com validação da estrutura atualizada
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
 
@@ -151,8 +165,9 @@ export default function Professor({
     simuladoAtivo.disciplinas.forEach((d) => {
       let acertosDisc = 0;
       const respAlunoDisc = respostasProfessor[d.nome] || {};
+      const gabaritoOficial = d.gabarito || [];
 
-      d.gabarito.forEach((correta, idx) => {
+      gabaritoOficial.forEach((correta, idx) => {
         totalQuestoesGeral++;
         if (respAlunoDisc[idx] && respAlunoDisc[idx] === correta) {
           acertosDisc++;
@@ -160,7 +175,7 @@ export default function Professor({
         }
       });
 
-      const qtdQ = d.qtdQuestoes || d.gabarito.length;
+      const qtdQ = gabaritoOficial.length;
       const percentualDisc =
         qtdQ > 0 ? Math.round((acertosDisc / qtdQ) * 100) : 0;
       const notaDisc =
@@ -345,19 +360,23 @@ export default function Professor({
                           ALUNO
                         </th>
 
-                        {simuladoAtivo?.disciplinas.map((disc) => (
-                          <th
-                            key={disc.nome}
-                            className="p-1.5 border-r border-gray-200 text-center whitespace-normal break-words align-middle"
-                          >
-                            <span className="block text-gray-800 font-bold leading-tight break-words">
-                              {disc.nome}
-                            </span>
-                            <span className="text-[9px] text-gray-400 font-normal block mt-0.5">
-                              ({disc.qtdQuestoes} Q)
-                            </span>
-                          </th>
-                        ))}
+                        {simuladoAtivo?.disciplinas.map((disc) => {
+                          const qtdQ =
+                            disc.gabarito?.length || disc.qtdQuestoes || 0;
+                          return (
+                            <th
+                              key={disc.nome}
+                              className="p-1.5 border-r border-gray-200 text-center whitespace-normal break-words align-middle"
+                            >
+                              <span className="block text-gray-800 font-bold leading-tight break-words">
+                                {disc.nome}
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-normal block mt-0.5">
+                                ({qtdQ} Q)
+                              </span>
+                            </th>
+                          );
+                        })}
 
                         <th className="p-1.5 border-r border-gray-200 text-center bg-blue-50/50 whitespace-normal break-words align-middle">
                           <span className="block text-gray-800 font-bold leading-tight break-words">
@@ -497,58 +516,64 @@ export default function Professor({
                 </button>
               </div>
 
-              {simuladoAtivo.disciplinas.map((d) => (
-                <div
-                  key={d.nome}
-                  className="p-3 bg-white border border-gray-200 rounded-sm space-y-2"
-                >
-                  <div className="flex justify-between items-center text-xs font-bold uppercase">
-                    <span className="text-gray-800">{d.nome}</span>
-                    <span className="text-gray-500">
-                      {d.qtdQuestoes} QUESTÕES (VALOR Q:{" "}
-                      {(10 / d.qtdQuestoes).toFixed(2)} PTS)
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                    {d.gabarito.map((_, qIdx) => {
-                      const valAtual = respostasProfessor[d.nome]?.[qIdx] || "";
-                      const invalido =
-                        valAtual !== "" &&
-                        !["A", "B", "C", "D", "E"].includes(valAtual);
+              {simuladoAtivo.disciplinas.map((d) => {
+                const gabaritoDisc = d.gabarito || [];
+                const qtdQ = gabaritoDisc.length;
+                const valorQuestao = qtdQ > 0 ? (10 / qtdQ).toFixed(2) : "0.00";
 
-                      return (
-                        <div
-                          key={qIdx}
-                          className="flex flex-col items-center gap-1"
-                        >
-                          <span className="text-[10px] text-gray-500 font-bold uppercase">
-                            Q{qIdx + 1}
-                          </span>
-                          <input
-                            id={`prof-q-${d.nome}-${qIdx}`}
-                            type="text"
-                            maxLength="1"
-                            value={valAtual}
-                            onChange={(e) =>
-                              handleRespostaProfessor(
-                                d.nome,
-                                qIdx,
-                                e.target.value,
-                                e,
-                              )
-                            }
-                            className={`w-10 h-10 text-center font-bold uppercase border rounded-sm outline-none text-sm transition ${
-                              invalido
-                                ? "border-red-500 bg-red-50 text-red-700"
-                                : "border-gray-300 bg-white text-gray-800 focus:ring-1 focus:ring-blue-500"
-                            }`}
-                          />
-                        </div>
-                      );
-                    })}
+                return (
+                  <div
+                    key={d.nome}
+                    className="p-3 bg-white border border-gray-200 rounded-sm space-y-2"
+                  >
+                    <div className="flex justify-between items-center text-xs font-bold uppercase">
+                      <span className="text-gray-800">{d.nome}</span>
+                      <span className="text-gray-500">
+                        {qtdQ} QUESTÕES (VALOR Q: {valorQuestao} PTS)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                      {gabaritoDisc.map((_, qIdx) => {
+                        const valAtual =
+                          respostasProfessor[d.nome]?.[qIdx] || "";
+                        const invalido =
+                          valAtual !== "" &&
+                          !["A", "B", "C", "D", "E"].includes(valAtual);
+
+                        return (
+                          <div
+                            key={qIdx}
+                            className="flex flex-col items-center gap-1"
+                          >
+                            <span className="text-[10px] text-gray-500 font-bold uppercase">
+                              Q{qIdx + 1}
+                            </span>
+                            <input
+                              id={`prof-q-${d.nome}-${qIdx}`}
+                              type="text"
+                              maxLength="1"
+                              value={valAtual}
+                              onChange={(e) =>
+                                handleRespostaProfessor(
+                                  d.nome,
+                                  qIdx,
+                                  e.target.value,
+                                  e,
+                                )
+                              }
+                              className={`w-10 h-10 text-center font-bold uppercase border rounded-sm outline-none text-sm transition ${
+                                invalido
+                                  ? "border-red-500 bg-red-50 text-red-700"
+                                  : "border-gray-300 bg-white text-gray-800 focus:ring-1 focus:ring-blue-500"
+                              }`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <button
