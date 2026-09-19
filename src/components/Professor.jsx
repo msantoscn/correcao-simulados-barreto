@@ -59,7 +59,7 @@ export default function Professor({
     setRespostasProfessor({});
   };
 
-  // Selecionar aluno para digitação mantendo o gabarito bruto pré-existente
+  // Selecionar aluno para digitação validando o gabarito atualizado
   const handleSelecionarAluno = (nomeAluno) => {
     setAlunoAtivo(nomeAluno);
 
@@ -73,7 +73,21 @@ export default function Professor({
     );
 
     if (respostaExistente && respostaExistente.gabaritoBruto) {
-      setRespostasProfessor(respostaExistente.gabaritoBruto);
+      // Filtra e mantém apenas as respostas compatíveis com as disciplinas/questões atuais do simulado
+      const gabaritoFiltrado = {};
+      simuladoAtivo?.disciplinas?.forEach((d) => {
+        if (respostaExistente.gabaritoBruto[d.nome]) {
+          gabaritoFiltrado[d.nome] = {};
+          const qtdPermitida = d.gabarito?.length || 0;
+          for (let i = 0; i < qtdPermitida; i++) {
+            if (respostaExistente.gabaritoBruto[d.nome][i]) {
+              gabaritoFiltrado[d.nome][i] =
+                respostaExistente.gabaritoBruto[d.nome][i];
+            }
+          }
+        }
+      });
+      setRespostasProfessor(gabaritoFiltrado);
     } else {
       setRespostasProfessor({});
     }
@@ -152,7 +166,7 @@ export default function Professor({
     }
   };
 
-  // Salvar respostas do aluno com validação da estrutura atualizada
+  // Salvar respostas do aluno recalculando com base no gabarito atualizado de todas as disciplinas
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
 
@@ -166,6 +180,7 @@ export default function Professor({
       let acertosDisc = 0;
       const respAlunoDisc = respostasProfessor[d.nome] || {};
       const gabaritoOficial = d.gabarito || [];
+      const qtdQ = gabaritoOficial.length;
 
       gabaritoOficial.forEach((correta, idx) => {
         totalQuestoesGeral++;
@@ -175,7 +190,6 @@ export default function Professor({
         }
       });
 
-      const qtdQ = gabaritoOficial.length;
       const percentualDisc =
         qtdQ > 0 ? Math.round((acertosDisc / qtdQ) * 100) : 0;
       const notaDisc =
@@ -361,8 +375,7 @@ export default function Professor({
                         </th>
 
                         {simuladoAtivo?.disciplinas.map((disc) => {
-                          const qtdQ =
-                            disc.gabarito?.length || disc.qtdQuestoes || 0;
+                          const qtdQ = disc.gabarito?.length || 0;
                           return (
                             <th
                               key={disc.nome}
