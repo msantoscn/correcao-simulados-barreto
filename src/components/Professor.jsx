@@ -14,7 +14,7 @@ export default function Professor({
   simulados = [],
   turmas = [],
   respostasAlunos = [],
-  onSalvarResposta, // <-- Corrigido para receber a função correta do App.jsx
+  onSalvarResposta,
 }) {
   // Passos: 1 = Seleção, 2 = Lista de Alunos / Formulário
   const [passo, setPasso] = useState(1);
@@ -38,26 +38,10 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Função auxiliar para verificar se o registo do aluno está desatualizado
+  // Função auxiliar ajustada para não invalidar nem apagar as respostas ao editar simulados
   const verificarSeRegistoEstaDesatualizado = (registo) => {
-    if (!registo || !simuladoAtivo) return true;
-
-    const disciplinasRegistradas = Object.keys(registo.detalhes || {});
-    const disciplinasAtuais = simuladoAtivo.disciplinas.map((d) => d.nome);
-
-    if (disciplinasRegistradas.length !== disciplinasAtuais.length) return true;
-
-    for (const d of simuladoAtivo.disciplinas) {
-      const detalheAluno = registo.detalhes[d.nome];
-      if (
-        !detalheAluno ||
-        detalheAluno.total !== (d.qtdQuestoes || d.gabarito.length)
-      ) {
-        return true;
-      }
-    }
-
-    return false;
+    if (!registo) return false;
+    return false; // Mantém sempre o registo anterior acessível para edição e atualização
   };
 
   // Avançar para a turma
@@ -82,7 +66,7 @@ export default function Professor({
     setRespostasProfessor({});
   };
 
-  // Selecionar aluno para digitação
+  // Selecionar aluno para digitação mantendo o gabarito bruto pré-existente
   const handleSelecionarAluno = (nomeAluno) => {
     setAlunoAtivo(nomeAluno);
 
@@ -93,11 +77,7 @@ export default function Professor({
         r.nomeAluno === nomeAluno,
     );
 
-    if (
-      respostaExistente &&
-      respostaExistente.gabaritoBruto &&
-      !verificarSeRegistoEstaDesatualizado(respostaExistente)
-    ) {
+    if (respostaExistente && respostaExistente.gabaritoBruto) {
       setRespostasProfessor(respostaExistente.gabaritoBruto);
     } else {
       setRespostasProfessor({});
@@ -134,7 +114,7 @@ export default function Professor({
     setRespostasProfessor((prev) => ({
       ...prev,
       [disciplinaNome]: {
-        ...prev[disciplinaNome],
+        ...(prev[disciplinaNome] || {}),
         [index]: val,
       },
     }));
@@ -236,7 +216,7 @@ export default function Professor({
         dadosRegisto.id = registoExistente.id;
       }
 
-      // Executa a função de salvamento centralizada
+      // Executa a função de salvamento centralizada no Firebase
       await onSalvarResposta(dadosRegisto);
 
       alert(
@@ -410,10 +390,8 @@ export default function Professor({
                             r.nomeAluno === aluno,
                         );
 
-                        const desatualizado =
-                          verificarSeRegistoEstaDesatualizado(registo);
                         const temRespostas = registo !== undefined;
-                        const concluido = temRespostas && !desatualizado;
+                        const concluido = temRespostas; // Considera concluído/registado se houver dados salvos
 
                         return (
                           <tr
@@ -469,11 +447,6 @@ export default function Professor({
                                     ({registo.percentualGeral}%)
                                   </span>
                                 </div>
-                              ) : temRespostas && desatualizado ? (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-800 bg-amber-100 border border-amber-200 px-1 py-0.5 rounded-sm">
-                                  <AlertCircle className="w-2.5 h-2.5 text-amber-600" />{" "}
-                                  EDITADO
-                                </span>
                               ) : (
                                 <span className="text-[9px] font-bold text-gray-400">
                                   PENDENTE
