@@ -9,15 +9,12 @@ import {
   Edit3,
   PlusCircle,
 } from "lucide-react";
-// Importações do Firestore (ajuste o caminho do arquivo conforme a estrutura do seu projeto)
-import { db } from "../firebase";
-import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 
 export default function Professor({
   simulados = [],
   turmas = [],
   respostasAlunos = [],
-  setRespostasAlunos,
+  onSalvarResposta, // <-- Corrigido para receber a função correta do App.jsx
 }) {
   // Passos: 1 = Seleção, 2 = Lista de Alunos / Formulário
   const [passo, setPasso] = useState(1);
@@ -166,7 +163,7 @@ export default function Professor({
     }
   };
 
-  // Salvar respostas do aluno no Firestore
+  // Salvar respostas do aluno utilizando a função unificada recebida do App
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
 
@@ -212,7 +209,6 @@ export default function Professor({
         ? ((totalAcertosGeral / totalQuestoesGeral) * 10).toFixed(1)
         : "0.0";
 
-    // Verifica se já existe um registo prévio para este aluno neste simulado/turma
     const registoExistente = respostasAlunos.find(
       (r) =>
         r.simuladoId === simuladoAtivo.id &&
@@ -221,67 +217,36 @@ export default function Professor({
     );
 
     try {
-      let dadosRegisto;
+      const dadosRegisto = {
+        simuladoId: simuladoAtivo.id,
+        simuladoNome: simuladoAtivo.nome,
+        turma: turmaAtiva.nome,
+        nomeAluno: alunoAtivo,
+        professorAplicador: professorAplicador.trim(),
+        totalAcertos: totalAcertosGeral,
+        totalQuestoes: totalQuestoesGeral,
+        percentualGeral,
+        notaFinal: notaGeral,
+        detalhes: resultadoPorDisciplina,
+        gabaritoBruto: respostasProfessor,
+        dataRegisto: new Date().toLocaleDateString("pt-PT"),
+      };
 
       if (registoExistente && registoExistente.id) {
-        // Atualiza o documento existente no Firestore
-        dadosRegisto = {
-          ...registoExistente,
-          professorAplicador: professorAplicador.trim(),
-          totalAcertos: totalAcertosGeral,
-          totalQuestoes: totalQuestoesGeral,
-          percentualGeral,
-          notaFinal: notaGeral,
-          detalhes: resultadoPorDisciplina,
-          gabaritoBruto: respostasProfessor,
-          dataRegisto: new Date().toLocaleDateString("pt-PT"),
-        };
-        const docRef = doc(db, "respostas_alunos", registoExistente.id);
-        await setDoc(docRef, dadosRegisto);
-      } else {
-        // Cria um novo documento no Firestore
-        dadosRegisto = {
-          simuladoId: simuladoAtivo.id,
-          simuladoNome: simuladoAtivo.nome,
-          turma: turmaAtiva.nome,
-          nomeAluno: alunoAtivo,
-          professorAplicador: professorAplicador.trim(),
-          totalAcertos: totalAcertosGeral,
-          totalQuestoes: totalQuestoesGeral,
-          percentualGeral,
-          notaFinal: notaGeral,
-          detalhes: resultadoPorDisciplina,
-          gabaritoBruto: respostasProfessor,
-          dataRegisto: new Date().toLocaleDateString("pt-PT"),
-        };
-        const docRef = await addDoc(
-          collection(db, "respostas_alunos"),
-          dadosRegisto,
-        );
-        dadosRegisto.id = docRef.id;
+        dadosRegisto.id = registoExistente.id;
       }
 
-      // Atualiza o estado local com a lista modificada
-      const filtrados = respostasAlunos.filter(
-        (r) =>
-          !(
-            r.simuladoId === simuladoAtivo.id &&
-            r.turma === turmaAtiva.nome &&
-            r.nomeAluno === alunoAtivo
-          ),
-      );
-
-      const listaAtualizada = [...filtrados, dadosRegisto];
-      setRespostasAlunos(listaAtualizada);
+      // Executa a função de salvamento centralizada
+      await onSalvarResposta(dadosRegisto);
 
       alert(
-        `Respostas guardadas com sucesso no Firebase! ${alunoAtivo}: ${percentualGeral}% de acertos`,
+        `Respostas guardadas com sucesso! ${alunoAtivo}: ${percentualGeral}% de acertos`,
       );
 
       setAlunoAtivo(null);
       setRespostasProfessor({});
     } catch (error) {
-      console.error("Erro ao guardar respostas no Firebase:", error);
+      console.error("Erro ao guardar respostas:", error);
       alert("Erro ao guardar respostas. Verifique a consola.");
     }
   };
