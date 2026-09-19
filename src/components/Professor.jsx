@@ -10,7 +10,7 @@ import {
   PlusCircle,
 } from "lucide-react";
 // Importações do Firestore (ajuste o caminho do arquivo conforme a estrutura do seu projeto)
-import { db } from "../services/firebaseConnection";
+import { db } from "../firebase";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 
 export default function Professor({
