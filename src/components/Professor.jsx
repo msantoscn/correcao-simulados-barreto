@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 // Importações do Firestore (ajuste o caminho do arquivo conforme a estrutura do seu projeto)
 import { db } from "../services/firebaseConnection";
-import { collection, addDoc, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 
 export default function Professor({
   simulados = [],
