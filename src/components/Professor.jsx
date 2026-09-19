@@ -30,10 +30,10 @@ export default function Professor({
   const simuladoAtivo = simulados.find((s) => s.id === simuladoSelecionadoId);
   const turmaAtiva = turmas.find((t) => t.id === turmaSelecionadaId);
 
-  // Cálculo dinâmico do total de questões com base no gabarito atualizado das disciplinas
+  // Cálculo dinâmico do total geral de questões com base no gabarito atualizado
   const totalQuestoesSimulado =
     simuladoAtivo?.disciplinas?.reduce(
-      (acc, d) => acc + (d.gabarito?.length || d.qtdQuestoes || 0),
+      (acc, d) => acc + (d.gabarito?.length || 0),
       0,
     ) || 0;
 
@@ -59,7 +59,7 @@ export default function Professor({
     setRespostasProfessor({});
   };
 
-  // Selecionar aluno para digitação validando o gabarito atualizado
+  // Selecionar aluno para digitação
   const handleSelecionarAluno = (nomeAluno) => {
     setAlunoAtivo(nomeAluno);
 
@@ -73,21 +73,7 @@ export default function Professor({
     );
 
     if (respostaExistente && respostaExistente.gabaritoBruto) {
-      // Filtra e mantém apenas as respostas compatíveis com as disciplinas/questões atuais do simulado
-      const gabaritoFiltrado = {};
-      simuladoAtivo?.disciplinas?.forEach((d) => {
-        if (respostaExistente.gabaritoBruto[d.nome]) {
-          gabaritoFiltrado[d.nome] = {};
-          const qtdPermitida = d.gabarito?.length || 0;
-          for (let i = 0; i < qtdPermitida; i++) {
-            if (respostaExistente.gabaritoBruto[d.nome][i]) {
-              gabaritoFiltrado[d.nome][i] =
-                respostaExistente.gabaritoBruto[d.nome][i];
-            }
-          }
-        }
-      });
-      setRespostasProfessor(gabaritoFiltrado);
+      setRespostasProfessor(respostaExistente.gabaritoBruto);
     } else {
       setRespostasProfessor({});
     }
@@ -110,7 +96,6 @@ export default function Professor({
   const handleRespostaProfessor = (disciplinaNome, index, valor, e) => {
     const val = valor.toUpperCase();
 
-    // Se apagar o caractere
     if (e?.nativeEvent?.inputType === "deleteContentBackward" && !val) {
       setRespostasProfessor((prev) => ({
         ...prev,
@@ -128,7 +113,6 @@ export default function Professor({
       return;
     }
 
-    // Se não for A, B, C, D ou E, bloqueia e não faz nada
     if (val && !["A", "B", "C", "D", "E"].includes(val)) {
       return;
     }
@@ -141,7 +125,6 @@ export default function Professor({
       },
     }));
 
-    // Navegação automática para o próximo campo se preencheu uma letra válida
     if (["A", "B", "C", "D", "E"].includes(val)) {
       const proximoCampo = document.getElementById(
         `prof-q-${disciplinaNome}-${index + 1}`,
@@ -166,24 +149,20 @@ export default function Professor({
     }
   };
 
-  // Salvar respostas do aluno recalculando com base no gabarito atualizado de todas as disciplinas
-  const submeterRespostasAluno = async (e) => {
-    e.preventDefault();
-
-    if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
-
+  // Função auxiliar para recalcular os acertos com base estrita no gabarito atual do simulado
+  const calcularDesempenhoAluno = (gabaritoBrutoDoAluno) => {
     let totalAcertosGeral = 0;
-    let totalQuestoesGeral = 0;
+    let totalQGeral = 0;
     const resultadoPorDisciplina = {};
 
     simuladoAtivo.disciplinas.forEach((d) => {
       let acertosDisc = 0;
-      const respAlunoDisc = respostasProfessor[d.nome] || {};
+      const respAlunoDisc = gabaritoBrutoDoAluno[d.nome] || {};
       const gabaritoOficial = d.gabarito || [];
       const qtdQ = gabaritoOficial.length;
 
       gabaritoOficial.forEach((correta, idx) => {
-        totalQuestoesGeral++;
+        totalQGeral++;
         if (respAlunoDisc[idx] && respAlunoDisc[idx] === correta) {
           acertosDisc++;
           totalAcertosGeral++;
@@ -204,14 +183,25 @@ export default function Professor({
     });
 
     const percentualGeral =
-      totalQuestoesGeral > 0
-        ? Math.round((totalAcertosGeral / totalQuestoesGeral) * 100)
-        : 0;
-
+      totalQGeral > 0 ? Math.round((totalAcertosGeral / totalQGeral) * 100) : 0;
     const notaGeral =
-      totalQuestoesGeral > 0
-        ? ((totalAcertosGeral / totalQuestoesGeral) * 10).toFixed(1)
-        : "0.0";
+      totalQGeral > 0 ? ((totalAcertosGeral / totalQGeral) * 10).toFixed(1) : "0.0";
+
+    return {
+      totalAcertos: totalAcertosGeral,
+      totalQuestoes: totalQGeral,
+      percentualGeral,
+      notaFinal: notaGeral,
+      detalhes: resultadoPorDisciplina,
+    };
+  };
+
+  // Salvar respostas do aluno recalculando tudo na hora
+  const submeterRespostasAluno = async (e) => {
+    e.preventDefault();
+    if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
+
+    const calculo = calcularDesempenhoAluno(respostasProfessor);
 
     const registoExistente = respostasAlunos.find(
       (r) =>
@@ -229,11 +219,11 @@ export default function Professor({
         turma: turmaAtiva.nome,
         nomeAluno: alunoAtivo,
         professorAplicador: professorAplicador.trim(),
-        totalAcertos: totalAcertosGeral,
-        totalQuestoes: totalQuestoesGeral,
-        percentualGeral,
-        notaFinal: notaGeral,
-        detalhes: resultadoPorDisciplina,
+        totalAcertos: calculo.totalAcertos,
+        totalQuestoes: calculo.totalQuestoes,
+        percentualGeral: calculo.percentualGeral,
+        notaFinal: calculo.notaFinal,
+        detalhes: calculo.detalhes,
         gabaritoBruto: respostasProfessor,
         dataRegisto: new Date().toLocaleDateString("pt-PT"),
       };
@@ -245,7 +235,7 @@ export default function Professor({
       await onSalvarResposta(dadosRegisto);
 
       alert(
-        `Respostas guardadas com sucesso! ${alunoAtivo}: ${percentualGeral}% de acertos`,
+        `Respostas guardadas com sucesso! ${alunoAtivo}: ${calculo.percentualGeral}% de acertos`,
       );
 
       setAlunoAtivo(null);
@@ -416,7 +406,13 @@ export default function Professor({
                               String(aluno).trim().toUpperCase(),
                         );
 
-                        const concluido = registo !== undefined;
+                        // Recalcula dinamicamente com base no gabarito atual do simulado se houver gabarito bruto
+                        const dadosCalculados =
+                          registo && registo.gabaritoBruto
+                            ? calcularDesempenhoAluno(registo.gabaritoBruto)
+                            : null;
+
+                        const concluido = dadosCalculados !== null;
 
                         return (
                           <tr
@@ -433,7 +429,8 @@ export default function Professor({
                             </td>
 
                             {simuladoAtivo?.disciplinas.map((disc) => {
-                              const infoDisc = registo?.detalhes?.[disc.nome];
+                              const infoDisc =
+                                dadosCalculados?.detalhes?.[disc.nome];
 
                               return (
                                 <td
@@ -465,11 +462,11 @@ export default function Professor({
                               {concluido ? (
                                 <div className="flex flex-col items-center justify-center gap-0.5">
                                   <span className="font-bold text-gray-800 text-[10px]">
-                                    {registo.totalAcertos}/
-                                    {registo.totalQuestoes}
+                                    {dadosCalculados.totalAcertos}/
+                                    {dadosCalculados.totalQuestoes}
                                   </span>
                                   <span className="text-[10px] font-bold text-blue-600">
-                                    ({registo.percentualGeral}%)
+                                    ({dadosCalculados.percentualGeral}%)
                                   </span>
                                 </div>
                               ) : (
@@ -576,8 +573,8 @@ export default function Professor({
                               }
                               className={`w-10 h-10 text-center font-bold uppercase border rounded-sm outline-none text-sm transition ${
                                 invalido
-                                  ? "border-red-500 bg-red-50 text-red-700"
-                                  : "border-gray-300 bg-white text-gray-800 focus:ring-1 focus:ring-blue-500"
+                                | "border-red-500 bg-red-50 text-red-700"
+                                : "border-gray-300 bg-white text-gray-800 focus:ring-1 focus:ring-blue-500"
                               }`}
                             />
                           </div>
