@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Settings,
-  Zap,
   X,
   Trash2,
   PlusCircle,
@@ -10,49 +9,18 @@ import {
   Edit3,
 } from "lucide-react";
 
-export default function Admin({ simulados, setSimulados }) {
+export default function Admin({
+  simulados,
+  onSalvarSimulado,
+  onDeletarSimulado,
+}) {
   const [idEmEdicao, setIdEmEdicao] = useState(null);
   const [nomeSimulado, setNomeSimulado] = useState("");
-  const [disciplinas, setDisciplinas] = useState([
-    { id: 1, nome: "Português", qtdQuestoes: 5, gabarito: Array(5).fill("") },
-    { id: 2, nome: "Matemática", qtdQuestoes: 5, gabarito: Array(5).fill("") },
-  ]);
 
-  const carregarModeloPadrao = () => {
-    setNomeSimulado("Simulado Geral - 40 Questões");
-    setDisciplinas([
-      {
-        id: Date.now() + 1,
-        nome: "Língua Portuguesa",
-        qtdQuestoes: 8,
-        gabarito: Array(8).fill(""),
-      },
-      {
-        id: Date.now() + 2,
-        nome: "Matemática",
-        qtdQuestoes: 8,
-        gabarito: Array(8).fill(""),
-      },
-      {
-        id: Date.now() + 3,
-        nome: "História",
-        qtdQuestoes: 8,
-        gabarito: Array(8).fill(""),
-      },
-      {
-        id: Date.now() + 4,
-        nome: "Geografia",
-        qtdQuestoes: 8,
-        gabarito: Array(8).fill(""),
-      },
-      {
-        id: Date.now() + 5,
-        nome: "Ciências",
-        qtdQuestoes: 8,
-        gabarito: Array(8).fill(""),
-      },
-    ]);
-  };
+  // Começa com uma disciplina vazia, aguardando digitação
+  const [disciplinas, setDisciplinas] = useState([
+    { id: 1, nome: "", qtdQuestoes: 5, gabarito: Array(5).fill("") },
+  ]);
 
   const adicionarDisciplina = () => {
     const id = Date.now();
@@ -86,22 +54,27 @@ export default function Admin({ simulados, setSimulados }) {
 
   const atualizarGabaritoOficial = (disciplinaId, index, resposta) => {
     const val = resposta.toUpperCase();
-    setDisciplinas((prev) =>
-      prev.map((d) => {
-        if (d.id === disciplinaId) {
-          const novoGabarito = [...d.gabarito];
-          novoGabarito[index] = val;
-          return { ...d, gabarito: novoGabarito };
-        }
-        return d;
-      }),
-    );
 
-    if (["A", "B", "C", "D", "E"].includes(val)) {
-      const proximoCampo = document.getElementById(
-        `admin-q-${disciplinaId}-${index + 1}`,
+    // Só atualiza o estado se for vazio (apagar) ou uma letra permitida
+    if (val === "" || ["A", "B", "C", "D", "E"].includes(val)) {
+      setDisciplinas((prev) =>
+        prev.map((d) => {
+          if (d.id === disciplinaId) {
+            const novoGabarito = [...d.gabarito];
+            novoGabarito[index] = val;
+            return { ...d, gabarito: novoGabarito };
+          }
+          return d;
+        }),
       );
-      if (proximoCampo) proximoCampo.focus();
+
+      // Avança o cursor apenas se não for vazio
+      if (val !== "") {
+        const proximoCampo = document.getElementById(
+          `admin-q-${disciplinaId}-${index + 1}`,
+        );
+        if (proximoCampo) proximoCampo.focus();
+      }
     }
   };
 
@@ -115,145 +88,139 @@ export default function Admin({ simulados, setSimulados }) {
   const cancelarEdicao = () => {
     setIdEmEdicao(null);
     setNomeSimulado("");
+    // Ao cancelar, volta para uma disciplina limpa
     setDisciplinas([
-      { id: 1, nome: "Português", qtdQuestoes: 5, gabarito: Array(5).fill("") },
-      {
-        id: 2,
-        nome: "Matemática",
-        qtdQuestoes: 5,
-        gabarito: Array(5).fill(""),
-      },
+      { id: 1, nome: "", qtdQuestoes: 5, gabarito: Array(5).fill("") },
     ]);
   };
 
-  const removerSimulado = (id) => {
+  const removerSimulado = async (id) => {
     if (!confirm("Tem a certeza de que deseja eliminar este simulado?")) return;
-    const listaAtualizada = simulados.filter((s) => s.id !== id);
-    setSimulados(listaAtualizada);
-    localStorage.setItem("simulados", JSON.stringify(listaAtualizada));
-    if (idEmEdicao === id) cancelarEdicao();
+    try {
+      await onDeletarSimulado(id);
+      if (idEmEdicao === id) cancelarEdicao();
+    } catch (error) {
+      console.error("Erro ao eliminar simulado:", error);
+      alert("Erro ao eliminar o simulado do Firebase.");
+    }
   };
 
-  const guardarSimulado = (e) => {
+  const guardarSimulado = async (e) => {
     e.preventDefault();
     if (!nomeSimulado.trim()) return alert("Insira o nome do simulado.");
 
-    let listaAtualizada;
-
-    if (idEmEdicao) {
-      listaAtualizada = simulados.map((s) => {
-        if (s.id === idEmEdicao) {
-          return { ...s, nome: nomeSimulado, disciplinas };
-        }
-        return s;
-      });
-      alert("Simulado atualizado com sucesso!");
-    } else {
-      const novoSimulado = {
-        id: Date.now().toString(),
-        nome: nomeSimulado,
-        disciplinas,
-        dataCriacao: new Date().toLocaleDateString("pt-PT"),
-      };
-      listaAtualizada = [...simulados, novoSimulado];
-      alert("Simulado guardado com sucesso!");
+    try {
+      if (idEmEdicao) {
+        const simuladoAtualizado = {
+          id: idEmEdicao,
+          nome: nomeSimulado,
+          disciplinas,
+        };
+        await onSalvarSimulado(simuladoAtualizado);
+        alert("Simulado atualizado com sucesso no Firebase!");
+      } else {
+        const novoSimulado = {
+          nome: nomeSimulado,
+          disciplinas,
+          dataCriacao: new Date().toLocaleDateString("pt-PT"),
+        };
+        await onSalvarSimulado(novoSimulado);
+        alert("Simulado guardado com sucesso no Firebase!");
+      }
+      cancelarEdicao();
+    } catch (error) {
+      console.error("Erro ao guardar simulado:", error);
+      alert("Erro ao guardar o simulado no Firebase.");
     }
-
-    setSimulados(listaAtualizada);
-    localStorage.setItem("simulados", JSON.stringify(listaAtualizada));
-    cancelarEdicao();
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6 border border-slate-200">
-        <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
-          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <Settings className="text-indigo-600" />
-            {idEmEdicao ? "Editar Simulado" : "Criar Simulado"}
+      {/* COLUNA ESQUERDA - FORMULÁRIO */}
+      <div className="lg:col-span-2 bg-white rounded-sm shadow-sm p-6 border border-gray-200">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-gray-800 uppercase flex items-center gap-2">
+            <Settings className="text-gray-700 w-6 h-6" />
+            {idEmEdicao ? "EDITAR" : "CRIAR"}{" "}
+            <span className="text-red-600">SIMULADO</span>
           </h2>
 
           <div className="flex gap-2">
-            {!idEmEdicao && (
-              <button
-                type="button"
-                onClick={carregarModeloPadrao}
-                className="text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition"
-              >
-                <Zap className="w-4 h-4 text-amber-500" /> Modelo 40 Questões
-              </button>
-            )}
             {idEmEdicao && (
               <button
                 type="button"
                 onClick={cancelarEdicao}
-                className="text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-1 transition"
+                className="text-xs font-bold text-white bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded-sm uppercase flex items-center gap-1 transition cursor-pointer"
               >
-                <X className="w-4 h-4" /> Cancelar
+                <X className="w-4 h-4" /> CANCELAR
               </button>
             )}
           </div>
         </div>
 
-        <p className="text-slate-500 text-sm mb-6">
+        <p className="text-gray-500 text-sm mb-6 mt-2">
           Digite o gabarito. O cursor avança automaticamente para a questão
           seguinte ao digitar!
         </p>
 
         <form onSubmit={guardarSimulado} className="space-y-6">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
-              Nome do Simulado
+            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+              NOME DO SIMULADO
             </label>
             <input
               type="text"
               placeholder="Ex: Simulado 1 - 1º Trimestre"
               value={nomeSimulado}
               onChange={(e) => setNomeSimulado(e.target.value)}
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full p-2.5 border border-gray-300 rounded-sm focus:ring-1 focus:ring-blue-500 outline-none"
               required
             />
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-700">
-              Disciplinas e Gabarito Oficial
+            <h3 className="text-md font-bold text-gray-700 uppercase">
+              DISCIPLINAS E GABARITO OFICIAL
             </h3>
 
-            {disciplinas.map((disc) => (
+            {disciplinas.map((disc, index) => (
               <div
                 key={disc.id}
-                className="p-4 bg-slate-50 border border-slate-200 rounded-lg relative"
+                className="p-4 bg-[#f8f9fa] border border-gray-200 rounded-sm relative"
               >
+                <span className="absolute -top-3 left-4 bg-[#f8f9fa] px-2 text-[10px] font-bold text-gray-500 uppercase border border-gray-200 rounded-sm">
+                  DISCIPLINA {index + 1}
+                </span>
+
                 {disciplinas.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removerDisciplina(disc.id)}
-                    className="absolute top-3 right-3 text-red-500 hover:text-red-700"
+                    className="absolute top-3 right-3 text-red-500 hover:text-red-700 cursor-pointer"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 pr-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-2 pr-8">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Nome da Disciplina
+                    <label className="block text-xs font-bold text-gray-600 uppercase mb-1">
+                      NOME DA DISCIPLINA
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: História"
+                      placeholder="Ex: Ling. Portuguesa"
                       value={disc.nome}
                       onChange={(e) =>
                         atualizarDisciplina(disc.id, "nome", e.target.value)
                       }
-                      className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full p-2 border border-gray-300 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Nº de Questões (1-40)
+                    <label className="block text-xs font-bold text-gray-600 uppercase mb-1">
+                      QTD. DE QUESTÕES (1-40)
                     </label>
                     <input
                       type="number"
@@ -267,20 +234,20 @@ export default function Admin({ simulados, setSimulados }) {
                           e.target.value,
                         )
                       }
-                      className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full p-2 border border-gray-300 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white"
                       required
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-2">
-                    Respostas Corretas (A, B, C, D ou E)
+                  <label className="block text-xs font-bold text-gray-600 uppercase mb-2">
+                    RESPOSTAS CORRETAS (A, B, C, D OU E)
                   </label>
                   <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
                     {disc.gabarito.map((resposta, qIdx) => (
                       <div key={qIdx} className="flex flex-col items-center">
-                        <span className="text-[10px] text-slate-400 font-bold mb-0.5">
+                        <span className="text-[10px] text-gray-400 font-bold mb-0.5">
                           Q{qIdx + 1}
                         </span>
                         <input
@@ -295,7 +262,7 @@ export default function Admin({ simulados, setSimulados }) {
                               e.target.value,
                             )
                           }
-                          className="w-9 h-9 text-center text-sm font-bold uppercase border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 bg-white"
+                          className="w-9 h-9 text-center text-sm font-bold uppercase border border-gray-300 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white"
                           required
                         />
                       </div>
@@ -309,31 +276,33 @@ export default function Admin({ simulados, setSimulados }) {
           <button
             type="button"
             onClick={adicionarDisciplina}
-            className="w-full py-3 border-2 border-dashed border-indigo-400 text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 flex items-center justify-center gap-2 transition"
+            className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase text-sm rounded-sm flex items-center justify-center gap-2 transition shadow-sm cursor-pointer"
           >
-            <PlusCircle className="w-5 h-5" /> Adicionar Outra Disciplina
+            <PlusCircle className="w-5 h-5" /> ADICIONAR OUTRA DISCIPLINA
           </button>
 
           <button
             type="submit"
-            className="w-full py-4 bg-indigo-600 text-white font-bold rounded-lg text-lg hover:bg-indigo-700 shadow-md flex items-center justify-center gap-2 transition"
+            className="w-full py-4 bg-[#84cc16] hover:bg-lime-600 text-white font-bold uppercase text-lg rounded-sm shadow-sm flex items-center justify-center gap-2 transition cursor-pointer"
           >
             <Save className="w-5 h-5" />{" "}
-            {idEmEdicao ? "Atualizar Simulado" : "Guardar Simulado e Gabarito"}
+            {idEmEdicao ? "ATUALIZAR SIMULADO" : "CRIAR SIMULADO"}
           </button>
         </form>
       </div>
 
-      <div className="lg:col-span-1 bg-white rounded-xl shadow-md p-6 border border-slate-200 h-fit">
-        <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-          <FileText className="text-indigo-600 w-5 h-5" /> Simulados Gerados
+      {/* COLUNA DIREITA - LISTAGEM */}
+      <div className="lg:col-span-1 bg-white rounded-sm shadow-sm p-6 border border-gray-200 h-fit">
+        <h3 className="text-lg font-bold text-gray-800 uppercase mb-1 flex items-center gap-2 pb-2 border-b border-gray-100">
+          <FileText className="text-gray-700 w-5 h-5" /> SIMULADOS{" "}
+          <span className="text-red-600">GERADOS</span>
         </h3>
-        <p className="text-xs text-slate-500 mb-4">
+        <p className="text-xs text-gray-500 mb-4 mt-2">
           Clique em "Editar" para alterar o gabarito.
         </p>
 
         {simulados.length === 0 ? (
-          <p className="text-sm text-slate-400 italic text-center py-6">
+          <p className="text-sm text-gray-400 italic text-center py-6">
             Nenhum simulado criado.
           </p>
         ) : (
@@ -341,40 +310,43 @@ export default function Admin({ simulados, setSimulados }) {
             {simulados.map((sim) => (
               <div
                 key={sim.id}
-                className={`p-3 rounded-lg border transition ${
+                className={`p-4 rounded-sm border transition shadow-sm bg-white ${
                   idEmEdicao === sim.id
-                    ? "border-indigo-500 bg-indigo-50/50 ring-2 ring-indigo-200"
-                    : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                    ? "border-blue-400 ring-1 ring-blue-200"
+                    : "border-gray-200 hover:border-gray-300"
                 }`}
               >
-                <div className="flex justify-between items-start mb-1">
-                  <h4 className="font-bold text-slate-800 text-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-bold text-gray-800 text-sm uppercase">
                     {sim.nome}
                   </h4>
-                  <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-mono">
-                    {sim.dataCriacao}
+                </div>
+
+                <div className="mb-4">
+                  <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded-sm font-mono font-bold">
+                    DATA: {sim.dataCriacao || "N/D"}
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-500 mb-3">
-                  {sim.disciplinas.length} disciplina(s) •{" "}
-                  {sim.disciplinas.reduce(
+                <p className="text-xs text-gray-500 font-bold uppercase mb-4">
+                  {sim.disciplinas?.length || 0} disciplina(s) •{" "}
+                  {sim.disciplinas?.reduce(
                     (acc, d) => acc + (parseInt(d.qtdQuestoes) || 0),
                     0,
-                  )}{" "}
+                  ) || 0}{" "}
                   questões
                 </p>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+                <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                   <button
                     onClick={() => carregarParaEdicao(sim)}
-                    className="flex-1 py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded flex items-center justify-center gap-1 transition"
+                    className="flex-1 py-2 px-2 bg-[#4b82f6] hover:bg-blue-600 text-white text-xs font-bold uppercase rounded-sm flex items-center justify-center gap-1 transition cursor-pointer"
                   >
-                    <Edit3 className="w-3.5 h-3.5" /> Editar
+                    <Edit3 className="w-3.5 h-3.5" /> EDITAR
                   </button>
                   <button
                     onClick={() => removerSimulado(sim.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                    className="py-2 px-3 bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase rounded-sm transition flex items-center justify-center cursor-pointer"
                     title="Eliminar Simulado"
                   >
                     <Trash2 className="w-4 h-4" />
