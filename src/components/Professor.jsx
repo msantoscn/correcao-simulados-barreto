@@ -22,9 +22,14 @@ export default function Professor({
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
 
-  const simuladoAtivo = simulados.find((s) => s.id === simuladoSelecionadoId);
-  const turmaAtiva = turmas.find((t) => t.id === turmaSelecionadaId);
+  const simuladoAtivo = simulados.find(
+    (s) => String(s.id) === String(simuladoSelecionadoId),
+  );
+  const turmaAtiva = turmas.find(
+    (t) => String(t.id) === String(turmaSelecionadaId),
+  );
 
+  // Cálculo dinâmico do total geral de questões com base estrita no gabarito atual das disciplinas
   const totalQuestoesSimulado =
     simuladoAtivo?.disciplinas?.reduce(
       (acc, d) => acc + (d.gabarito?.length || 0),
@@ -138,7 +143,6 @@ export default function Professor({
     }
   };
 
-  // Verifica se o aluno realmente preencheu alguma resposta nesta disciplina
   const disciplinaTemRespostas = (respAlunoDisc) => {
     if (!respAlunoDisc) return false;
     return Object.values(respAlunoDisc).some(
@@ -157,7 +161,6 @@ export default function Professor({
       const gabaritoOficial = d.gabarito || [];
       const qtdQ = gabaritoOficial.length;
 
-      // Se a disciplina não tiver nenhuma resposta preenchida, ignoramos no cálculo geral e individual
       if (!disciplinaTemRespostas(respAlunoDisc)) {
         resultadoPorDisciplina[d.nome] = null;
         return;
@@ -234,7 +237,7 @@ export default function Professor({
         nomeAluno: alunoAtivo,
         professorAplicador: professorAplicador.trim(),
         totalAcertos: calculo.totalAcertos,
-        totalQuestoes: calculo.totalQuestoes,
+        totalQuestoes: calculo.totalQuestoes, // Garante que usa o novo total do simulado
         percentualGeral: calculo.percentualGeral,
         notaFinal: calculo.notaFinal,
         detalhes: calculo.detalhes,
