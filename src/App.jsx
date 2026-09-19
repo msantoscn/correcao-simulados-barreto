@@ -112,7 +112,7 @@ export default function App() {
         {abaAtiva === "turmas" && (
           <Turmas
             turmas={turmas}
-            onSalvarTurma={salvarTurma}
+            onSalvarTurmas={salvarTurma}
             onDeletarTurma={deletarTurma}
           />
         )}
