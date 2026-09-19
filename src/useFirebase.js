@@ -63,16 +63,36 @@ export function useFirebase() {
   };
 
   // --- Operações para Turmas ---
-  const salvarTurma = async (turma) => {
-    if (turma.id) {
-      await setDoc(doc(db, "turmas", turma.id), turma, { merge: true });
-    } else {
-      await addDoc(collection(db, "turmas"), turma);
+  const salvarTurma = async (turmasAtualizadas) => {
+    // Se o componente passar um array completo de turmas, guardamos cada uma delas individualmente no Firestore
+    if (Array.isArray(turmasAtualizadas)) {
+      for (const turma of turmasAtualizadas) {
+        const turmaRef = doc(db, "turmas", String(turma.id));
+        await setDoc(
+          turmaRef,
+          {
+            nome: turma.nome,
+            alunos: turma.alunos || [],
+          },
+          { merge: true },
+        );
+      }
+    } else if (turmasAtualizadas && turmasAtualizadas.id) {
+      // Se for apenas uma turma isolada
+      const turmaRef = doc(db, "turmas", String(turmasAtualizadas.id));
+      await setDoc(
+        turmaRef,
+        {
+          nome: turmasAtualizadas.nome,
+          alunos: turmasAtualizadas.alunos || [],
+        },
+        { merge: true },
+      );
     }
   };
 
   const deletarTurma = async (id) => {
-    await deleteDoc(doc(db, "turmas", id));
+    await deleteDoc(doc(db, "turmas", String(id)));
   };
 
   // --- Operações para Respostas dos Alunos ---
