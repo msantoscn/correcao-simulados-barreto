@@ -15,29 +15,22 @@ export default function Professor({
   respostasAlunos = [],
   onSalvarResposta,
 }) {
-  // Passos: 1 = Seleção, 2 = Lista de Alunos / Formulário
   const [passo, setPasso] = useState(1);
-
-  // Seleções principais
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [professorAplicador, setProfessorAplicador] = useState("");
-
-  // Aluno e Gabarito
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
 
   const simuladoAtivo = simulados.find((s) => s.id === simuladoSelecionadoId);
   const turmaAtiva = turmas.find((t) => t.id === turmaSelecionadaId);
 
-  // Cálculo dinâmico do total geral de questões com base no gabarito atualizado
   const totalQuestoesSimulado =
     simuladoAtivo?.disciplinas?.reduce(
       (acc, d) => acc + (d.gabarito?.length || 0),
       0,
     ) || 0;
 
-  // Avançar para a turma
   const handleEntrarNaTurma = (e) => {
     e.preventDefault();
     if (
@@ -52,14 +45,12 @@ export default function Professor({
     setPasso(2);
   };
 
-  // Voltar para a seleção
   const handleVoltarSelecao = () => {
     setPasso(1);
     setAlunoAtivo(null);
     setRespostasProfessor({});
   };
 
-  // Selecionar aluno para digitação
   const handleSelecionarAluno = (nomeAluno) => {
     setAlunoAtivo(nomeAluno);
 
@@ -79,7 +70,6 @@ export default function Professor({
     }
   };
 
-  // Foco automático no primeiro campo quando seleciona aluno
   useEffect(() => {
     if (alunoAtivo && simuladoAtivo?.disciplinas?.[0]) {
       const primeiraDisc = simuladoAtivo.disciplinas[0].nome;
@@ -92,7 +82,6 @@ export default function Professor({
     }
   }, [alunoAtivo, simuladoAtivo]);
 
-  // Tratar entradas do gabarito aceitando estritamente apenas A, B, C, D e E
   const handleRespostaProfessor = (disciplinaNome, index, valor, e) => {
     const val = valor.toUpperCase();
 
@@ -149,7 +138,6 @@ export default function Professor({
     }
   };
 
-  // Função auxiliar para recalcular os acertos com base estrita no gabarito atual do simulado
   const calcularDesempenhoAluno = (gabaritoBrutoDoAluno) => {
     let totalAcertosGeral = 0;
     let totalQGeral = 0;
@@ -185,7 +173,9 @@ export default function Professor({
     const percentualGeral =
       totalQGeral > 0 ? Math.round((totalAcertosGeral / totalQGeral) * 100) : 0;
     const notaGeral =
-      totalQGeral > 0 ? ((totalAcertosGeral / totalQGeral) * 10).toFixed(1) : "0.0";
+      totalQGeral > 0
+        ? ((totalAcertosGeral / totalQGeral) * 10).toFixed(1)
+        : "0.0";
 
     return {
       totalAcertos: totalAcertosGeral,
@@ -196,7 +186,6 @@ export default function Professor({
     };
   };
 
-  // Salvar respostas do aluno recalculando tudo na hora
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
@@ -406,7 +395,6 @@ export default function Professor({
                               String(aluno).trim().toUpperCase(),
                         );
 
-                        // Recalcula dinamicamente com base no gabarito atual do simulado se houver gabarito bruto
                         const dadosCalculados =
                           registo && registo.gabaritoBruto
                             ? calcularDesempenhoAluno(registo.gabaritoBruto)
@@ -573,8 +561,8 @@ export default function Professor({
                               }
                               className={`w-10 h-10 text-center font-bold uppercase border rounded-sm outline-none text-sm transition ${
                                 invalido
-                                | "border-red-500 bg-red-50 text-red-700"
-                                : "border-gray-300 bg-white text-gray-800 focus:ring-1 focus:ring-blue-500"
+                                  ? "border-red-500 bg-red-50 text-red-700"
+                                  : "border-gray-300 bg-white text-gray-800 focus:ring-1 focus:ring-blue-500"
                               }`}
                             />
                           </div>
