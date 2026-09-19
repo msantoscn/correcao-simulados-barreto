@@ -29,7 +29,6 @@ export default function Professor({
     (t) => String(t.id) === String(turmaSelecionadaId),
   );
 
-  // Cálculo dinâmico do total geral de questões com base estrita no gabarito atual das disciplinas
   const totalQuestoesSimulado =
     simuladoAtivo?.disciplinas?.reduce(
       (acc, d) => acc + (d.gabarito?.length || 0),
@@ -231,23 +230,20 @@ export default function Professor({
 
     try {
       const dadosRegisto = {
+        ...(registoExistente?.id ? { id: registoExistente.id } : {}),
         simuladoId: simuladoAtivo.id,
         simuladoNome: simuladoAtivo.nome,
         turma: turmaAtiva.nome,
         nomeAluno: alunoAtivo,
         professorAplicador: professorAplicador.trim(),
         totalAcertos: calculo.totalAcertos,
-        totalQuestoes: calculo.totalQuestoes, // Garante que usa o novo total do simulado
+        totalQuestoes: calculo.totalQuestoes,
         percentualGeral: calculo.percentualGeral,
         notaFinal: calculo.notaFinal,
         detalhes: calculo.detalhes,
         gabaritoBruto: respostasProfessor,
         dataRegisto: new Date().toLocaleDateString("pt-PT"),
       };
-
-      if (registoExistente && registoExistente.id) {
-        dadosRegisto.id = registoExistente.id;
-      }
 
       await onSalvarResposta(dadosRegisto);
 
@@ -259,7 +255,9 @@ export default function Professor({
       setRespostasProfessor({});
     } catch (error) {
       console.error("Erro ao guardar respostas:", error);
-      alert("Erro ao guardar respostas. Verifique a consola.");
+      alert(
+        "Erro ao guardar respostas. Verifique a consola para mais detalhes.",
+      );
     }
   };
 
