@@ -138,16 +138,33 @@ export default function Professor({
     }
   };
 
+  // Verifica se o aluno realmente preencheu alguma resposta nesta disciplina
+  const disciplinaTemRespostas = (respAlunoDisc) => {
+    if (!respAlunoDisc) return false;
+    return Object.values(respAlunoDisc).some(
+      (val) => val !== undefined && val !== null && String(val).trim() !== "",
+    );
+  };
+
   const calcularDesempenhoAluno = (gabaritoBrutoDoAluno) => {
     let totalAcertosGeral = 0;
     let totalQGeral = 0;
+    let temAlgumaRespostaValida = false;
     const resultadoPorDisciplina = {};
 
     simuladoAtivo.disciplinas.forEach((d) => {
-      let acertosDisc = 0;
       const respAlunoDisc = gabaritoBrutoDoAluno[d.nome] || {};
       const gabaritoOficial = d.gabarito || [];
       const qtdQ = gabaritoOficial.length;
+
+      // Se a disciplina não tiver nenhuma resposta preenchida, ignoramos no cálculo geral e individual
+      if (!disciplinaTemRespostas(respAlunoDisc)) {
+        resultadoPorDisciplina[d.nome] = null;
+        return;
+      }
+
+      temAlgumaRespostaValida = true;
+      let acertosDisc = 0;
 
       gabaritoOficial.forEach((correta, idx) => {
         totalQGeral++;
@@ -170,6 +187,10 @@ export default function Professor({
       };
     });
 
+    if (!temAlgumaRespostaValida) {
+      return null;
+    }
+
     const percentualGeral =
       totalQGeral > 0 ? Math.round((totalAcertosGeral / totalQGeral) * 100) : 0;
     const notaGeral =
@@ -191,6 +212,10 @@ export default function Professor({
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
 
     const calculo = calcularDesempenhoAluno(respostasProfessor);
+
+    if (!calculo) {
+      return alert("Preencha pelo menos uma resposta antes de guardar.");
+    }
 
     const registoExistente = respostasAlunos.find(
       (r) =>
