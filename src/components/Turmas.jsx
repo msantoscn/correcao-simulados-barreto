@@ -7,6 +7,7 @@ import {
   ClipboardList,
   BookOpen,
   X,
+  Search,
 } from "lucide-react";
 
 export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
@@ -15,6 +16,7 @@ export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
   const [novoAlunoUnico, setNovoAlunoUnico] = useState("");
   const [textoListaAlunos, setTextoListaAlunos] = useState("");
   const [mostrarAddAlunos, setMostrarAddAlunos] = useState(false);
+  const [buscaAluno, setBuscaAluno] = useState("");
 
   // Função auxiliar para atualizar e persistir no Firebase
   const atualizarEPersistir = async (novaLista) => {
@@ -31,9 +33,17 @@ export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
     e.preventDefault();
     if (!nomeNovaTurma.trim()) return;
 
+    const nomeFormatado = nomeNovaTurma.trim().toUpperCase();
+
+    // Verificação simples para evitar nomes duplicados
+    if (turmas.some((t) => t.nome === nomeFormatado)) {
+      alert("Já existe uma turma com este nome.");
+      return;
+    }
+
     const nova = {
       id: Date.now().toString(),
-      nome: nomeNovaTurma.trim().toUpperCase(),
+      nome: nomeFormatado,
       alunos: [],
     };
 
@@ -114,6 +124,7 @@ export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
 
   // Remover aluno individual
   const removerAluno = async (turmaId, nomeAluno) => {
+    if (!confirm(`Remover ${nomeAluno} da turma?`)) return;
     const listaAtualizada = turmas.map((t) => {
       if (t.id === turmaId) {
         return { ...t, alunos: t.alunos.filter((a) => a !== nomeAluno) };
@@ -124,67 +135,94 @@ export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
   };
 
   const turmaAtiva = turmas.find((t) => t.id === turmaSelecionadaId);
+  const alunosFiltrados =
+    turmaAtiva?.alunos?.filter((aluno) =>
+      aluno.includes(buscaAluno.trim().toUpperCase()),
+    ) || [];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Coluna Esquerda: Lista de Turmas */}
-      <div className="bg-white rounded-sm shadow-sm p-6 border border-gray-200">
-        <h2 className="text-xl font-bold text-gray-800 uppercase flex items-center gap-2 pb-2 border-b border-gray-100">
-          <Users className="text-gray-700 w-6 h-6" /> GERIR{" "}
-          <span className="text-red-600">TURMAS</span>
-        </h2>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      {/* =========================================================
+          COLUNA ESQUERDA: LISTA DE TURMAS
+          ========================================================= */}
+      <div className="lg:col-span-4 bg-white rounded-2xl shadow-sm p-4 sm:p-5 lg:p-6 border border-slate-200/80 h-fit">
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-5">
+          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
+            <Users className="text-slate-600 w-5 h-5" />
+          </div>
+          <h2 className="text-lg font-black tracking-wide uppercase text-slate-800">
+            Gerir <span className="text-[#4b82f6]">Turmas</span>
+          </h2>
+        </div>
 
         {/* Criar Turma */}
-        <form onSubmit={adicionarTurma} className="mb-6 mt-4">
-          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
-            NOME DA NOVA TURMA
+        <form onSubmit={adicionarTurma} className="mb-6">
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+            Nome da Nova Turma
           </label>
           <div className="flex gap-2">
+            {/* text-base previne o zoom no iOS ao focar no input */}
             <input
               type="text"
               placeholder="Ex: 9º ANO A"
               value={nomeNovaTurma}
               onChange={(e) => setNomeNovaTurma(e.target.value.toUpperCase())}
-              className="flex-1 p-2.5 border border-gray-300 rounded-sm focus:ring-1 focus:ring-blue-500 text-sm outline-none bg-white uppercase"
+              className="flex-1 p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-base sm:text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400"
               required
             />
             <button
               type="submit"
-              className="px-4 py-2.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase rounded-sm flex items-center gap-1 transition text-xs shadow-sm cursor-pointer"
+              className="px-4 py-3 lg:py-2.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl flex items-center gap-1.5 transition-all text-[11px] shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer"
             >
-              <Plus className="w-4 h-4" /> CRIAR
+              <Plus className="w-4 h-4" /> Criar
             </button>
           </div>
         </form>
 
         {/* Lista das Turmas */}
-        <h3 className="text-xs font-bold text-gray-600 uppercase mb-2">
-          TURMAS REGISTADAS ({turmas.length})
+        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+          <span>Turmas Registadas</span>
+          <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+            {turmas.length}
+          </span>
         </h3>
+
         {turmas.length === 0 ? (
-          <p className="text-xs text-gray-400 italic text-center py-4 bg-[#f8f9fa] rounded-sm border border-gray-200">
-            Nenhuma turma cadastrada.
-          </p>
+          <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+              Nenhuma turma cadastrada.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-3 lg:space-y-2.5">
             {turmas.map((turma) => (
               <div
                 key={turma.id}
                 onClick={() => {
                   setTurmaSelecionadaId(turma.id);
                   setMostrarAddAlunos(false);
+                  setBuscaAluno("");
+                  // Pequeno scroll suave no telemóvel para a secção de alunos
+                  if (window.innerWidth < 1024) {
+                    window.scrollTo({
+                      top: document.body.scrollHeight,
+                      behavior: "smooth",
+                    });
+                  }
                 }}
-                className={`p-3 rounded-sm border cursor-pointer transition flex items-center justify-between shadow-sm ${
+                className={`p-4 lg:p-3.5 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer group ${
                   turmaSelecionadaId === turma.id
-                    ? "border-blue-400 ring-1 ring-blue-200 bg-blue-50/30"
-                    : "border-gray-200 bg-white hover:border-gray-300"
+                    ? "border-blue-400 bg-blue-50/40 shadow-sm"
+                    : "border-transparent bg-slate-50 hover:bg-slate-100 hover:border-slate-200"
                 }`}
               >
                 <div>
-                  <h4 className="font-bold text-gray-800 text-sm uppercase">
+                  <h4
+                    className={`font-bold text-sm lg:text-sm uppercase mb-0.5 ${turmaSelecionadaId === turma.id ? "text-blue-700" : "text-slate-700"}`}
+                  >
                     {turma.nome}
                   </h4>
-                  <p className="text-xs text-gray-500 font-bold uppercase">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                     {turma.alunos?.length || 0} aluno(s)
                   </p>
                 </div>
@@ -195,10 +233,15 @@ export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
                     e.stopPropagation();
                     removerTurma(turma.id);
                   }}
-                  className="p-1.5 text-red-500 hover:text-red-700 transition cursor-pointer"
+                  /* Opacidade a 100 no telemóvel, dependente do hover apenas em desktop */
+                  className={`p-2.5 lg:p-2 rounded-lg transition-all cursor-pointer ${
+                    turmaSelecionadaId === turma.id
+                      ? "text-red-500 hover:bg-red-100 hover:text-red-600"
+                      : "text-slate-400 lg:opacity-0 lg:group-hover:opacity-100 opacity-100 hover:bg-red-50 hover:text-red-500"
+                  }`}
                   title="Eliminar Turma"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-5 h-5 lg:w-4 lg:h-4" />
                 </button>
               </div>
             ))}
@@ -206,91 +249,104 @@ export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
         )}
       </div>
 
-      {/* Coluna Direita: Alunos da Turma Selecionada */}
-      <div className="lg:col-span-2 bg-white rounded-sm shadow-sm p-6 border border-gray-200">
+      {/* =========================================================
+          COLUNA DIREITA: ALUNOS DA TURMA
+          ========================================================= */}
+      <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col h-fit lg:min-h-[500px]">
         {!turmaAtiva ? (
-          <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8 text-gray-400">
-            <BookOpen className="w-12 h-12 mb-2 text-gray-300" />
-            <p className="text-sm font-bold uppercase">
-              Selecione ou crie uma turma ao lado para gerir os seus alunos.
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50/50 min-h-[300px]">
+            <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center mb-4">
+              <BookOpen className="w-8 h-8 text-slate-300" />
+            </div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-xs leading-relaxed">
+              Selecione ou crie uma turma para gerir os seus alunos.
             </p>
           </div>
         ) : (
-          <div>
+          <div className="flex flex-col h-full">
             {/* Cabeçalho da Turma */}
-            <div className="border-b border-gray-100 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-bold text-gray-800 uppercase">
-                  TURMA: <span className="text-red-600">{turmaAtiva.nome}</span>
-                </h3>
-                <p className="text-xs text-gray-500 font-bold uppercase mt-1">
-                  TOTAL DE {turmaAtiva.alunos?.length || 0} ALUNOS INSCRITOS
-                </p>
-              </div>
+            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 bg-white">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Gerindo Turma
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800 uppercase tracking-wide">
+                    {turmaAtiva.nome}
+                  </h3>
+                  <div className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md mt-2">
+                    {turmaAtiva.alunos?.length || 0} ALUNOS INSCRITOS
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setMostrarAddAlunos(!mostrarAddAlunos)}
-                className="px-4 py-2.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase rounded-sm flex items-center justify-center gap-1.5 transition text-xs shadow-sm self-start sm:self-auto cursor-pointer"
-              >
-                {mostrarAddAlunos ? (
-                  <>
-                    <X className="w-4 h-4" /> FECHAR
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4" /> ADICIONAR ALUNOS
-                  </>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setMostrarAddAlunos(!mostrarAddAlunos)}
+                  className={`w-full sm:w-auto px-4 py-3 lg:py-2.5 font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all text-[11px] shadow-sm active:scale-95 cursor-pointer ${
+                    mostrarAddAlunos
+                      ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      : "bg-[#4b82f6] text-white hover:bg-blue-600 shadow-blue-500/20"
+                  }`}
+                >
+                  {mostrarAddAlunos ? (
+                    <>
+                      <X className="w-4 h-4" /> Fechar Painel
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" /> Adicionar Alunos
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Painel expansível de adicionar/importar alunos */}
             {mostrarAddAlunos && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 p-4 bg-[#f8f9fa] border border-gray-200 rounded-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 sm:p-5 lg:p-6 bg-slate-50 border-b border-slate-200">
                 {/* Adicionar 1 Aluno */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                    <UserPlus className="w-4 h-4 text-gray-700" /> ADICIONAR 1
-                    ALUNO
+                <div>
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                    <UserPlus className="w-3.5 h-3.5" /> Adicionar Individual
                   </h4>
-                  <form onSubmit={adicionarAlunoUnico} className="space-y-2">
+                  <form onSubmit={adicionarAlunoUnico} className="space-y-3">
                     <input
                       type="text"
                       placeholder="Nome completo do aluno"
                       value={novoAlunoUnico}
                       onChange={(e) => setNovoAlunoUnico(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-sm text-sm bg-white focus:ring-1 focus:ring-blue-500 outline-none uppercase"
+                      className="w-full p-3 lg:p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-base sm:text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400"
                       required
                     />
                     <button
                       type="submit"
-                      className="w-full py-2 bg-[#4b82f6] hover:bg-blue-600 text-white text-xs font-bold uppercase rounded-sm shadow-sm transition cursor-pointer"
+                      className="w-full py-3 lg:py-2.5 bg-white border-2 border-[#4b82f6] text-[#4b82f6] hover:bg-blue-50 text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
                     >
-                      ADICIONAR ALUNO
+                      Gravar Aluno
                     </button>
                   </form>
                 </div>
 
                 {/* Colar Lista Completa */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-gray-700 uppercase flex items-center gap-1.5">
-                    <ClipboardList className="w-4 h-4 text-gray-700" /> COLAR
-                    LISTA DE ALUNOS
+                <div>
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                    <ClipboardList className="w-3.5 h-3.5" /> Importar Lista
                   </h4>
-                  <form onSubmit={colarListaAlunos} className="space-y-2">
+                  <form onSubmit={colarListaAlunos} className="space-y-3">
                     <textarea
                       rows="3"
-                      placeholder="Cole aqui a lista de nomes (um por linha)"
+                      placeholder="Cole a lista de nomes (um por linha)"
                       value={textoListaAlunos}
                       onChange={(e) => setTextoListaAlunos(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-sm text-xs bg-white focus:ring-1 focus:ring-blue-500 outline-none font-mono uppercase"
+                      className="w-full p-3 lg:p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-base sm:text-sm font-mono outline-none transition-all uppercase placeholder:text-slate-400 resize-none"
                     ></textarea>
                     <button
                       type="submit"
-                      className="w-full py-2 bg-[#84cc16] hover:bg-lime-600 text-white text-xs font-bold uppercase rounded-sm shadow-sm transition cursor-pointer"
+                      className="w-full py-3 lg:py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-sm shadow-emerald-500/20 transition-all cursor-pointer"
                     >
-                      IMPORTAR LISTA
+                      Importar Todos
                     </button>
                   </form>
                 </div>
@@ -298,48 +354,76 @@ export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
             )}
 
             {/* Lista de Alunos Registados */}
-            <div>
+            <div className="flex-1 flex flex-col p-4 sm:p-5 lg:p-6 bg-slate-50/30">
               {!turmaAtiva.alunos || turmaAtiva.alunos.length === 0 ? (
-                <p className="text-xs text-gray-400 italic text-center py-6 bg-[#f8f9fa] rounded-sm border border-gray-200">
-                  Nenhum aluno registado nesta turma. Clique no botão acima para
-                  adicionar.
-                </p>
+                <div className="flex-1 flex items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-white">
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                    Nenhum aluno registado nesta turma.
+                    <br />
+                    Clique no botão acima para adicionar.
+                  </p>
+                </div>
               ) : (
-                <div className="border border-gray-200 rounded-sm overflow-hidden">
-                  <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-[#f8f9fa] text-[11px] font-bold text-gray-500 uppercase border-b border-gray-200">
-                    <div className="col-span-2 sm:col-span-1">Nº</div>
-                    <div className="col-span-8 sm:col-span-10">
-                      NOME DO ALUNO
-                    </div>
-                    <div className="col-span-2 sm:col-span-1 text-right">
-                      AÇÕES
+                <div className="flex-1 flex flex-col h-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                  {/* Barra de Pesquisa */}
+                  <div className="bg-slate-50 border-b border-slate-200 p-3 lg:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="relative w-full sm:max-w-xs">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Buscar aluno..."
+                        value={buscaAluno}
+                        onChange={(e) => setBuscaAluno(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2.5 lg:py-2 bg-white border border-slate-200 rounded-lg text-base sm:text-xs outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
+                      />
                     </div>
                   </div>
 
-                  <div className="divide-y divide-gray-200 bg-white max-h-[400px] overflow-y-auto">
-                    {turmaAtiva.alunos.map((aluno, idx) => (
-                      <div
-                        key={idx}
-                        className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-gray-50 transition"
-                      >
-                        <div className="col-span-2 sm:col-span-1 text-xs font-bold text-gray-500">
-                          {String(idx + 1).padStart(2, "0")}
-                        </div>
-                        <div className="col-span-8 sm:col-span-10 text-xs font-bold text-gray-800 uppercase truncate">
-                          {aluno}
-                        </div>
-                        <div className="col-span-2 sm:col-span-1 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => removerAluno(turmaAtiva.id, aluno)}
-                            className="p-1 text-red-500 hover:text-red-700 transition cursor-pointer"
-                            title="Remover Aluno"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                  {/* Cabeçalho das Colunas */}
+                  <div className="grid grid-cols-12 gap-3 px-4 py-3 bg-slate-50/80 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">
+                    <div className="col-span-2 sm:col-span-1 text-center">
+                      Nº
+                    </div>
+                    <div className="col-span-8 sm:col-span-9">
+                      Nome do Aluno
+                    </div>
+                    <div className="col-span-2 text-right">Ações</div>
+                  </div>
+
+                  {/* Lista sem scroll */}
+                  <div className="divide-y divide-slate-100 flex-1">
+                    {alunosFiltrados.length === 0 ? (
+                      <div className="p-8 text-center text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        Nenhum aluno encontrado na busca.
                       </div>
-                    ))}
+                    ) : (
+                      alunosFiltrados.map((aluno, idx) => (
+                        <div
+                          key={idx}
+                          className="grid grid-cols-12 gap-3 px-4 py-3 sm:py-3 items-center hover:bg-blue-50/30 transition-colors group"
+                        >
+                          <div className="col-span-2 sm:col-span-1 text-xs font-bold text-slate-400 text-center">
+                            {String(
+                              turmaAtiva.alunos.indexOf(aluno) + 1,
+                            ).padStart(2, "0")}
+                          </div>
+                          <div className="col-span-8 sm:col-span-9 text-xs font-bold text-slate-700 uppercase truncate">
+                            {aluno}
+                          </div>
+                          <div className="col-span-2 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => removerAluno(turmaAtiva.id, aluno)}
+                              /* Opacidade a 100 no telemóvel, dependente do hover apenas em desktop */
+                              className="p-2 lg:p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus:opacity-100"
+                              title="Remover Aluno"
+                            >
+                              <Trash2 className="w-5 h-5 lg:w-4 lg:h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}

@@ -5,17 +5,26 @@ import {
   Users,
   UserCheck,
   FileSpreadsheet,
+  LogOut,
+  Loader2,
 } from "lucide-react";
 import Admin from "./components/Admin.jsx";
 import Turmas from "./components/Turmas.jsx";
 import Professor from "./components/Professor.jsx";
 import Relatorios from "./components/Relatorios.jsx";
+import Login from "./components/Login.jsx";
 import { useFirebase } from "./useFirebase.js";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 
-export default function App() {
-  const [abaAtiva, setAbaAtiva] = useState("admin");
+function MainContent() {
+  const { user, logout, isProfessor, isGestao, loadingAuth } = useAuth();
 
-  // Dados e funções vindos diretamente do Firebase Firestore em tempo real
+  const [abaAtiva, setAbaAtiva] = useState(() =>
+    isProfessor ? "professor" : "admin",
+  );
+  const abaExibida = isProfessor ? "professor" : abaAtiva;
+
+  // Dados e funções do Firebase
   const {
     simulados,
     turmas,
@@ -28,80 +37,127 @@ export default function App() {
     salvarRespostaAluno,
   } = useFirebase();
 
-  // Ecrã de carregamento inicial enquanto busca os dados na nuvem
+  // 1. A carregar verificação de login
+  if (loadingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 text-[#4b82f6] animate-spin" />
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">
+          A verificar autenticação...
+        </p>
+      </div>
+    );
+  }
+
+  // 2. Se não estiver autenticado, exibe a Tela de Login
+  if (!user) {
+    return <Login />;
+  }
+
+  // 3. A carregar dados do Firebase
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center">
-        <div className="text-center space-y-2">
-          <Award className="w-10 h-10 text-[#4b82f6] animate-pulse mx-auto" />
-          <p className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-            A carregar dados do Firebase...
-          </p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4">
+        <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center">
+          <Award className="w-10 h-10 text-[#4b82f6] animate-bounce" />
         </div>
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">
+          A carregar sistema...
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-gray-800 font-sans pb-12">
-      {/* Cabeçalho no estilo institucional */}
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
-          <div className="flex items-center space-x-2">
-            <Award className="w-7 h-7 text-[#4b82f6]" />
-            <h1 className="text-xl font-bold tracking-wide uppercase text-gray-800">
-              SIMULA<span className="text-red-600">TECH</span> (FIREBASE)
-            </h1>
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-12 transition-colors">
+      {/* Cabeçalho */}
+      <header className="bg-white border-b border-slate-200/80 shadow-sm sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+          {/* Logo e Info do Usuário */}
+          <div className="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-xl border border-blue-100">
+                <Award className="w-6 h-6 text-[#4b82f6]" />
+              </div>
+              <div>
+                <h1 className="text-lg font-black tracking-wide uppercase text-slate-800 leading-none mb-1">
+                  SIMULA<span className="text-[#5C9B14]">TECH</span>
+                </h1>
+                <div className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md border border-slate-200 shadow-sm">
+                  <span className="truncate max-w-[120px] sm:max-w-none mr-1">
+                    {user.nome}
+                  </span>
+                  ({user.codigo}) •{" "}
+                  <span className="text-[#4b82f6] ml-1">{user.cargo}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Botão de Sair Mobile */}
+            <button
+              onClick={logout}
+              className="md:hidden p-2.5 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-xl transition-all cursor-pointer border border-red-100 active:scale-95"
+              title="Sair da Conta"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
 
-          <nav className="flex flex-wrap gap-1.5 text-xs font-bold">
-            <button
-              onClick={() => setAbaAtiva("admin")}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-sm uppercase transition cursor-pointer ${
-                abaAtiva === "admin"
-                  ? "bg-[#4b82f6] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <Settings className="w-4 h-4" /> ADMIN
-            </button>
-            <button
-              onClick={() => setAbaAtiva("turmas")}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-sm uppercase transition cursor-pointer ${
-                abaAtiva === "turmas"
-                  ? "bg-[#4b82f6] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <Users className="w-4 h-4" /> TURMAS
-            </button>
-            <button
+          {/* Navegação */}
+          <nav className="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
+            {isGestao && (
+              <>
+                <NavButton
+                  active={abaExibida === "admin"}
+                  onClick={() => setAbaAtiva("admin")}
+                  icon={Settings}
+                >
+                  Admin
+                </NavButton>
+
+                <NavButton
+                  active={abaExibida === "turmas"}
+                  onClick={() => setAbaAtiva("turmas")}
+                  icon={Users}
+                >
+                  Turmas
+                </NavButton>
+              </>
+            )}
+
+            <NavButton
+              active={abaExibida === "professor"}
               onClick={() => setAbaAtiva("professor")}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-sm uppercase transition cursor-pointer ${
-                abaAtiva === "professor"
-                  ? "bg-[#4b82f6] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              icon={UserCheck}
             >
-              <UserCheck className="w-4 h-4" /> PROFESSOR
-            </button>
+              Professor
+            </NavButton>
+
+            {isGestao && (
+              <NavButton
+                active={abaExibida === "relatorios"}
+                onClick={() => setAbaAtiva("relatorios")}
+                icon={FileSpreadsheet}
+              >
+                Relatórios
+              </NavButton>
+            )}
+
+            {/* Botão de Sair Desktop */}
             <button
-              onClick={() => setAbaAtiva("relatorios")}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-sm uppercase transition cursor-pointer ${
-                abaAtiva === "relatorios"
-                  ? "bg-[#4b82f6] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              onClick={logout}
+              className="hidden md:flex ml-1 p-2.5 bg-white text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all cursor-pointer border border-slate-200 hover:border-red-200 shadow-sm active:scale-95"
+              title="Sair da Conta"
             >
-              <FileSpreadsheet className="w-4 h-4" /> RELATÓRIOS
+              <LogOut className="w-4 h-4" />
             </button>
           </nav>
         </div>
       </header>
 
-      {/* Conteúdo da Aba Ativa */}
-      <main className="max-w-6xl mx-auto px-4 mt-6">
-        {abaAtiva === "admin" && (
+      {/* Conteúdo Principal */}
+      <main className="max-w-6xl mx-auto px-4 mt-8">
+        {abaExibida === "admin" && isGestao && (
           <Admin
             simulados={simulados}
             onSalvarSimulado={salvarSimulado}
@@ -109,7 +165,7 @@ export default function App() {
           />
         )}
 
-        {abaAtiva === "turmas" && (
+        {abaExibida === "turmas" && isGestao && (
           <Turmas
             turmas={turmas}
             onSalvarTurmas={salvarTurma}
@@ -117,7 +173,7 @@ export default function App() {
           />
         )}
 
-        {abaAtiva === "professor" && (
+        {abaExibida === "professor" && (
           <Professor
             simulados={simulados}
             turmas={turmas}
@@ -126,7 +182,7 @@ export default function App() {
           />
         )}
 
-        {abaAtiva === "relatorios" && (
+        {abaExibida === "relatorios" && isGestao && (
           <Relatorios
             turmas={turmas}
             simulados={simulados}
@@ -135,5 +191,34 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+}
+
+/* ========================================================================
+   SUB-COMPONENTES (Clean Code)
+   ======================================================================== */
+
+// Componente reutilizável para os botões do Menu
+function NavButton({ active, onClick, icon: Icon, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] ${
+        active
+          ? "bg-[#4b82f6] text-white shadow-md shadow-blue-500/20 border-transparent"
+          : "bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 border-slate-200 shadow-sm border"
+      }`}
+    >
+      <Icon className="w-4 h-4" />
+      {children}
+    </button>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainContent />
+    </AuthProvider>
   );
 }
