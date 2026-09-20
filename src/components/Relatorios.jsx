@@ -9,45 +9,60 @@ export default function Relatorios({
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
 
-  const turmaAtual = turmas.find((t) => t.id === turmaSelecionadaId);
-
-  // Garante que seleciona o simulado corretamente por ID ou pega o primeiro
+  const turmaAtual = turmas.find(
+    (t) => String(t.id) === String(turmaSelecionadaId),
+  );
   const simuladoAtual =
-    simulados.find((s) => s.id === simuladoSelecionadoId) || simulados[0];
+    simulados.find((s) => String(s.id) === String(simuladoSelecionadoId)) ||
+    simulados[0];
 
-  // Normaliza a lista de disciplinas para garantir que sempre temos um array utilizável
-  const obterDisciplinasSimulado = () => {
-    if (!simuladoAtual) return [];
-    if (Array.isArray(simuladoAtual.disciplinas))
-      return simuladoAtual.disciplinas;
-    if (
-      typeof simuladoAtual.disciplinas === "object" &&
-      simuladoAtual.disciplinas !== null
-    ) {
-      return Object.entries(simuladoAtual.disciplinas).map(([nome, dados]) => ({
-        nome,
-        ...dados,
-      }));
-    }
-    return [];
-  };
+  // Extrair disciplinas do simulado ativo
+  const disciplinasDoSimulado = Array.isArray(simuladoAtual?.disciplinas)
+    ? simuladoAtual.disciplinas
+    : typeof simuladoAtual?.disciplinas === "object" &&
+        simuladoAtual?.disciplinas !== null
+      ? Object.entries(simuladoAtual.disciplinas).map(([nome, dados]) => ({
+          nome,
+          ...dados,
+        }))
+      : [];
 
-  const disciplinasDoSimulado = obterDisciplinasSimulado();
-
-  // Filtrar respostas da turma e simulado ativos
+  // Filtrar respostas da turma e simulado selecionados
   const respostasDaTurma = respostasAlunos.filter((resp) => {
-    if (!turmaSelecionadaId) return false;
+    if (!turmaSelecionadaId || !turmaAtual) return false;
+
     const matchTurma =
-      resp.turmaId === turmaSelecionadaId || resp.turma === turmaAtual?.nome;
+      String(resp.turmaId) === String(turmaSelecionadaId) ||
+      String(resp.turma || "")
+        .trim()
+        .toUpperCase() ===
+        String(turmaAtual.nome || "")
+          .trim()
+          .toUpperCase();
+
     const matchSimulado = simuladoSelecionadoId
-      ? resp.simuladoId === simuladoSelecionadoId
+      ? String(resp.simuladoId) === String(simuladoSelecionadoId) ||
+        String(resp.simuladoNome || resp.simulado || "")
+          .trim()
+          .toUpperCase() ===
+          String(simuladoAtual?.nome || simuladoAtual?.titulo || "")
+            .trim()
+            .toUpperCase()
       : true;
+
     return matchTurma && matchSimulado;
   });
 
   const lidarComImpressao = () => {
     window.print();
   };
+
+  // Calcular total de questões do simulado
+  const totalQuestoesSimulado = disciplinasDoSimulado.reduce(
+    (acc, d) =>
+      acc + (d.gabarito?.length || d.questoes?.length || d.totalQuestoes || 0),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -67,7 +82,7 @@ export default function Relatorios({
           {turmaSelecionadaId && (
             <button
               onClick={lidarComImpressao}
-              className="print:hidden px-4 py-2 bg-[#84cc16] hover:bg-lime-600 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              className="print:hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-1.5 transition cursor-pointer shadow-sm"
             >
               <Printer className="w-4 h-4" /> Exportar / Imprimir
             </button>
@@ -89,9 +104,9 @@ export default function Relatorios({
                 {turmas.map((turma) => (
                   <button
                     key={turma.id}
-                    onClick={() => setTurmaSelecionadaId(turma.id)}
+                    onClick={() => setTurmaSelecionadaId(String(turma.id))}
                     className={`px-3 py-1.5 text-xs font-bold uppercase rounded-sm transition cursor-pointer border ${
-                      turmaSelecionadaId === turma.id
+                      String(turmaSelecionadaId) === String(turma.id)
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                         : "bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100"
                     }`}
@@ -149,6 +164,7 @@ export default function Relatorios({
                     <th className="p-3 w-1/4">Aluno</th>
                     {disciplinasDoSimulado.map((disc, idx) => {
                       const qtdQ =
+                        disc.gabarito?.length ||
                         disc.questoes?.length ||
                         disc.totalQuestoes ||
                         disc.qtd ||
@@ -167,17 +183,7 @@ export default function Relatorios({
                       Geral (Total)
                       <br />
                       <span className="text-[9px] text-gray-400 font-normal">
-                        (
-                        {disciplinasDoSimulado.reduce(
-                          (acc, d) =>
-                            acc +
-                            (d.questoes?.length ||
-                              d.totalQuestoes ||
-                              d.qtd ||
-                              0),
-                          0,
-                        )}{" "}
-                        Q)
+                        ({totalQuestoesSimulado} Q)
                       </span>
                     </th>
                   </tr>
@@ -186,8 +192,10 @@ export default function Relatorios({
                   {turmaAtual.alunos.map((nomeAluno, index) => {
                     const respostaAluno = respostasDaTurma.find(
                       (r) =>
-                        (r.aluno || r.nomeAluno)?.trim().toUpperCase() ===
-                        nomeAluno.trim().toUpperCase(),
+                        String(r.nomeAluno || r.aluno || "")
+                          .trim()
+                          .toUpperCase() ===
+                        String(nomeAluno).trim().toUpperCase(),
                     );
 
                     return (
@@ -202,17 +210,36 @@ export default function Relatorios({
                         {/* Notas por Disciplina */}
                         {disciplinasDoSimulado.map((disc, dIdx) => {
                           const qtdQ =
+                            disc.gabarito?.length ||
                             disc.questoes?.length ||
                             disc.totalQuestoes ||
-                            disc.qtd ||
                             0;
 
-                          // Procura a pontuação em diferentes formatos possíveis gravados no banco
-                          const resultadoDisc =
-                            respostaAluno?.disciplinas?.[disc.nome] ||
-                            respostaAluno?.[disc.nome] ||
-                            (respostaAluno?.detalhesDisciplinas &&
-                              respostaAluno.detalhesDisciplinas[disc.nome]);
+                          let resultadoDisc = null;
+                          if (respostaAluno) {
+                            // O componente Professor.jsx guarda os dados em 'detalhes'
+                            const containerDisciplinas =
+                              respostaAluno.detalhes ||
+                              respostaAluno.disciplinas ||
+                              respostaAluno;
+
+                            if (
+                              containerDisciplinas &&
+                              typeof containerDisciplinas === "object"
+                            ) {
+                              const chaveEncontrada = Object.keys(
+                                containerDisciplinas,
+                              ).find(
+                                (k) =>
+                                  k.trim().toUpperCase() ===
+                                  String(disc.nome).trim().toUpperCase(),
+                              );
+                              if (chaveEncontrada) {
+                                resultadoDisc =
+                                  containerDisciplinas[chaveEncontrada];
+                              }
+                            }
+                          }
 
                           if (!respostaAluno || !resultadoDisc) {
                             return (
@@ -225,17 +252,23 @@ export default function Relatorios({
                             );
                           }
 
+                          const acertos = resultadoDisc.acertos ?? 0;
+                          const total = resultadoDisc.total ?? qtdQ;
+                          const percentual =
+                            resultadoDisc.percentagem ??
+                            resultadoDisc.percentual ??
+                            (total > 0
+                              ? Math.round((acertos / total) * 100)
+                              : 0);
+                          const nota = resultadoDisc.nota ?? "0.0";
+
                           return (
                             <td key={dIdx} className="p-3 text-center">
                               <div className="font-bold text-gray-800">
-                                {resultadoDisc.acertos ?? 0}/
-                                {resultadoDisc.total ?? qtdQ}
-                                {resultadoDisc.percentual !== undefined
-                                  ? ` (${resultadoDisc.percentual}%)`
-                                  : ""}
+                                {acertos}/{total} ({percentual}%)
                               </div>
                               <div className="mt-1 inline-block px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-[2px] text-[10px] font-bold">
-                                NOTA: {resultadoDisc.nota ?? 0}
+                                NOTA: {nota}
                               </div>
                             </td>
                           );
@@ -243,19 +276,25 @@ export default function Relatorios({
 
                         {/* Coluna Geral / Status */}
                         <td className="p-3 text-center bg-gray-50/50 font-bold">
-                          {!respostaAluno ? (
+                          {!respostaAluno ||
+                          respostaAluno.totalAcertos === undefined ? (
                             <span className="text-[10px] uppercase font-bold text-gray-400 bg-gray-200 px-2 py-1 rounded-sm">
                               Pendente
                             </span>
                           ) : (
                             <div>
                               <div className="text-blue-600">
-                                {respostaAluno.totalAcertos ?? 0}/
-                                {respostaAluno.totalQuestoes ?? 0}
+                                {respostaAluno.totalAcertos}/
+                                {respostaAluno.totalQuestoes}
                               </div>
                               <div className="text-[11px] text-gray-500 font-normal">
-                                ({respostaAluno.percentualGeral ?? 0}%)
+                                ({respostaAluno.percentualGeral}%)
                               </div>
+                              {respostaAluno.notaFinal && (
+                                <div className="text-[10px] text-emerald-700 font-bold mt-0.5">
+                                  Nota: {respostaAluno.notaFinal}
+                                </div>
+                              )}
                             </div>
                           )}
                         </td>
