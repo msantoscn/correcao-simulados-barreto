@@ -11,7 +11,7 @@ export default function Relatorios({
 
   const turmaAtual = turmas.find((t) => t.id === turmaSelecionadaId);
 
-  // Simulados disponíveis ou o simulado selecionado
+  // Simulado selecionado atual
   const simuladoAtual =
     simulados.find((s) => s.id === simuladoSelecionadoId) || simulados[0];
 
@@ -26,7 +26,6 @@ export default function Relatorios({
     return matchTurma && matchSimulado;
   });
 
-  // Função para imprimir / exportar o relatório
   const lidarComImpressao = () => {
     window.print();
   };
@@ -134,7 +133,7 @@ export default function Relatorios({
                         {disc.nome}
                         <br />
                         <span className="text-[9px] text-gray-400 font-normal">
-                          ({disc.questoes?.length || 0} Q)
+                          ({disc.questoes?.length || disc.totalQuestoes || 0} Q)
                         </span>
                       </th>
                     ))}
@@ -144,7 +143,8 @@ export default function Relatorios({
                       <span className="text-[9px] text-gray-400 font-normal">
                         (
                         {simuladoAtual?.disciplinas?.reduce(
-                          (acc, d) => acc + (d.questoes?.length || 0),
+                          (acc, d) =>
+                            acc + (d.questoes?.length || d.totalQuestoes || 0),
                           0,
                         ) || 0}{" "}
                         Q)
@@ -154,7 +154,6 @@ export default function Relatorios({
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-xs text-gray-700">
                   {turmaAtual.alunos.map((nomeAluno, index) => {
-                    // Encontra a resposta submetida para este aluno específico
                     const respostaAluno = respostasDaTurma.find(
                       (r) =>
                         (r.aluno || r.nomeAluno)?.trim().toUpperCase() ===
@@ -172,8 +171,13 @@ export default function Relatorios({
 
                         {/* Notas por Disciplina */}
                         {simuladoAtual?.disciplinas?.map((disc, dIdx) => {
+                          // Procura pelo nome da disciplina ou chave correspondente nos dados salvos
                           const resultadoDisc =
-                            respostaAluno?.disciplinas?.[disc.nome];
+                            respostaAluno?.disciplinas?.[disc.nome] ||
+                            respostaAluno?.[disc.nome] ||
+                            (respostaAluno?.detalhesDisciplinas &&
+                              respostaAluno.detalhesDisciplinas[disc.nome]);
+
                           if (!respostaAluno || !resultadoDisc) {
                             return (
                               <td
@@ -188,11 +192,15 @@ export default function Relatorios({
                           return (
                             <td key={dIdx} className="p-3 text-center">
                               <div className="font-bold text-gray-800">
-                                {resultadoDisc.acertos}/{resultadoDisc.total} (
-                                {resultadoDisc.percentual}%)
+                                {resultadoDisc.acertos ?? 0}/
+                                {resultadoDisc.total ??
+                                  (disc.questoes?.length || 0)}
+                                {resultadoDisc.percentual !== undefined
+                                  ? ` (${resultadoDisc.percentual}%)`
+                                  : ""}
                               </div>
                               <div className="mt-1 inline-block px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-[2px] text-[10px] font-bold">
-                                NOTA: {resultadoDisc.nota}
+                                NOTA: {resultadoDisc.nota ?? 0}
                               </div>
                             </td>
                           );
@@ -207,11 +215,11 @@ export default function Relatorios({
                           ) : (
                             <div>
                               <div className="text-blue-600">
-                                {respostaAluno.totalAcertos || 0}/
-                                {respostaAluno.totalQuestoes || 0}
+                                {respostaAluno.totalAcertos ?? 0}/
+                                {respostaAluno.totalQuestoes ?? 0}
                               </div>
                               <div className="text-[11px] text-gray-500 font-normal">
-                                ({respostaAluno.percentualGeral || 0}%)
+                                ({respostaAluno.percentualGeral ?? 0}%)
                               </div>
                             </div>
                           )}
