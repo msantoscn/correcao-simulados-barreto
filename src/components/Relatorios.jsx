@@ -82,7 +82,7 @@ export default function Relatorios({
           {turmaSelecionadaId && (
             <button
               onClick={lidarComImpressao}
-              className="print:hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              className="print:hidden px-4 py-2 bg-[#84cc16] hover:bg-lime-600 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-1.5 transition cursor-pointer shadow-sm"
             >
               <Printer className="w-4 h-4" /> Exportar / Imprimir
             </button>
