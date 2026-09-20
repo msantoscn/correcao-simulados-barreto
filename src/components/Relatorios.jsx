@@ -59,30 +59,30 @@ export default function Relatorios({
     0,
   );
 
-  // Função para gerar e descarregar o PDF diretamente
+  // Função para gerar e descarregar o PDF diretamente com margens internas reduzidas
   const gerarPDF = () => {
     if (!turmaAtual) return;
 
-    const doc = new jsPDF("landscape"); // Documento na horizontal
+    const doc = new jsPDF("landscape");
     const nomeSimulado =
       simuladoAtual?.nome || simuladoAtual?.titulo || "Geral";
 
     // Cabeçalho do PDF
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.text("RESUMO DE DESEMPENHO DA TURMA", 14, 20);
+    doc.text("RESUMO DE DESEMPENHO DA TURMA", 14, 15);
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 116, 139);
     doc.text(
       `Turma: ${turmaAtual.nome}   |   Simulado: ${nomeSimulado}`,
       14,
-      28,
+      21,
     );
 
-    // Preparar as colunas da tabela do PDF
+    // Preparar colunas
     const colunas = [
       { header: "ALUNO", dataKey: "aluno" },
       ...disciplinasDoSimulado.map((disc) => {
@@ -103,7 +103,7 @@ export default function Relatorios({
       },
     ];
 
-    // Preparar as linhas (dados) da tabela do PDF
+    // Preparar linhas
     const linhas = turmaAtual.alunos.map((nomeAluno, index) => {
       const linhaData = {};
       const numAluno = String(index + 1).padStart(2, "0");
@@ -116,7 +116,6 @@ export default function Relatorios({
             .toUpperCase() === String(nomeAluno).trim().toUpperCase(),
       );
 
-      // Preencher notas por disciplina
       disciplinasDoSimulado.forEach((disc) => {
         let resultadoDisc = null;
         if (respostaAluno) {
@@ -155,7 +154,6 @@ export default function Relatorios({
         }
       });
 
-      // Preencher Geral
       if (!respostaAluno || respostaAluno.totalAcertos === undefined) {
         linhaData.geral = "PENDENTE";
       } else {
@@ -165,15 +163,16 @@ export default function Relatorios({
       return linhaData;
     });
 
-    // Gerar a tabela no PDF
+    // Gerar a tabela com padding reduzido nas linhas
     autoTable(doc, {
-      startY: 35,
+      startY: 25,
       columns: colunas,
       body: linhas,
       theme: "grid",
       styles: {
         fontSize: 8,
-        cellPadding: 4,
+        // cellPadding reduzido verticalmente para diminuir a altura das linhas
+        cellPadding: { top: 1.5, bottom: 1.5, left: 3, right: 3 },
         halign: "center",
         valign: "middle",
         lineColor: [226, 232, 240],
@@ -183,16 +182,17 @@ export default function Relatorios({
         fillColor: [248, 250, 252],
         textColor: [30, 41, 59],
         fontStyle: "bold",
+        cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
       },
       columnStyles: {
         aluno: { halign: "left", fontStyle: "bold", textColor: [51, 65, 85] },
       },
       alternateRowStyles: {
-        fillColor: [250, 252, 255], // Cor de fundo subtil nas linhas pares
+        fillColor: [250, 252, 255],
       },
     });
 
-    // Descarregar o ficheiro com o nome personalizado
+    // Descarregar ficheiro com nome da turma
     doc.save(`Relatório de Notas ${turmaAtual.nome}.pdf`);
   };
 
@@ -267,7 +267,7 @@ export default function Relatorios({
         </div>
       </div>
 
-      {/* Visualização da Tabela no Ecrã */}
+      {/* Tabela de Visualização na Tela */}
       {turmaSelecionadaId ? (
         <div className="w-full bg-white">
           <div className="flex items-center gap-2 mb-3 text-[#2c3e50]">
