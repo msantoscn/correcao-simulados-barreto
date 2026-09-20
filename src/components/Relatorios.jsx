@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { FileSpreadsheet, Printer, User } from "lucide-react";
+import { FileSpreadsheet, Download, User } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Relatorios({
   turmas = [],
@@ -51,29 +53,153 @@ export default function Relatorios({
     return matchTurma && matchSimulado;
   });
 
-  const lidarComImpressao = () => {
-    window.print();
-  };
-
   const totalQuestoesSimulado = disciplinasDoSimulado.reduce(
     (acc, d) =>
       acc + (d.gabarito?.length || d.questoes?.length || d.totalQuestoes || 0),
     0,
   );
 
-  return (
-    <div className="space-y-6 pb-12 print:space-y-0 print:pb-0">
-      {/* Estilos para impressão: paisagem, remoção de margens para caber na página */}
-      <style type="text/css" media="print">
-        {`
-          @page { size: landscape; margin: 10mm; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .print-hide { display: none !important; }
-        `}
-      </style>
+  // Função para gerar e descarregar o PDF diretamente
+  const gerarPDF = () => {
+    if (!turmaAtual) return;
 
-      {/* Cabeçalho e Filtros (Ocultos na impressão) */}
-      <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200 print-hide">
+    const doc = new jsPDF("landscape"); // Documento na horizontal
+    const nomeSimulado =
+      simuladoAtual?.nome || simuladoAtual?.titulo || "Geral";
+
+    // Cabeçalho do PDF
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 41, 59);
+    doc.text("RESUMO DE DESEMPENHO DA TURMA", 14, 20);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text(
+      `Turma: ${turmaAtual.nome}   |   Simulado: ${nomeSimulado}`,
+      14,
+      28,
+    );
+
+    // Preparar as colunas da tabela do PDF
+    const colunas = [
+      { header: "ALUNO", dataKey: "aluno" },
+      ...disciplinasDoSimulado.map((disc) => {
+        const qtd =
+          disc.gabarito?.length ||
+          disc.questoes?.length ||
+          disc.totalQuestoes ||
+          disc.qtd ||
+          0;
+        return {
+          header: `${String(disc.nome).toUpperCase()}\n(${qtd} Q)`,
+          dataKey: disc.nome,
+        };
+      }),
+      {
+        header: `GERAL (TOTAL)\n(${totalQuestoesSimulado} Q)`,
+        dataKey: "geral",
+      },
+    ];
+
+    // Preparar as linhas (dados) da tabela do PDF
+    const linhas = turmaAtual.alunos.map((nomeAluno, index) => {
+      const linhaData = {};
+      const numAluno = String(index + 1).padStart(2, "0");
+      linhaData.aluno = `${numAluno}  ${String(nomeAluno).toUpperCase()}`;
+
+      const respostaAluno = respostasDaTurma.find(
+        (r) =>
+          String(r.nomeAluno || r.aluno || "")
+            .trim()
+            .toUpperCase() === String(nomeAluno).trim().toUpperCase(),
+      );
+
+      // Preencher notas por disciplina
+      disciplinasDoSimulado.forEach((disc) => {
+        let resultadoDisc = null;
+        if (respostaAluno) {
+          const container =
+            respostaAluno.detalhes ||
+            respostaAluno.disciplinas ||
+            respostaAluno;
+          if (container && typeof container === "object") {
+            const chave = Object.keys(container).find(
+              (k) =>
+                k.trim().toUpperCase() ===
+                String(disc.nome).trim().toUpperCase(),
+            );
+            if (chave) resultadoDisc = container[chave];
+          }
+        }
+
+        if (!respostaAluno || !resultadoDisc) {
+          linhaData[disc.nome] = "-";
+        } else {
+          const qtd =
+            disc.gabarito?.length ||
+            disc.questoes?.length ||
+            disc.totalQuestoes ||
+            0;
+          const acertos = resultadoDisc.acertos ?? 0;
+          const total = resultadoDisc.total ?? qtd;
+          const percentual =
+            resultadoDisc.percentagem ??
+            resultadoDisc.percentual ??
+            (total > 0 ? Math.round((acertos / total) * 100) : 0);
+          const nota = Number(resultadoDisc.nota ?? 0).toFixed(1);
+
+          linhaData[disc.nome] =
+            `${acertos}/${total} (${percentual}%)\nNOTA: ${nota}`;
+        }
+      });
+
+      // Preencher Geral
+      if (!respostaAluno || respostaAluno.totalAcertos === undefined) {
+        linhaData.geral = "PENDENTE";
+      } else {
+        linhaData.geral = `${respostaAluno.totalAcertos}/${respostaAluno.totalQuestoes}\n(${respostaAluno.percentualGeral}%)`;
+      }
+
+      return linhaData;
+    });
+
+    // Gerar a tabela no PDF
+    autoTable(doc, {
+      startY: 35,
+      columns: colunas,
+      body: linhas,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+        cellPadding: 4,
+        halign: "center",
+        valign: "middle",
+        lineColor: [226, 232, 240],
+        lineWidth: 0.1,
+      },
+      headStyles: {
+        fillColor: [248, 250, 252],
+        textColor: [30, 41, 59],
+        fontStyle: "bold",
+      },
+      columnStyles: {
+        aluno: { halign: "left", fontStyle: "bold", textColor: [51, 65, 85] },
+      },
+      alternateRowStyles: {
+        fillColor: [250, 252, 255], // Cor de fundo subtil nas linhas pares
+      },
+    });
+
+    // Descarregar o ficheiro com o nome personalizado
+    doc.save(`Relatório de Notas ${turmaAtual.nome}.pdf`);
+  };
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Cabeçalho e Filtros */}
+      <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-100">
           <div>
             <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
@@ -84,10 +210,10 @@ export default function Relatorios({
 
           {turmaSelecionadaId && (
             <button
-              onClick={lidarComImpressao}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-2 transition cursor-pointer shadow-sm"
+              onClick={gerarPDF}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-2 transition cursor-pointer shadow-sm"
             >
-              <Printer className="w-4 h-4" /> Exportar / Imprimir
+              <Download className="w-4 h-4" /> Descarregar PDF
             </button>
           )}
         </div>
@@ -141,20 +267,14 @@ export default function Relatorios({
         </div>
       </div>
 
-      {/* Tabela de Resultados no formato exato solicitado */}
+      {/* Visualização da Tabela no Ecrã */}
       {turmaSelecionadaId ? (
-        <div className="w-full bg-white print:bg-transparent">
-          {/* Título da Tabela (Igual à imagem) */}
-          <div className="flex items-center gap-2 mb-3 text-[#2c3e50] print:text-black">
+        <div className="w-full bg-white">
+          <div className="flex items-center gap-2 mb-3 text-[#2c3e50]">
             <User className="w-5 h-5" />
             <h3 className="text-[13px] font-bold uppercase tracking-wide">
               Resumo de Desempenho da Turma
             </h3>
-            {/* Informação extra para a folha impressa */}
-            <span className="hidden print:inline text-[13px] font-bold text-gray-600 uppercase ml-auto">
-              {turmaAtual?.nome} —{" "}
-              {simuladoAtual?.nome || simuladoAtual?.titulo}
-            </span>
           </div>
 
           {!turmaAtual?.alunos || turmaAtual.alunos.length === 0 ? (
@@ -166,14 +286,11 @@ export default function Relatorios({
               <table className="w-full text-left border-collapse bg-white">
                 <thead>
                   <tr>
-                    {/* Coluna Aluno */}
                     <th className="border border-[#e2e8f0] p-3 align-middle bg-[#f8fafc]/50 w-[25%] sm:w-1/4">
                       <span className="text-[11px] font-bold text-gray-800 uppercase">
                         Aluno
                       </span>
                     </th>
-
-                    {/* Colunas Disciplinas */}
                     {disciplinasDoSimulado.map((disc, idx) => {
                       const qtdQ =
                         disc.gabarito?.length ||
@@ -198,8 +315,6 @@ export default function Relatorios({
                         </th>
                       );
                     })}
-
-                    {/* Coluna Geral */}
                     <th className="border border-[#e2e8f0] p-2 text-center align-middle bg-[#f8fafc]/50 min-w-[110px]">
                       <span className="block text-[11px] font-bold text-gray-800 uppercase">
                         Geral (Total)
@@ -210,7 +325,6 @@ export default function Relatorios({
                     </th>
                   </tr>
                 </thead>
-
                 <tbody className="text-[11px] text-gray-700">
                   {turmaAtual.alunos.map((nomeAluno, index) => {
                     const respostaAluno = respostasDaTurma.find(
@@ -226,7 +340,6 @@ export default function Relatorios({
                         key={index}
                         className="hover:bg-gray-50 transition-colors"
                       >
-                        {/* Célula Aluno */}
                         <td
                           className="border border-[#e2e8f0] p-3 align-middle truncate"
                           title={nomeAluno}
@@ -238,15 +351,12 @@ export default function Relatorios({
                             {nomeAluno}
                           </span>
                         </td>
-
-                        {/* Células Disciplinas */}
                         {disciplinasDoSimulado.map((disc, dIdx) => {
                           const qtdQ =
                             disc.gabarito?.length ||
                             disc.questoes?.length ||
                             disc.totalQuestoes ||
                             0;
-
                           let resultadoDisc = null;
                           if (respostaAluno) {
                             const containerDisciplinas =
@@ -264,10 +374,9 @@ export default function Relatorios({
                                   k.trim().toUpperCase() ===
                                   String(disc.nome).trim().toUpperCase(),
                               );
-                              if (chaveEncontrada) {
+                              if (chaveEncontrada)
                                 resultadoDisc =
                                   containerDisciplinas[chaveEncontrada];
-                              }
                             }
                           }
 
@@ -311,8 +420,6 @@ export default function Relatorios({
                             </td>
                           );
                         })}
-
-                        {/* Célula Geral (Total) */}
                         <td className="border border-[#e2e8f0] p-2 text-center align-middle">
                           {!respostaAluno ||
                           respostaAluno.totalAcertos === undefined ? (
@@ -340,7 +447,7 @@ export default function Relatorios({
           )}
         </div>
       ) : (
-        <div className="bg-gray-50 p-16 rounded-sm border border-dashed border-gray-300 text-center print-hide">
+        <div className="bg-gray-50 p-16 rounded-sm border border-dashed border-gray-300 text-center">
           <FileSpreadsheet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">
             Selecione uma turma para visualizar os resultados.
