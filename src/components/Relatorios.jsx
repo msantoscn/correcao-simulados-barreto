@@ -37,7 +37,7 @@ export default function Relatorios({ turmas = [], respostasAlunos = [] }) {
       {/* Cabeçalho da Seção */}
       <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200">
         <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide">
-          Relatórios de Desempenho por Turma
+          Relatórios de Desempenho
         </h2>
         <p className="text-xs text-gray-500 mt-1">
           Selecione uma turma para visualizar o resumo estatístico e o
