@@ -604,7 +604,7 @@ export default function Professor({
                   type="submit"
                   className="flex-1 py-2.5 bg-[#84cc16] hover:bg-lime-600 text-white font-bold uppercase rounded-sm shadow-sm transition text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <CheckCircle className="w-4 h-4" /> GUARDAR RESPOSTAS DE{" "}
+                  <CheckCircle className="w-4 h-4" /> SALVAR RESPOSTAS DE{" "}
                   {alunoAtivo}
                 </button>
                 <button

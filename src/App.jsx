@@ -127,7 +127,11 @@ export default function App() {
         )}
 
         {abaAtiva === "relatorios" && (
-          <Relatorios turmas={turmas} respostasAlunos={respostasAlunos} />
+          <Relatorios
+            turmas={turmas}
+            simulados={simulados}
+            respostasAlunos={respostasAlunos}
+          />
         )}
       </main>
     </div>
