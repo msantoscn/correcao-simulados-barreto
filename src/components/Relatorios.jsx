@@ -62,18 +62,34 @@ export default function Relatorios({
   );
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 print:space-y-0 print:pb-0">
+      {/* 
+        Este bloco de estilo só afeta a impressão.
+        Força a página a ficar deitada (landscape) e ajusta as margens para caber tudo.
+      */}
+      <style type="text/css" media="print">
+        {`
+          @page { size: landscape; margin: 10mm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        `}
+      </style>
+
       {/* Cabeçalho e Filtros */}
-      <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-100 print:pb-2">
+      <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0 print:mb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-100 print:border-b-2 print:border-gray-800 print:pb-2">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-              <FileSpreadsheet className="w-6 h-6 text-blue-600" /> Relatório de
-              Desempenho
+            <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2 print:text-black">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600 print:hidden" />{" "}
+              Relatório de Desempenho
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 mt-1 print:hidden">
               Consolidado de notas e aproveitamento por disciplina e aluno.
             </p>
+            {/* Título visível apenas na impressão */}
+            <div className="hidden print:block text-sm font-bold text-gray-700 mt-2 uppercase">
+              Turma: {turmaAtual?.nome} | Simulado:{" "}
+              {simuladoAtual?.nome || simuladoAtual?.titulo || "Geral"}
+            </div>
           </div>
 
           {turmaSelecionadaId && (
@@ -138,16 +154,13 @@ export default function Relatorios({
 
       {/* Área da Tabela */}
       {turmaSelecionadaId ? (
-        <div className="bg-white rounded-sm shadow-sm border border-gray-300 overflow-hidden print:shadow-none print:border-none">
-          <div className="p-4 bg-gray-800 text-white flex justify-between items-center print:bg-transparent print:text-black print:border-b-2 print:border-gray-800">
+        <div className="bg-white rounded-sm shadow-sm border border-gray-300 print:shadow-none print:border-none">
+          <div className="p-3 bg-gray-800 text-white flex justify-between items-center print:hidden">
             <h3 className="text-sm font-bold uppercase tracking-wider">
-              Turma:{" "}
-              <span className="text-blue-400 print:text-blue-600">
-                {turmaAtual?.nome}
-              </span>
-              <span className="mx-2 text-gray-500 print:text-gray-400">|</span>
+              Turma: <span className="text-blue-400">{turmaAtual?.nome}</span>
+              <span className="mx-2 text-gray-500">|</span>
               Simulado:{" "}
-              <span className="text-blue-400 print:text-blue-600">
+              <span className="text-blue-400">
                 {simuladoAtual?.nome || simuladoAtual?.titulo || "Geral"}
               </span>
             </h3>
@@ -158,11 +171,13 @@ export default function Relatorios({
               Não existem alunos inscritos nesta turma.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-max">
+            // A largura total (w-full) sem scrollbar, dividindo proporcionalmente
+            <div className="w-full">
+              <table className="w-full text-left border-collapse table-fixed">
                 <thead>
-                  <tr className="border-b-2 border-gray-300 bg-gray-100 text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    <th className="p-4 w-[250px] align-middle text-gray-800">
+                  <tr className="border-b-2 border-gray-300 bg-gray-100 print:bg-gray-200 text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    {/* A primeira coluna ocupa um espaço maior (~25%) */}
+                    <th className="p-2 sm:p-3 w-1/4 align-middle text-gray-800 print:text-[11px] print:p-1">
                       Aluno
                     </th>
 
@@ -176,30 +191,33 @@ export default function Relatorios({
                       return (
                         <th
                           key={idx}
-                          className="p-4 text-center align-middle border-l border-gray-300 min-w-[140px]"
+                          className="p-2 sm:p-3 text-center align-middle border-l border-gray-300 print:border-gray-400 print:text-[11px] print:p-1"
                         >
-                          <span className="block text-gray-800">
+                          <span
+                            className="block text-gray-800 truncate"
+                            title={disc.nome}
+                          >
                             {disc.nome}
                           </span>
-                          <span className="text-[10px] text-gray-500 font-medium mt-0.5 block">
-                            ({qtdQ} Questões)
+                          <span className="text-[9px] text-gray-500 font-medium mt-0.5 block">
+                            ({qtdQ} Q)
                           </span>
                         </th>
                       );
                     })}
 
-                    <th className="p-4 text-center align-middle border-l-2 border-gray-300 bg-blue-50/50 min-w-[150px]">
-                      <span className="block text-blue-900">
-                        Resultado Final
+                    <th className="p-2 sm:p-3 text-center align-middle border-l-2 border-gray-300 bg-blue-50/50 print:bg-gray-200 print:border-gray-400 print:text-[11px] print:p-1">
+                      <span className="block text-blue-900 print:text-black">
+                        Geral
                       </span>
-                      <span className="text-[10px] text-blue-600 font-medium mt-0.5 block">
-                        ({totalQuestoesSimulado} Questões)
+                      <span className="text-[9px] text-blue-600 print:text-gray-600 font-medium mt-0.5 block">
+                        ({totalQuestoesSimulado} Q)
                       </span>
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-200 text-sm text-gray-700">
+                <tbody className="divide-y divide-gray-200 text-sm text-gray-700 print:text-xs">
                   {turmaAtual.alunos.map((nomeAluno, index) => {
                     const respostaAluno = respostasDaTurma.find(
                       (r) =>
@@ -215,8 +233,11 @@ export default function Relatorios({
                         className="odd:bg-white even:bg-gray-50 hover:bg-blue-50/40 transition"
                       >
                         {/* Coluna Nome do Aluno */}
-                        <td className="p-4 font-bold text-gray-900 uppercase align-middle whitespace-nowrap">
-                          <span className="text-xs text-gray-400 font-mono bg-gray-200 px-1.5 py-0.5 rounded-sm mr-3">
+                        <td
+                          className="p-2 sm:p-3 font-bold text-gray-900 uppercase align-middle truncate print:p-1.5"
+                          title={nomeAluno}
+                        >
+                          <span className="text-[10px] text-gray-400 font-mono bg-gray-200 px-1 py-0.5 rounded-sm mr-2 print:bg-transparent print:border print:border-gray-300">
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           {nomeAluno}
@@ -258,7 +279,7 @@ export default function Relatorios({
                             return (
                               <td
                                 key={dIdx}
-                                className="p-4 text-center align-middle border-l border-gray-200 text-gray-300 font-medium"
+                                className="p-2 sm:p-3 text-center align-middle border-l border-gray-200 text-gray-300 font-medium print:p-1"
                               >
                                 —
                               </td>
@@ -278,44 +299,39 @@ export default function Relatorios({
                           return (
                             <td
                               key={dIdx}
-                              className="p-4 text-center align-middle border-l border-gray-200"
+                              className="p-2 sm:p-3 text-center align-middle border-l border-gray-200 print:p-1 print:border-gray-300"
                             >
-                              <div className="font-extrabold text-gray-800 text-sm">
+                              <div className="font-extrabold text-gray-800 text-xs sm:text-sm print:text-[11px]">
                                 {acertos}/{total}{" "}
-                                <span className="text-blue-600 font-bold ml-1">
+                                <span className="text-blue-600 print:text-gray-600 font-bold ml-0.5">
                                   ({percentual}%)
                                 </span>
                               </div>
-                              <div className="mt-1.5 inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-[3px] text-xs font-bold shadow-sm">
+                              <div className="mt-1 inline-block px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-[3px] text-[10px] font-bold shadow-sm print:bg-transparent print:border-gray-400 print:text-black">
                                 NOTA: {nota}
                               </div>
                             </td>
                           );
                         })}
 
-                        {/* Coluna Resultado Geral */}
-                        <td className="p-4 text-center align-middle border-l-2 border-gray-300 bg-blue-50/20">
+                        {/* Coluna Resultado Geral - Agora sem a Nota Final */}
+                        <td className="p-2 sm:p-3 text-center align-middle border-l-2 border-gray-300 bg-blue-50/20 print:p-1 print:bg-transparent print:border-gray-400">
                           {!respostaAluno ||
                           respostaAluno.totalAcertos === undefined ? (
-                            <span className="text-xs uppercase font-bold text-gray-500 bg-gray-200 px-3 py-1.5 rounded-sm">
+                            <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-sm print:border print:border-gray-300 print:bg-transparent">
                               Pendente
                             </span>
                           ) : (
                             <div className="flex flex-col items-center justify-center">
-                              <div className="font-extrabold text-blue-900 text-base">
+                              <div className="font-extrabold text-blue-900 print:text-black text-sm sm:text-base print:text-xs">
                                 {respostaAluno.totalAcertos}{" "}
-                                <span className="text-gray-500 text-sm font-bold">
+                                <span className="text-gray-500 text-xs font-bold print:text-gray-600">
                                   / {respostaAluno.totalQuestoes}
                                 </span>
                               </div>
-                              <div className="text-xs text-blue-600 font-bold mt-0.5 bg-blue-100 px-2 rounded-sm">
-                                Aproveitamento: {respostaAluno.percentualGeral}%
+                              <div className="text-[10px] sm:text-xs text-blue-600 print:text-gray-800 font-bold mt-0.5 bg-blue-100 print:bg-transparent print:border print:border-gray-300 px-1.5 rounded-sm">
+                                {respostaAluno.percentualGeral}%
                               </div>
-                              {respostaAluno.notaFinal && (
-                                <div className="mt-2 text-xs font-black text-white bg-blue-600 px-3 py-1 rounded-sm shadow-sm uppercase">
-                                  Final: {respostaAluno.notaFinal}
-                                </div>
-                              )}
                             </div>
                           )}
                         </td>
@@ -328,7 +344,7 @@ export default function Relatorios({
           )}
         </div>
       ) : (
-        <div className="bg-gray-50 p-16 rounded-sm border border-dashed border-gray-300 text-center">
+        <div className="bg-gray-50 p-16 rounded-sm border border-dashed border-gray-300 text-center print:hidden">
           <FileSpreadsheet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">
             Selecione uma turma para visualizar os resultados.
