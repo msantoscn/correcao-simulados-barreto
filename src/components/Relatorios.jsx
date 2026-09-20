@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileSpreadsheet, Printer } from "lucide-react";
+import { FileSpreadsheet, Printer, User } from "lucide-react";
 
 export default function Relatorios({
   turmas = [],
@@ -63,54 +63,43 @@ export default function Relatorios({
 
   return (
     <div className="space-y-6 pb-12 print:space-y-0 print:pb-0">
-      {/* 
-        Este bloco de estilo só afeta a impressão.
-        Força a página a ficar deitada (landscape) e ajusta as margens para caber tudo.
-      */}
+      {/* Estilos para impressão: paisagem, remoção de margens para caber na página */}
       <style type="text/css" media="print">
         {`
           @page { size: landscape; margin: 10mm; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-hide { display: none !important; }
         `}
       </style>
 
-      {/* Cabeçalho e Filtros */}
-      <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200 print:shadow-none print:border-none print:p-0 print:mb-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-100 print:border-b-2 print:border-gray-800 print:pb-2">
+      {/* Cabeçalho e Filtros (Ocultos na impressão) */}
+      <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200 print-hide">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-100">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2 print:text-black">
-              <FileSpreadsheet className="w-6 h-6 text-blue-600 print:hidden" />{" "}
-              Relatório de Desempenho
+            <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600" /> Relatório de
+              Desempenho
             </h2>
-            <p className="text-sm text-gray-500 mt-1 print:hidden">
-              Consolidado de notas e aproveitamento por disciplina e aluno.
-            </p>
-            {/* Título visível apenas na impressão */}
-            <div className="hidden print:block text-sm font-bold text-gray-700 mt-2 uppercase">
-              Turma: {turmaAtual?.nome} | Simulado:{" "}
-              {simuladoAtual?.nome || simuladoAtual?.titulo || "Geral"}
-            </div>
           </div>
 
           {turmaSelecionadaId && (
             <button
               onClick={lidarComImpressao}
-              className="print:hidden px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-2 transition cursor-pointer shadow-sm"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-2 transition cursor-pointer shadow-sm"
             >
               <Printer className="w-4 h-4" /> Exportar / Imprimir
             </button>
           )}
         </div>
 
-        {/* Filtros */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5 print:hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
               1. Selecionar Turma
             </label>
             {turmas.length === 0 ? (
               <p className="text-sm text-amber-600 font-medium bg-amber-50 p-3 rounded-sm border border-amber-200">
-                Nenhuma turma registada no sistema.
+                Nenhuma turma registada.
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -152,35 +141,39 @@ export default function Relatorios({
         </div>
       </div>
 
-      {/* Área da Tabela */}
+      {/* Tabela de Resultados no formato exato solicitado */}
       {turmaSelecionadaId ? (
-        <div className="bg-white rounded-sm shadow-sm border border-gray-300 print:shadow-none print:border-none">
-          <div className="p-3 bg-gray-800 text-white flex justify-between items-center print:hidden">
-            <h3 className="text-sm font-bold uppercase tracking-wider">
-              Turma: <span className="text-blue-400">{turmaAtual?.nome}</span>
-              <span className="mx-2 text-gray-500">|</span>
-              Simulado:{" "}
-              <span className="text-blue-400">
-                {simuladoAtual?.nome || simuladoAtual?.titulo || "Geral"}
-              </span>
+        <div className="w-full bg-white print:bg-transparent">
+          {/* Título da Tabela (Igual à imagem) */}
+          <div className="flex items-center gap-2 mb-3 text-[#2c3e50] print:text-black">
+            <User className="w-5 h-5" />
+            <h3 className="text-[13px] font-bold uppercase tracking-wide">
+              Resumo de Desempenho da Turma
             </h3>
+            {/* Informação extra para a folha impressa */}
+            <span className="hidden print:inline text-[13px] font-bold text-gray-600 uppercase ml-auto">
+              {turmaAtual?.nome} —{" "}
+              {simuladoAtual?.nome || simuladoAtual?.titulo}
+            </span>
           </div>
 
           {!turmaAtual?.alunos || turmaAtual.alunos.length === 0 ? (
-            <div className="p-12 text-center text-gray-500 text-sm uppercase font-bold bg-gray-50">
+            <div className="p-12 text-center text-gray-500 text-sm uppercase font-bold border border-gray-200">
               Não existem alunos inscritos nesta turma.
             </div>
           ) : (
-            // A largura total (w-full) sem scrollbar, dividindo proporcionalmente
             <div className="w-full">
-              <table className="w-full text-left border-collapse table-fixed">
+              <table className="w-full text-left border-collapse bg-white">
                 <thead>
-                  <tr className="border-b-2 border-gray-300 bg-gray-100 print:bg-gray-200 text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    {/* A primeira coluna ocupa um espaço maior (~25%) */}
-                    <th className="p-2 sm:p-3 w-1/4 align-middle text-gray-800 print:text-[11px] print:p-1">
-                      Aluno
+                  <tr>
+                    {/* Coluna Aluno */}
+                    <th className="border border-[#e2e8f0] p-3 align-middle bg-[#f8fafc]/50 w-[25%] sm:w-1/4">
+                      <span className="text-[11px] font-bold text-gray-800 uppercase">
+                        Aluno
+                      </span>
                     </th>
 
+                    {/* Colunas Disciplinas */}
                     {disciplinasDoSimulado.map((disc, idx) => {
                       const qtdQ =
                         disc.gabarito?.length ||
@@ -191,33 +184,34 @@ export default function Relatorios({
                       return (
                         <th
                           key={idx}
-                          className="p-2 sm:p-3 text-center align-middle border-l border-gray-300 print:border-gray-400 print:text-[11px] print:p-1"
+                          className="border border-[#e2e8f0] p-2 text-center align-middle bg-[#f8fafc]/50"
                         >
                           <span
-                            className="block text-gray-800 truncate"
+                            className="block text-[11px] font-bold text-gray-800 uppercase truncate"
                             title={disc.nome}
                           >
                             {disc.nome}
                           </span>
-                          <span className="text-[9px] text-gray-500 font-medium mt-0.5 block">
+                          <span className="text-[10px] text-gray-400 font-normal mt-0.5 block">
                             ({qtdQ} Q)
                           </span>
                         </th>
                       );
                     })}
 
-                    <th className="p-2 sm:p-3 text-center align-middle border-l-2 border-gray-300 bg-blue-50/50 print:bg-gray-200 print:border-gray-400 print:text-[11px] print:p-1">
-                      <span className="block text-blue-900 print:text-black">
-                        Geral
+                    {/* Coluna Geral */}
+                    <th className="border border-[#e2e8f0] p-2 text-center align-middle bg-[#f8fafc]/50 min-w-[110px]">
+                      <span className="block text-[11px] font-bold text-gray-800 uppercase">
+                        Geral (Total)
                       </span>
-                      <span className="text-[9px] text-blue-600 print:text-gray-600 font-medium mt-0.5 block">
+                      <span className="text-[10px] text-gray-400 font-normal mt-0.5 block">
                         ({totalQuestoesSimulado} Q)
                       </span>
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-200 text-sm text-gray-700 print:text-xs">
+                <tbody className="text-[11px] text-gray-700">
                   {turmaAtual.alunos.map((nomeAluno, index) => {
                     const respostaAluno = respostasDaTurma.find(
                       (r) =>
@@ -230,20 +224,22 @@ export default function Relatorios({
                     return (
                       <tr
                         key={index}
-                        className="odd:bg-white even:bg-gray-50 hover:bg-blue-50/40 transition"
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        {/* Coluna Nome do Aluno */}
+                        {/* Célula Aluno */}
                         <td
-                          className="p-2 sm:p-3 font-bold text-gray-900 uppercase align-middle truncate print:p-1.5"
+                          className="border border-[#e2e8f0] p-3 align-middle truncate"
                           title={nomeAluno}
                         >
-                          <span className="text-[10px] text-gray-400 font-mono bg-gray-200 px-1 py-0.5 rounded-sm mr-2 print:bg-transparent print:border print:border-gray-300">
+                          <span className="text-[10px] text-[#64748b] font-bold mr-2">
                             {String(index + 1).padStart(2, "0")}
                           </span>
-                          {nomeAluno}
+                          <span className="font-bold text-[#334155] uppercase">
+                            {nomeAluno}
+                          </span>
                         </td>
 
-                        {/* Colunas de Disciplinas */}
+                        {/* Células Disciplinas */}
                         {disciplinasDoSimulado.map((disc, dIdx) => {
                           const qtdQ =
                             disc.gabarito?.length ||
@@ -279,9 +275,9 @@ export default function Relatorios({
                             return (
                               <td
                                 key={dIdx}
-                                className="p-2 sm:p-3 text-center align-middle border-l border-gray-200 text-gray-300 font-medium print:p-1"
+                                className="border border-[#e2e8f0] p-3 text-center align-middle text-gray-300 font-medium"
                               >
-                                —
+                                -
                               </td>
                             );
                           }
@@ -294,43 +290,43 @@ export default function Relatorios({
                             (total > 0
                               ? Math.round((acertos / total) * 100)
                               : 0);
-                          const nota = resultadoDisc.nota ?? "0.0";
+                          const nota = Number(resultadoDisc.nota ?? 0).toFixed(
+                            1,
+                          );
 
                           return (
                             <td
                               key={dIdx}
-                              className="p-2 sm:p-3 text-center align-middle border-l border-gray-200 print:p-1 print:border-gray-300"
+                              className="border border-[#e2e8f0] p-2 text-center align-middle"
                             >
-                              <div className="font-extrabold text-gray-800 text-xs sm:text-sm print:text-[11px]">
+                              <div className="font-bold text-[#1e293b] text-[11px]">
                                 {acertos}/{total}{" "}
-                                <span className="text-blue-600 print:text-gray-600 font-bold ml-0.5">
+                                <span className="text-[#3b82f6] ml-0.5 font-semibold">
                                   ({percentual}%)
                                 </span>
                               </div>
-                              <div className="mt-1 inline-block px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-[3px] text-[10px] font-bold shadow-sm print:bg-transparent print:border-gray-400 print:text-black">
+                              <div className="mt-1 inline-block px-1.5 py-[1px] text-[#16a34a] border border-[#4ade80] bg-white rounded-[2px] text-[10px] font-bold tracking-wide">
                                 NOTA: {nota}
                               </div>
                             </td>
                           );
                         })}
 
-                        {/* Coluna Resultado Geral - Agora sem a Nota Final */}
-                        <td className="p-2 sm:p-3 text-center align-middle border-l-2 border-gray-300 bg-blue-50/20 print:p-1 print:bg-transparent print:border-gray-400">
+                        {/* Célula Geral (Total) */}
+                        <td className="border border-[#e2e8f0] p-2 text-center align-middle">
                           {!respostaAluno ||
                           respostaAluno.totalAcertos === undefined ? (
-                            <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded-sm print:border print:border-gray-300 print:bg-transparent">
+                            <span className="text-[10px] uppercase font-bold text-[#cbd5e1]">
                               Pendente
                             </span>
                           ) : (
-                            <div className="flex flex-col items-center justify-center">
-                              <div className="font-extrabold text-blue-900 print:text-black text-sm sm:text-base print:text-xs">
-                                {respostaAluno.totalAcertos}{" "}
-                                <span className="text-gray-500 text-xs font-bold print:text-gray-600">
-                                  / {respostaAluno.totalQuestoes}
-                                </span>
+                            <div>
+                              <div className="font-bold text-[#1e293b] text-[11px]">
+                                {respostaAluno.totalAcertos}/
+                                {respostaAluno.totalQuestoes}
                               </div>
-                              <div className="text-[10px] sm:text-xs text-blue-600 print:text-gray-800 font-bold mt-0.5 bg-blue-100 print:bg-transparent print:border print:border-gray-300 px-1.5 rounded-sm">
-                                {respostaAluno.percentualGeral}%
+                              <div className="text-[11px] text-[#3b82f6] font-semibold mt-0.5">
+                                ({respostaAluno.percentualGeral}%)
                               </div>
                             </div>
                           )}
@@ -344,7 +340,7 @@ export default function Relatorios({
           )}
         </div>
       ) : (
-        <div className="bg-gray-50 p-16 rounded-sm border border-dashed border-gray-300 text-center print:hidden">
+        <div className="bg-gray-50 p-16 rounded-sm border border-dashed border-gray-300 text-center print-hide">
           <FileSpreadsheet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">
             Selecione uma turma para visualizar os resultados.
