@@ -11,9 +11,28 @@ export default function Relatorios({
 
   const turmaAtual = turmas.find((t) => t.id === turmaSelecionadaId);
 
-  // Simulado selecionado atual
+  // Garante que seleciona o simulado corretamente por ID ou pega o primeiro
   const simuladoAtual =
     simulados.find((s) => s.id === simuladoSelecionadoId) || simulados[0];
+
+  // Normaliza a lista de disciplinas para garantir que sempre temos um array utilizável
+  const obterDisciplinasSimulado = () => {
+    if (!simuladoAtual) return [];
+    if (Array.isArray(simuladoAtual.disciplinas))
+      return simuladoAtual.disciplinas;
+    if (
+      typeof simuladoAtual.disciplinas === "object" &&
+      simuladoAtual.disciplinas !== null
+    ) {
+      return Object.entries(simuladoAtual.disciplinas).map(([nome, dados]) => ({
+        nome,
+        ...dados,
+      }));
+    }
+    return [];
+  };
+
+  const disciplinasDoSimulado = obterDisciplinasSimulado();
 
   // Filtrar respostas da turma e simulado ativos
   const respostasDaTurma = respostasAlunos.filter((resp) => {
@@ -48,7 +67,7 @@ export default function Relatorios({
           {turmaSelecionadaId && (
             <button
               onClick={lidarComImpressao}
-              className="print:hidden px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+              className="print:hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase rounded-sm flex items-center gap-1.5 transition cursor-pointer shadow-sm"
             >
               <Printer className="w-4 h-4" /> Exportar / Imprimir
             </button>
@@ -128,25 +147,36 @@ export default function Relatorios({
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-100/70 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
                     <th className="p-3 w-1/4">Aluno</th>
-                    {simuladoAtual?.disciplinas?.map((disc, idx) => (
-                      <th key={idx} className="p-3 text-center">
-                        {disc.nome}
-                        <br />
-                        <span className="text-[9px] text-gray-400 font-normal">
-                          ({disc.questoes?.length || disc.totalQuestoes || 0} Q)
-                        </span>
-                      </th>
-                    ))}
+                    {disciplinasDoSimulado.map((disc, idx) => {
+                      const qtdQ =
+                        disc.questoes?.length ||
+                        disc.totalQuestoes ||
+                        disc.qtd ||
+                        0;
+                      return (
+                        <th key={idx} className="p-3 text-center">
+                          {disc.nome}
+                          <br />
+                          <span className="text-[9px] text-gray-400 font-normal">
+                            ({qtdQ} Q)
+                          </span>
+                        </th>
+                      );
+                    })}
                     <th className="p-3 text-center bg-gray-100">
                       Geral (Total)
                       <br />
                       <span className="text-[9px] text-gray-400 font-normal">
                         (
-                        {simuladoAtual?.disciplinas?.reduce(
+                        {disciplinasDoSimulado.reduce(
                           (acc, d) =>
-                            acc + (d.questoes?.length || d.totalQuestoes || 0),
+                            acc +
+                            (d.questoes?.length ||
+                              d.totalQuestoes ||
+                              d.qtd ||
+                              0),
                           0,
-                        ) || 0}{" "}
+                        )}{" "}
                         Q)
                       </span>
                     </th>
@@ -170,8 +200,14 @@ export default function Relatorios({
                         </td>
 
                         {/* Notas por Disciplina */}
-                        {simuladoAtual?.disciplinas?.map((disc, dIdx) => {
-                          // Procura pelo nome da disciplina ou chave correspondente nos dados salvos
+                        {disciplinasDoSimulado.map((disc, dIdx) => {
+                          const qtdQ =
+                            disc.questoes?.length ||
+                            disc.totalQuestoes ||
+                            disc.qtd ||
+                            0;
+
+                          // Procura a pontuação em diferentes formatos possíveis gravados no banco
                           const resultadoDisc =
                             respostaAluno?.disciplinas?.[disc.nome] ||
                             respostaAluno?.[disc.nome] ||
@@ -193,8 +229,7 @@ export default function Relatorios({
                             <td key={dIdx} className="p-3 text-center">
                               <div className="font-bold text-gray-800">
                                 {resultadoDisc.acertos ?? 0}/
-                                {resultadoDisc.total ??
-                                  (disc.questoes?.length || 0)}
+                                {resultadoDisc.total ?? qtdQ}
                                 {resultadoDisc.percentual !== undefined
                                   ? ` (${resultadoDisc.percentual}%)`
                                   : ""}
