@@ -9,7 +9,7 @@ import {
   X,
 } from "lucide-react";
 
-export default function Turmas({ turmas, onSalvarTurmas }) {
+export default function Turmas({ turmas, onSalvarTurmas, onDeletarTurma }) {
   const [nomeNovaTurma, setNomeNovaTurma] = useState("");
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState(null);
   const [novoAlunoUnico, setNovoAlunoUnico] = useState("");
@@ -46,9 +46,13 @@ export default function Turmas({ turmas, onSalvarTurmas }) {
   // Remover turma
   const removerTurma = async (id) => {
     if (!confirm("Tem a certeza de que deseja eliminar esta turma?")) return;
-    const listaAtualizada = turmas.filter((t) => t.id !== id);
-    await atualizarEPersistir(listaAtualizada);
-    if (turmaSelecionadaId === id) setTurmaSelecionadaId(null);
+    try {
+      await onDeletarTurma(id);
+      if (turmaSelecionadaId === id) setTurmaSelecionadaId(null);
+    } catch (error) {
+      console.error("Erro ao eliminar turma do Firebase:", error);
+      alert("Erro ao eliminar turma.");
+    }
   };
 
   // Adicionar aluno único
