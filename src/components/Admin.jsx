@@ -132,7 +132,7 @@ export default function Admin({
     if (gabaritoIncompleto) {
       if (
         !confirm(
-          "Algumas questões estão sem gabarito. Deseja guardar mesmo assim?",
+          "Algumas questões estão sem gabarito. Deseja salvar mesmo assim?",
         )
       )
         return;
@@ -156,12 +156,12 @@ export default function Admin({
           dataCriacao: new Date().toLocaleDateString("pt-PT"),
         };
         await onSalvarSimulado(novoSimulado);
-        alert("Simulado guardado com sucesso!");
+        alert("Simulado cadastrado com sucesso!");
       }
       cancelarEdicao();
     } catch (error) {
-      console.error("Erro ao guardar simulado:", error);
-      alert("Erro ao guardar o simulado no Firebase.");
+      console.error("Erro ao salvar simulado:", error);
+      alert("Erro ao salvar o simulado no Firebase.");
     }
   };
 
@@ -268,7 +268,7 @@ export default function Admin({
               className="w-full py-3.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99]"
             >
               <Save className="w-4 h-4" />
-              {idEmEdicao ? "Atualizar Simulado" : "Guardar Simulado"}
+              {idEmEdicao ? "Atualizar Simulado" : "Salvar Simulado"}
             </button>
           </div>
         </form>
@@ -459,7 +459,7 @@ function SimuladoCard({ sim, emEdicao, aoEditar, aoDuplicar, aoRemover }) {
         <button
           onClick={aoRemover}
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer border border-transparent hover:border-red-100"
-          title="Eliminar Simulado"
+          title="Excluir Simulado"
         >
           <Trash2 className="w-4 h-4" />
         </button>

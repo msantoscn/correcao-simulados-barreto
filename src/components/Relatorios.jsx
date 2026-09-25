@@ -238,7 +238,7 @@ export default function Relatorios({
               onClick={gerarPDF}
               className="w-full sm:w-auto px-4 py-2.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer active:scale-95"
             >
-              <Download className="w-4 h-4" /> Descarregar PDF
+              <Download className="w-4 h-4" /> Exportar PDF
             </button>
           )}
         </div>

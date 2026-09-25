@@ -154,7 +154,7 @@ export default function Professor({
 
     if (
       window.confirm(
-        `Tem a certeza que deseja limpar as marcações atuais de ${alunoAtivo}?`,
+        `Tem a certeza que deseja limpar as repostas atuais de ${alunoAtivo}?`,
       )
     ) {
       setRespostasProfessor({});
@@ -254,7 +254,7 @@ export default function Professor({
     const calculo = calcularDesempenhoAluno(respostasProfessor);
 
     if (!calculo) {
-      return alert("Preencha pelo menos uma resposta antes de guardar.");
+      return alert("Preencha pelo menos uma resposta antes de salvar.");
     }
 
     const registoExistente = respostasAlunos.find(
@@ -285,12 +285,12 @@ export default function Professor({
 
       await onSalvarResposta(dadosRegisto);
       alert(
-        `Respostas guardadas com sucesso! ${alunoAtivo}: ${calculo.percentualGeral}% de acertos`,
+        `Respostas salvas com sucesso! ${alunoAtivo}: ${calculo.percentualGeral}% de acertos`,
       );
       setAlunoAtivo(null);
       setRespostasProfessor({});
     } catch (error) {
-      console.error("Erro ao guardar respostas:", error);
+      console.error("Erro ao salvar respostas:", error);
     }
   };
 
@@ -458,7 +458,7 @@ export default function Professor({
                     >
                       {meuDono ? (
                         <>
-                          <Edit3 className="w-4 h-4" /> Lançar Notas
+                          <Edit3 className="w-4 h-4" /> add Notas
                         </>
                       ) : (
                         <>
@@ -778,7 +778,7 @@ export default function Professor({
                   type="submit"
                   className="w-full sm:w-auto px-6 py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl text-xs shadow-xs shadow-blue-500/20 cursor-pointer transition-all active:scale-95"
                 >
-                  Guardar Respostas do Aluno
+                  Salvar Respostas do Aluno
                 </button>
               </div>
             </form>
