@@ -39,7 +39,7 @@ function MainContent() {
     deletarTurma,
     salvarRespostaAluno,
     deletarRespostaAluno,
-    vincularTurmaProfessor,
+    vincularTurma, // <--- CORRIGIDO AQUI (removido o 'Professor' no final)
     salvarUsuarios,
     deletarUsuario,
   } = useFirebase();
@@ -198,7 +198,7 @@ function MainContent() {
             respostasAlunos={respostasAlunos}
             onSalvarResposta={salvarRespostaAluno}
             onExcluirResposta={deletarRespostaAluno}
-            onVincularTurma={vincularTurmaProfessor}
+            onVincularTurma={vincularTurma} // <--- CORRIGIDO AQUI TAMBÉM
           />
         )}
 

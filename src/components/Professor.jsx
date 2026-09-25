@@ -45,20 +45,57 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Função para verificar se o utilizador atual pode editar esta turma
+  // Função centralizada para verificar se o utilizador logado é o dono ou gestor
   const temPermissaoEdicao = (turma) => {
     if (isGestao) return true;
-    if (!turma?.professorVinculadoCodigo) return true; // Turma livre pode ser assumida
-    return turma.professorVinculadoCodigo === user.codigo; // Apenas o professor vinculado
+    if (!turma) return false;
+    if (!turma.professorVinculadoCodigo) return true; // Se estiver livre, qualquer um pode assumir ao clicar
+    return (
+      String(turma.professorVinculadoCodigo).trim() ===
+      String(user.codigo).trim()
+    );
   };
 
-  // Vínculo automático da turma ao clicar se estiver livre
+  // Ao clicar para entrar na turma
   const handleEntrarNaTurma = async (turma, idSimulado) => {
+    const temDonoOutro =
+      turma.professorVinculadoCodigo &&
+      String(turma.professorVinculadoCodigo).trim() !== "" &&
+      String(turma.professorVinculadoCodigo).trim() !==
+        String(user.codigo).trim() &&
+      !isGestao;
+
+    // Se já pertence a outro professor, bloqueia imediatamente
+    if (temDonoOutro) {
+      alert(
+        `Esta turma pertence ao professor ${turma.professorVinculadoNome || "outro colega"}. Apenas visualização de notas permitida.`,
+      );
+      setTurmaSelecionadaId(turma.id);
+      setSimuladoSelecionadoId(idSimulado);
+      setPasso(2);
+      return;
+    }
+
+    // Se a turma está LIVRE e o usuário é um professor, vincula definitivamente
     if (!turma.professorVinculadoCodigo && !isGestao && onVincularTurma) {
-      await onVincularTurma(turma.id, {
-        codigo: user.codigo,
-        nome: user.nome,
-      });
+      const confirmar = window.confirm(
+        `Deseja assumir a turma ${turma.nome}? A partir de agora, ela ficará vinculada a si e apenas você poderá lançar notas nela.`,
+      );
+
+      if (!confirmar) {
+        return;
+      }
+
+      try {
+        await onVincularTurma(turma.id, {
+          codigo: user.codigo,
+          nome: user.nome,
+        });
+      } catch (error) {
+        console.error("Erro ao vincular turma:", error);
+        alert("Erro ao vincular a turma. Tente novamente.");
+        return;
+      }
     }
 
     setTurmaSelecionadaId(turma.id);
@@ -75,11 +112,8 @@ export default function Professor({
   };
 
   const handleSelecionarAluno = (nomeAluno) => {
-    // Se não tiver permissão de edição, impede de abrir para lançar
     if (!temPermissaoEdicao(turmaAtiva)) {
-      alert(
-        "Esta turma pertence a outro professor. Apenas visualização permitida.",
-      );
+      alert("Acesso negado. Esta turma pertence a outro professor.");
       return;
     }
 
@@ -217,6 +251,11 @@ export default function Professor({
     e.preventDefault();
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
 
+    if (!temPermissaoEdicao(turmaAtiva)) {
+      alert("Não tem permissão para guardar notas nesta turma.");
+      return;
+    }
+
     const calculo = calcularDesempenhoAluno(respostasProfessor);
 
     if (!calculo) {
@@ -339,7 +378,12 @@ export default function Professor({
             {turmas.map((turma) => {
               const idsSimuladosDoBimestre =
                 turma.simuladosVinculados?.[bimestreSelecionado] || [];
-              const podeEditar = temPermissaoEdicao(turma);
+              const meuDono =
+                !turma.professorVinculadoCodigo ||
+                String(turma.professorVinculadoCodigo).trim() === "" ||
+                String(turma.professorVinculadoCodigo).trim() ===
+                  String(user.codigo).trim() ||
+                isGestao;
 
               return (
                 <div
@@ -352,8 +396,7 @@ export default function Professor({
                         {turma.nome}
                       </h4>
                       {turma.professorVinculadoCodigo ? (
-                        turma.professorVinculadoCodigo === user.codigo ||
-                        isGestao ? (
+                        meuDono ? (
                           <Lock
                             className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0 ml-1"
                             title="Sua Turma"
@@ -398,18 +441,21 @@ export default function Professor({
                             key={simId}
                             onClick={() => handleEntrarNaTurma(turma, simId)}
                             className={`w-full py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-between gap-2 transition-all active:scale-[0.98] cursor-pointer ${
-                              podeEditar
+                              meuDono
                                 ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
-                                : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                : "bg-slate-200 text-slate-600 hover:bg-slate-300"
                             }`}
                           >
                             <span className="truncate">
                               {simObj?.nome || "Simulado Desconhecido"}
                             </span>
-                            {podeEditar ? (
+                            {meuDono ? (
                               <Edit3 className="w-3.5 h-3.5 flex-shrink-0" />
                             ) : (
-                              <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+                              <Eye
+                                className="w-3.5 h-3.5 flex-shrink-0 text-slate-500"
+                                title="Apenas Leitura"
+                              />
                             )}
                           </button>
                         );
@@ -619,7 +665,7 @@ export default function Professor({
                                       <PlusCircle className="w-4 h-4" />
                                     )
                                   ) : (
-                                    <Eye className="w-4 h-4" />
+                                    <Eye className="w-4 h-4 text-slate-500" />
                                   )}
                                 </button>
 

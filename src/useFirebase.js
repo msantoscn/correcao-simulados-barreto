@@ -69,7 +69,7 @@ export function useFirebase() {
     await deleteDoc(doc(db, "simulados", id));
   };
 
-  // --- Operações para Turmas (Corrigido para incluir simuladosVinculados) ---
+  // --- Operações para Turmas (Agora salva o professor vinculado) ---
   const salvarTurma = async (turmasAtualizadas) => {
     if (Array.isArray(turmasAtualizadas)) {
       for (const turma of turmasAtualizadas) {
@@ -79,6 +79,8 @@ export function useFirebase() {
           {
             nome: turma.nome,
             alunos: turma.alunos || [],
+            professorVinculadoCodigo: turma.professorVinculadoCodigo || null,
+            professorVinculadoNome: turma.professorVinculadoNome || null,
             simuladosVinculados: turma.simuladosVinculados || {
               1: [],
               2: [],
@@ -96,6 +98,10 @@ export function useFirebase() {
         {
           nome: turmasAtualizadas.nome,
           alunos: turmasAtualizadas.alunos || [],
+          professorVinculadoCodigo:
+            turmasAtualizadas.professorVinculadoCodigo || null,
+          professorVinculadoNome:
+            turmasAtualizadas.professorVinculadoNome || null,
           simuladosVinculados: turmasAtualizadas.simuladosVinculados || {
             1: [],
             2: [],
@@ -105,6 +111,27 @@ export function useFirebase() {
         },
         { merge: true },
       );
+    }
+  };
+
+  // Nova função específica para vincular o professor à turma livre
+  const vincularTurma = async (turmaId, professor) => {
+    try {
+      const turmaRef = doc(db, "turmas", String(turmaId));
+      await setDoc(
+        turmaRef,
+        {
+          professorVinculadoCodigo: professor.codigo,
+          professorVinculadoNome: professor.nome,
+        },
+        { merge: true },
+      );
+      console.log(
+        `Turma ${turmaId} vinculada com sucesso ao professor ${professor.nome}`,
+      );
+    } catch (error) {
+      console.error("Erro ao vincular turma:", error);
+      throw error;
     }
   };
 
@@ -179,6 +206,7 @@ export function useFirebase() {
     salvarSimulado,
     deletarSimulado,
     salvarTurma,
+    vincularTurma, // <--- Exportado aqui
     deletarTurma,
     salvarUsuarios,
     deletarUsuario,
