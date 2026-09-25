@@ -45,37 +45,44 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Função centralizada e rigorosa de permissão de edição
+  // Função centralizada, rigorosa e normalizada para permissão de edição
   const temPermissaoEdicao = (turma) => {
     if (isGestao) return true;
     if (!turma) return false;
+
+    const codigoTurma = turma.professorVinculadoCodigo
+      ? String(turma.professorVinculadoCodigo).trim().toUpperCase()
+      : "";
+
+    const codigoUsuario = user?.codigo
+      ? String(user.codigo).trim().toUpperCase()
+      : "";
+
     // Se não tem professor vinculado, está livre (pode assumir)
-    if (
-      !turma.professorVinculadoCodigo ||
-      String(turma.professorVinculadoCodigo).trim() === ""
-    ) {
+    if (!codigoTurma) {
       return true;
     }
+
     // Só tem permissão se o código do usuário logado for exatamente o vinculado
-    return (
-      String(turma.professorVinculadoCodigo).trim() ===
-      String(user.codigo).trim()
-    );
+    return codigoTurma === codigoUsuario;
   };
 
   // Ao clicar para entrar na turma
   const handleEntrarNaTurma = async (turma, idSimulado) => {
-    const temDonoOutro =
-      turma.professorVinculadoCodigo &&
-      String(turma.professorVinculadoCodigo).trim() !== "" &&
-      String(turma.professorVinculadoCodigo).trim() !==
-        String(user.codigo).trim() &&
-      !isGestao;
+    const codigoTurma = turma.professorVinculadoCodigo
+      ? String(turma.professorVinculadoCodigo).trim().toUpperCase()
+      : "";
+    const codigoUsuario = user?.codigo
+      ? String(user.codigo).trim().toUpperCase()
+      : "";
 
-    // Se já pertence a outro professor, avisa e entra estritamente em MODO DE LEITURA
+    const temDonoOutro =
+      codigoTurma !== "" && codigoTurma !== codigoUsuario && !isGestao;
+
+    // Se já pertence a outro professor, avisa e entra em MODO DE LEITURA
     if (temDonoOutro) {
       alert(
-        `Esta turma pertence ao professor ${turma.professorVinculadoNome || "outro colega"}. Apenas visualização de notas permitida.`,
+        `Esta turma pertence ao aplicador ${turma.professorVinculadoNome || "outro colega"}. Apenas visualização de notas permitida.`,
       );
       setTurmaSelecionadaId(turma.id);
       setSimuladoSelecionadoId(idSimulado);
@@ -84,7 +91,7 @@ export default function Professor({
     }
 
     // Se a turma está LIVRE e o usuário é um professor, vincula definitivamente
-    if (!turma.professorVinculadoCodigo && !isGestao && onVincularTurma) {
+    if (!codigoTurma && !isGestao && onVincularTurma) {
       const confirmar = window.confirm(
         `Deseja assumir a turma ${turma.nome}? A partir de agora, ela ficará vinculada a si e apenas você poderá lançar notas nela.`,
       );
@@ -119,10 +126,10 @@ export default function Professor({
   };
 
   const handleSelecionarAluno = (nomeAluno) => {
-    // BLOQUEIO RIGOROSO: Se não tiver permissão, impede absolutamente de abrir o formulário
+    // BLOQUEIO RIGOROSO: Se não tiver permissão, impede absolutamente de abrir para edição
     if (!temPermissaoEdicao(turmaAtiva)) {
       alert(
-        "Acesso negado. Esta turma pertence a outro professor e está em modo apenas leitura.",
+        "Acesso negado. Esta turma pertence a outro aplicador e está em modo apenas leitura.",
       );
       return;
     }
@@ -135,7 +142,7 @@ export default function Professor({
         String(r.turma).trim().toUpperCase() ===
           String(turmaAtiva?.nome).trim().toUpperCase() &&
         String(r.nomeAluno).trim().toUpperCase() ===
-          String(nomeAluno).trim().toUpperCase(),
+          String(alunoAtivo).trim().toUpperCase(),
     );
 
     if (respostaExistente && respostaExistente.gabaritoBruto) {
@@ -265,7 +272,7 @@ export default function Professor({
     e.preventDefault();
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
 
-    // BLOQUEIO RIGOROSO NO SUBMIT: Impede gravação caso não tenha permissão
+    // BLOQUEIO RIGOROSO NO SUBMIT
     if (!temPermissaoEdicao(turmaAtiva)) {
       alert(
         "Ação negada! Você não tem permissão para lançar ou salvar notas nesta turma.",
@@ -395,12 +402,16 @@ export default function Professor({
             {turmas.map((turma) => {
               const idsSimuladosDoBimestre =
                 turma.simuladosVinculados?.[bimestreSelecionado] || [];
+
+              const codigoTurma = turma.professorVinculadoCodigo
+                ? String(turma.professorVinculadoCodigo).trim().toUpperCase()
+                : "";
+              const codigoUsuario = user?.codigo
+                ? String(user.codigo).trim().toUpperCase()
+                : "";
+
               const meuDono =
-                !turma.professorVinculadoCodigo ||
-                String(turma.professorVinculadoCodigo).trim() === "" ||
-                String(turma.professorVinculadoCodigo).trim() ===
-                  String(user.codigo).trim() ||
-                isGestao;
+                !codigoTurma || codigoTurma === codigoUsuario || isGestao;
 
               return (
                 <div
@@ -412,7 +423,7 @@ export default function Professor({
                       <h4 className="font-black text-slate-800 uppercase tracking-wide text-xs sm:text-sm truncate">
                         {turma.nome}
                       </h4>
-                      {turma.professorVinculadoCodigo ? (
+                      {codigoTurma ? (
                         meuDono ? (
                           <Lock
                             className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0 ml-1"
@@ -421,7 +432,7 @@ export default function Professor({
                         ) : (
                           <Lock
                             className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0 ml-1"
-                            title="Turma de Outro Professor (Apenas Leitura)"
+                            title="Turma de Outro Aplicador (Apenas Leitura)"
                           />
                         )
                       ) : (
@@ -432,7 +443,7 @@ export default function Professor({
                       )}
                     </div>
                     <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase truncate">
-                      Responsável:{" "}
+                      Aplicador:{" "}
                       <span
                         className={
                           turma.professorVinculadoNome
@@ -783,7 +794,7 @@ export default function Professor({
                                     }
                                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
                                       selecionada
-                                        ? "bg-[#4b82f6] text-white border-transparent scale-110 shadow-blue-500/20"
+                                        ? "bg-[#4b82f6] text-white border-transparent scale-115 shadow-blue-500/20"
                                         : "bg-white text-slate-400 border border-slate-200 hover:border-blue-300 hover:bg-blue-50"
                                     }`}
                                   >
