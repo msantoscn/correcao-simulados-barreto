@@ -132,6 +132,11 @@ export default function Login() {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1.5">
             Sistema de Gestão de Simulados
           </p>
+          <div className="mt-2.5 inline-block px-3 py-1 bg-slate-100 border border-slate-200 rounded-full">
+            <p className="text-[10px] font-black tracking-wider text-slate-700 uppercase">
+              ESCOLA MUNICIPAL JOSÉ BARRETO DE ARAÚJO
+            </p>
+          </div>
         </div>
 
         {/* Formulário de Acesso Unificado */}
