@@ -365,7 +365,7 @@ export default function Usuarios({
                             className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-bold uppercase outline-none"
                           >
                             <option value="PROFESSOR">Prof</option>
-                            <option value="COORDENACAO">Admin</option>
+                            <option value="COORDENACAO">Coord</option>
                           </select>
                         </div>
                         <div className="col-span-2">
@@ -415,7 +415,7 @@ export default function Usuarios({
                                 : "bg-blue-100 text-blue-700"
                             }`}
                           >
-                            {usuario.cargo === "COORDENACAO" ? "Admin" : "Prof"}
+                            {usuario.cargo === "COORDENACAO" ? "Coord" : "Prof"}
                           </span>
                         </div>
                         <div className="col-span-1 text-center">
