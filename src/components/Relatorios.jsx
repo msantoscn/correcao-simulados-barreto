@@ -1,5 +1,12 @@
 import { useState, useMemo } from "react";
-import { FileSpreadsheet, Download, User, AlertCircle } from "lucide-react";
+import {
+  FileSpreadsheet,
+  Download,
+  User,
+  Calendar,
+  Layers,
+  BookOpen,
+} from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -8,21 +15,35 @@ export default function Relatorios({
   simulados = [],
   respostasAlunos = [],
 }) {
+  const [bimestreSelecionado, setBimestreSelecionado] = useState("");
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
 
-  // Turma e Simulado atuais memoizados para evitar cálculos redundantes
+  // Turma atual memoizada
   const turmaAtual = useMemo(
     () => turmas.find((t) => String(t.id) === String(turmaSelecionadaId)),
     [turmas, turmaSelecionadaId],
   );
 
+  // Lista de IDs dos simulados vinculados à turma selecionada neste bimestre
+  const idsSimuladosVinculados = useMemo(() => {
+    if (!turmaAtual || !bimestreSelecionado) return [];
+    return turmaAtual.simuladosVinculados?.[bimestreSelecionado] || [];
+  }, [turmaAtual, bimestreSelecionado]);
+
+  // Lista de objetos de simulados que estão efetivamente vinculados
+  const simuladosDisponiveis = useMemo(() => {
+    return simulados.filter((s) => idsSimuladosVinculados.includes(s.id));
+  }, [simulados, idsSimuladosVinculados]);
+
+  // Simulado atual memoizado
   const simuladoAtual = useMemo(() => {
     return (
       simulados.find((s) => String(s.id) === String(simuladoSelecionadoId)) ||
-      simulados[0]
+      simuladosDisponiveis[0] ||
+      null
     );
-  }, [simulados, simuladoSelecionadoId]);
+  }, [simulados, simuladoSelecionadoId, simuladosDisponiveis]);
 
   // Normalização das disciplinas do simulado
   const disciplinasDoSimulado = useMemo(() => {
@@ -41,7 +62,7 @@ export default function Relatorios({
 
   // Filtragem das respostas da turma
   const respostasDaTurma = useMemo(() => {
-    if (!turmaSelecionadaId || !turmaAtual) return [];
+    if (!turmaSelecionadaId || !turmaAtual || !simuladoAtual) return [];
 
     return respostasAlunos.filter((resp) => {
       const matchTurma =
@@ -53,25 +74,18 @@ export default function Relatorios({
             .trim()
             .toUpperCase();
 
-      const matchSimulado = simuladoSelecionadoId
-        ? String(resp.simuladoId) === String(simuladoSelecionadoId) ||
-          String(resp.simuladoNome || resp.simulado || "")
+      const matchSimulado =
+        String(resp.simuladoId) === String(simuladoAtual.id) ||
+        String(resp.simuladoNome || resp.simulado || "")
+          .trim()
+          .toUpperCase() ===
+          String(simuladoAtual?.nome || simuladoAtual?.titulo || "")
             .trim()
-            .toUpperCase() ===
-            String(simuladoAtual?.nome || simuladoAtual?.titulo || "")
-              .trim()
-              .toUpperCase()
-        : true;
+            .toUpperCase();
 
       return matchTurma && matchSimulado;
     });
-  }, [
-    respostasAlunos,
-    turmaSelecionadaId,
-    turmaAtual,
-    simuladoSelecionadoId,
-    simuladoAtual,
-  ]);
+  }, [respostasAlunos, turmaSelecionadaId, turmaAtual, simuladoAtual]);
 
   const totalQuestoesSimulado = useMemo(() => {
     return disciplinasDoSimulado.reduce(
@@ -82,7 +96,6 @@ export default function Relatorios({
     );
   }, [disciplinasDoSimulado]);
 
-  // Função auxiliar para obter a quantidade de questões de uma disciplina
   const getQtdQuestao = (disc) =>
     disc.gabarito?.length ||
     disc.questoes?.length ||
@@ -92,13 +105,12 @@ export default function Relatorios({
 
   // Função para gerar e descarregar o PDF
   const gerarPDF = () => {
-    if (!turmaAtual) return;
+    if (!turmaAtual || !simuladoAtual) return;
 
     const doc = new jsPDF("landscape");
     const nomeSimulado =
       simuladoAtual?.nome || simuladoAtual?.titulo || "Geral";
 
-    // Cabeçalho do PDF
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 41, 59);
@@ -108,12 +120,11 @@ export default function Relatorios({
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 116, 139);
     doc.text(
-      `Turma: ${turmaAtual.nome}   |   Simulado: ${nomeSimulado}`,
+      `Bimestre: ${bimestreSelecionado}º   |   Turma: ${turmaAtual.nome}   |   Simulado: ${nomeSimulado}`,
       14,
       21,
     );
 
-    // Colunas
     const colunas = [
       { header: "ALUNO", dataKey: "aluno" },
       ...disciplinasDoSimulado.map((disc) => {
@@ -129,7 +140,6 @@ export default function Relatorios({
       },
     ];
 
-    // Linhas
     const linhas = turmaAtual.alunos.map((nomeAluno, index) => {
       const linhaData = {};
       const numAluno = String(index + 1).padStart(2, "0");
@@ -212,12 +222,12 @@ export default function Relatorios({
       },
     });
 
-    doc.save(`Relatório de Notas ${turmaAtual.nome}.pdf`);
+    doc.save(`Relatório_${turmaAtual.nome}_${nomeSimulado}.pdf`);
   };
 
   return (
     <div className="space-y-6 pb-12 max-w-7xl mx-auto">
-      {/* Cabeçalho e Filtros */}
+      {/* Cabeçalho e Seletores em Menu Suspenso (Select) */}
       <div className="bg-white p-6 rounded-xl shadow-xs border border-gray-100">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-gray-100">
           <div>
@@ -226,12 +236,12 @@ export default function Relatorios({
               Desempenho
             </h2>
             <p className="text-xs text-gray-500 mt-1">
-              Visualize o rendimento detalhado por turma e exporte os dados
-              consolidados.
+              Selecione o bimestre, a turma e o simulado para consultar os
+              resultados.
             </p>
           </div>
 
-          {turmaSelecionadaId && (
+          {turmaSelecionadaId && simuladoAtual && (
             <button
               onClick={gerarPDF}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow cursor-pointer active:scale-95"
@@ -241,65 +251,97 @@ export default function Relatorios({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          {/* PASSO 1: SELECIONAR BIMESTRE */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
-              1. Selecionar Turma
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" /> 1. Selecionar
+              Bimestre
             </label>
-            {turmas.length === 0 ? (
-              <div className="flex items-center gap-2 text-sm text-amber-700 font-medium bg-amber-50 p-3.5 rounded-lg border border-amber-200">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Nenhuma turma registada.</span>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {turmas.map((turma) => (
-                  <button
-                    key={turma.id}
-                    onClick={() => setTurmaSelecionadaId(String(turma.id))}
-                    className={`px-4 py-2 text-xs font-bold uppercase rounded-lg transition-all cursor-pointer border ${
-                      String(turmaSelecionadaId) === String(turma.id)
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    {turma.nome}
-                  </button>
-                ))}
-              </div>
-            )}
+            <select
+              value={bimestreSelecionado}
+              onChange={(e) => {
+                setBimestreSelecionado(e.target.value);
+                setTurmaSelecionadaId("");
+                setSimuladoSelecionadoId("");
+              }}
+              className="w-full p-2.5 border border-gray-200 rounded-lg text-xs bg-gray-50 font-bold text-gray-700 uppercase outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs cursor-pointer"
+            >
+              <option value="">-- Selecione o Bimestre --</option>
+              <option value="1">1º Bimestre</option>
+              <option value="2">2º Bimestre</option>
+              <option value="3">3º Bimestre</option>
+              <option value="4">4º Bimestre</option>
+            </select>
           </div>
 
-          {turmaSelecionadaId && simulados.length > 0 && (
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
-                2. Selecionar Simulado
-              </label>
-              <select
-                value={simuladoSelecionadoId || simuladoAtual?.id || ""}
-                onChange={(e) => setSimuladoSelecionadoId(e.target.value)}
-                className="w-full p-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 font-bold text-gray-700 uppercase outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs cursor-pointer"
-              >
-                {simulados.map((sim) => (
-                  <option key={sim.id} value={sim.id}>
-                    {sim.nome || sim.titulo || "Simulado"}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* PASSO 2: SELECIONAR TURMA (Habilitado apenas se houver bimestre) */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-blue-600" /> 2. Selecionar
+              Turma
+            </label>
+            <select
+              disabled={!bimestreSelecionado || turmas.length === 0}
+              value={turmaSelecionadaId}
+              onChange={(e) => {
+                setTurmaSelecionadaId(e.target.value);
+                setSimuladoSelecionadoId("");
+              }}
+              className="w-full p-2.5 border border-gray-200 rounded-lg text-xs bg-gray-50 font-bold text-gray-700 uppercase outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">-- Selecione a Turma --</option>
+              {turmas.map((turma) => (
+                <option key={turma.id} value={turma.id}>
+                  {turma.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* PASSO 3: SELECIONAR SIMULADO VINCULADO (Habilitado apenas se houver turma) */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-blue-600" /> 3. Simulado
+              Vinculado
+            </label>
+            <select
+              disabled={
+                !turmaSelecionadaId || simuladosDisponiveis.length === 0
+              }
+              value={simuladoSelecionadoId || simuladoAtual?.id || ""}
+              onChange={(e) => setSimuladoSelecionadoId(e.target.value)}
+              className="w-full p-2.5 border border-gray-200 rounded-lg text-xs bg-gray-50 font-bold text-gray-700 uppercase outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {simuladosDisponiveis.length === 0
+                  ? "-- Nenhum simulado vinculado --"
+                  : "-- Selecione o Simulado --"}
+              </option>
+              {simuladosDisponiveis.map((sim) => (
+                <option key={sim.id} value={sim.id}>
+                  {sim.nome || sim.titulo || "Simulado"}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Tabela de Visualização na Tela */}
-      {turmaSelecionadaId ? (
+      {/* Tabela de Visualização dos Resultados */}
+      {turmaSelecionadaId && simuladoAtual ? (
         <div className="bg-white p-6 rounded-xl shadow-xs border border-gray-100 overflow-hidden">
-          <div className="flex items-center gap-2.5 mb-4 text-gray-800">
-            <User className="w-5 h-5 text-blue-600" />
-            <h3 className="text-sm font-bold uppercase tracking-wide">
-              Resumo de Desempenho da Turma:{" "}
-              <span className="text-blue-600">{turmaAtual?.nome}</span>
-            </h3>
+          <div className="flex items-center justify-between mb-4 text-gray-800 pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <User className="w-5 h-5 text-blue-600" />
+              <h3 className="text-sm font-bold uppercase tracking-wide">
+                Desempenho da Turma:{" "}
+                <span className="text-blue-600">{turmaAtual?.nome}</span>
+                <span className="text-gray-400 font-normal ml-2">
+                  ({simuladoAtual.nome || simuladoAtual.titulo})
+                </span>
+              </h3>
+            </div>
           </div>
 
           {!turmaAtual?.alunos || turmaAtual.alunos.length === 0 ? (
@@ -464,7 +506,11 @@ export default function Relatorios({
         <div className="bg-white p-16 rounded-xl border border-dashed border-gray-200 text-center shadow-xs">
           <FileSpreadsheet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-            Selecione uma turma para visualizar os resultados.
+            {!bimestreSelecionado
+              ? "Selecione o bimestre para começar."
+              : !turmaSelecionadaId
+                ? "Selecione a turma para prosseguir."
+                : "Selecione um simulado vinculado para visualizar os resultados."}
           </p>
         </div>
       )}

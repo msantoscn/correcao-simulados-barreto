@@ -7,11 +7,13 @@ import {
   FileSpreadsheet,
   LogOut,
   Loader2,
+  UserCog,
 } from "lucide-react";
 import Admin from "./components/Admin.jsx";
 import Turmas from "./components/Turmas.jsx";
 import Professor from "./components/Professor.jsx";
 import Relatorios from "./components/Relatorios.jsx";
+import Usuarios from "./components/Usuarios.jsx";
 import Login from "./components/Login.jsx";
 import { useFirebase } from "./useFirebase.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
@@ -29,12 +31,17 @@ function MainContent() {
     simulados,
     turmas,
     respostasAlunos,
+    usuarios,
     loading,
     salvarSimulado,
     deletarSimulado,
     salvarTurma,
     deletarTurma,
     salvarRespostaAluno,
+    deletarRespostaAluno,
+    vincularTurmaProfessor,
+    salvarUsuarios,
+    deletarUsuario,
   } = useFirebase();
 
   // 1. A carregar verificação de login
@@ -134,13 +141,23 @@ function MainContent() {
             </NavButton>
 
             {isGestao && (
-              <NavButton
-                active={abaExibida === "relatorios"}
-                onClick={() => setAbaAtiva("relatorios")}
-                icon={FileSpreadsheet}
-              >
-                Relatórios
-              </NavButton>
+              <>
+                <NavButton
+                  active={abaExibida === "relatorios"}
+                  onClick={() => setAbaAtiva("relatorios")}
+                  icon={FileSpreadsheet}
+                >
+                  Relatórios
+                </NavButton>
+
+                <NavButton
+                  active={abaExibida === "usuarios"}
+                  onClick={() => setAbaAtiva("usuarios")}
+                  icon={UserCog}
+                >
+                  Acessos
+                </NavButton>
+              </>
             )}
 
             {/* Botão de Sair Desktop */}
@@ -168,6 +185,7 @@ function MainContent() {
         {abaExibida === "turmas" && isGestao && (
           <Turmas
             turmas={turmas}
+            simuladosDisponiveis={simulados}
             onSalvarTurmas={salvarTurma}
             onDeletarTurma={deletarTurma}
           />
@@ -179,6 +197,8 @@ function MainContent() {
             turmas={turmas}
             respostasAlunos={respostasAlunos}
             onSalvarResposta={salvarRespostaAluno}
+            onExcluirResposta={deletarRespostaAluno}
+            onVincularTurma={vincularTurmaProfessor}
           />
         )}
 
@@ -187,6 +207,14 @@ function MainContent() {
             turmas={turmas}
             simulados={simulados}
             respostasAlunos={respostasAlunos}
+          />
+        )}
+
+        {abaExibida === "usuarios" && isGestao && (
+          <Usuarios
+            usuarios={usuarios || []}
+            onSalvarUsuarios={salvarUsuarios}
+            onDeletarUsuario={deletarUsuario}
           />
         )}
       </main>
@@ -198,7 +226,6 @@ function MainContent() {
    SUB-COMPONENTES (Clean Code)
    ======================================================================== */
 
-// Componente reutilizável para os botões do Menu
 function NavButton({ active, onClick, icon: Icon, children }) {
   return (
     <button

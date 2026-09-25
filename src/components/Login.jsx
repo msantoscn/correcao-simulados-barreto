@@ -1,5 +1,14 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { db } from "../firebase"; // Ajuste o caminho se necessário
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
 import {
   Award,
   GraduationCap,
@@ -9,14 +18,16 @@ import {
   Lock,
   KeyRound,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
 
   // Estados da interface
-  const [perfilSelecionado, setPerfilSelecionado] = useState(null); // 'PROFESSOR' ou 'GESTAO'
+  const [perfilSelecionado, setPerfilSelecionado] = useState(null);
   const [isPrimeiroAcesso, setIsPrimeiroAcesso] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Formulário
   const [codigo, setCodigo] = useState("");
@@ -25,7 +36,7 @@ export default function Login() {
   const [nome, setNome] = useState("");
   const [erro, setErro] = useState("");
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErro("");
 
@@ -34,40 +45,102 @@ export default function Login() {
       return;
     }
 
-    if (isPrimeiroAcesso) {
-      if (senha !== confirmarSenha) {
-        setErro("As senhas não coincidem.");
-        return;
-      }
-      if (senha.length < 4) {
-        setErro("A senha deve ter pelo menos 4 caracteres.");
-        return;
-      }
-
-      const chavePrimeiroAcesso = `senha_${perfilSelecionado}_${codigo.trim().toLowerCase()}`;
-      localStorage.setItem(chavePrimeiroAcesso, senha);
-    } else {
-      const chavePrimeiroAcesso = `senha_${perfilSelecionado}_${codigo.trim().toLowerCase()}`;
-      const senhaSalva = localStorage.getItem(chavePrimeiroAcesso);
-
-      if (senhaSalva && senhaSalva !== senha) {
-        setErro("Senha incorreta. Tente novamente.");
-        return;
-      }
+    if (isPrimeiroAcesso && senha !== confirmarSenha) {
+      setErro("As senhas não coincidem.");
+      return;
+    }
+    if (isPrimeiroAcesso && senha.length < 4) {
+      setErro("A senha deve ter pelo menos 4 caracteres.");
+      return;
     }
 
-    const cargoFinal =
-      perfilSelecionado === "PROFESSOR" ? "PROFESSOR" : "COORDENACAO";
+    setLoading(true);
+    const codigoUpper = codigo.trim().toUpperCase();
 
-    login({
-      codigo: codigo.trim().toUpperCase(),
-      nome:
-        nome.trim() ||
-        (perfilSelecionado === "PROFESSOR"
-          ? `Prof. ${codigo.toUpperCase()}`
-          : `Gestor ${codigo.toUpperCase()}`),
-      cargo: cargoFinal,
-    });
+    try {
+      // 1. Busca o utilizador no Firebase
+      const q = query(
+        collection(db, "usuarios"),
+        where("codigo", "==", codigoUpper),
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        setErro(
+          "Código não encontrado. Verifique se o seu acesso foi libertado pela gestão.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+
+      // 2. Valida o cargo (impede que um professor entre como gestão)
+      if (
+        perfilSelecionado === "GESTAO" &&
+        userData.cargo !== "COORDENACAO" &&
+        userData.cargo !== "DIRECAO" &&
+        userData.cargo !== "ADMIN"
+      ) {
+        setErro("Acesso negado. Este código não tem permissões de Gestão.");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Lógica de Primeiro Acesso
+      if (isPrimeiroAcesso) {
+        if (userData.senha) {
+          setErro(
+            "Este código já possui uma senha registada. Faça o login normalmente.",
+          );
+          setLoading(false);
+          return;
+        }
+
+        const nomeFinal =
+          nome.trim() || userData.nome || `Utilizador ${codigoUpper}`;
+
+        // Atualiza a senha e o nome no Firebase
+        await updateDoc(doc(db, "usuarios", userId), {
+          senha: senha,
+          nome: nomeFinal,
+        });
+
+        login({
+          codigo: codigoUpper,
+          nome: nomeFinal,
+          cargo: userData.cargo,
+        });
+      } else {
+        // 4. Lógica de Login Normal
+        if (!userData.senha) {
+          setErro(
+            "Senha não cadastrada. Utilize a opção 'Primeiro acesso' para criar a sua senha.",
+          );
+          setLoading(false);
+          return;
+        }
+
+        if (userData.senha !== senha) {
+          setErro("Senha incorreta. Tente novamente.");
+          setLoading(false);
+          return;
+        }
+
+        login({
+          codigo: userData.codigo,
+          nome: userData.nome,
+          cargo: userData.cargo,
+        });
+      }
+    } catch (error) {
+      console.error("Erro na autenticação:", error);
+      setErro("Erro ao comunicar com o servidor. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const voltarSelecao = () => {
@@ -100,7 +173,6 @@ export default function Login() {
               Selecione o perfil
             </p>
 
-            {/* Opção Professor */}
             <button
               onClick={() => setPerfilSelecionado("PROFESSOR")}
               className="w-full p-4 rounded-xl border border-slate-200 hover:border-[#4b82f6] bg-white hover:bg-blue-50/50 flex items-center justify-between transition-all duration-200 group cursor-pointer shadow-sm hover:shadow-md"
@@ -116,7 +188,6 @@ export default function Login() {
               <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#4b82f6] group-hover:translate-x-0.5 transition-all" />
             </button>
 
-            {/* Opção Direção / Coordenação */}
             <button
               onClick={() => setPerfilSelecionado("GESTAO")}
               className="w-full p-4 rounded-xl border border-slate-200 hover:border-slate-800 bg-white hover:bg-slate-50 flex items-center justify-between transition-all duration-200 group cursor-pointer shadow-sm hover:shadow-md"
@@ -167,12 +238,11 @@ export default function Login() {
               </div>
             )}
 
-            {/* Login / Cód. SIPAE */}
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                 {perfilSelecionado === "PROFESSOR"
                   ? "Cód. do SIPAE"
-                  : "Usuário"}
+                  : "Cód. Gestão"}
               </label>
               <div className="relative flex items-center">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
@@ -184,14 +254,13 @@ export default function Login() {
                   placeholder={
                     perfilSelecionado === "PROFESSOR"
                       ? "Ex: SIPAE-1024"
-                      : "Ex: coord.maria"
+                      : "Ex: ADMIN-01"
                   }
                   className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
                 />
               </div>
             </div>
 
-            {/* Nome (Apenas Primeiro Acesso) */}
             {isPrimeiroAcesso && (
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
@@ -211,7 +280,6 @@ export default function Login() {
               </div>
             )}
 
-            {/* Senha */}
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                 Senha
@@ -229,7 +297,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Confirmar Senha (Apenas Primeiro Acesso) */}
             {isPrimeiroAcesso && (
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
@@ -249,23 +316,24 @@ export default function Login() {
               </div>
             )}
 
-            {/* Botão Entrar / Cadastrar */}
             <button
               type="submit"
-              className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer mt-2 active:scale-[0.99]"
+              disabled={loading}
+              className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 disabled:bg-blue-400 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer mt-2 active:scale-[0.99] flex items-center justify-center gap-2"
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {isPrimeiroAcesso ? "Cadastrar e Entrar" : "Entrar"}
             </button>
 
-            {/* Link Primeiro Acesso */}
             <div className="text-center pt-1">
               <button
                 type="button"
+                disabled={loading}
                 onClick={() => {
                   setIsPrimeiroAcesso(!isPrimeiroAcesso);
                   setErro("");
                 }}
-                className="text-[11px] text-[#4b82f6] font-bold uppercase tracking-wider hover:underline cursor-pointer"
+                className="text-[11px] text-[#4b82f6] font-bold uppercase tracking-wider hover:underline cursor-pointer disabled:opacity-50"
               >
                 {isPrimeiroAcesso
                   ? "Já possui senha? Fazer Login"

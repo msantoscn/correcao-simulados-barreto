@@ -13,6 +13,7 @@ export function useFirebase() {
   const [simulados, setSimulados] = useState([]);
   const [turmas, setTurmas] = useState([]);
   const [respostasAlunos, setRespostasAlunos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,7 +30,12 @@ export function useFirebase() {
       setTurmas(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 
-    // 3. Escuta a coleção de Respostas e Notas em tempo real
+    // 3. Escuta a coleção de Usuários (Acessos) em tempo real
+    const unsubUsuarios = onSnapshot(collection(db, "usuarios"), (snapshot) => {
+      setUsuarios(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+
+    // 4. Escuta a coleção de Respostas e Notas em tempo real
     const unsubRespostas = onSnapshot(
       collection(db, "respostas_alunos"),
       (snapshot) => {
@@ -43,6 +49,7 @@ export function useFirebase() {
     return () => {
       unsubSimulados();
       unsubTurmas();
+      unsubUsuarios();
       unsubRespostas();
     };
   }, []);
@@ -62,7 +69,7 @@ export function useFirebase() {
     await deleteDoc(doc(db, "simulados", id));
   };
 
-  // --- Operações para Turmas ---
+  // --- Operações para Turmas (Corrigido para incluir simuladosVinculados) ---
   const salvarTurma = async (turmasAtualizadas) => {
     if (Array.isArray(turmasAtualizadas)) {
       for (const turma of turmasAtualizadas) {
@@ -72,6 +79,12 @@ export function useFirebase() {
           {
             nome: turma.nome,
             alunos: turma.alunos || [],
+            simuladosVinculados: turma.simuladosVinculados || {
+              1: [],
+              2: [],
+              3: [],
+              4: [],
+            },
           },
           { merge: true },
         );
@@ -83,6 +96,12 @@ export function useFirebase() {
         {
           nome: turmasAtualizadas.nome,
           alunos: turmasAtualizadas.alunos || [],
+          simuladosVinculados: turmasAtualizadas.simuladosVinculados || {
+            1: [],
+            2: [],
+            3: [],
+            4: [],
+          },
         },
         { merge: true },
       );
@@ -93,10 +112,44 @@ export function useFirebase() {
     await deleteDoc(doc(db, "turmas", String(id)));
   };
 
+  // --- Operações para Usuários (Lista VIP) ---
+  const salvarUsuarios = async (usuariosAtualizados) => {
+    if (Array.isArray(usuariosAtualizados)) {
+      for (const usuario of usuariosAtualizados) {
+        const userRef = doc(db, "usuarios", String(usuario.id));
+        await setDoc(
+          userRef,
+          {
+            codigo: usuario.codigo,
+            nome: usuario.nome || "",
+            cargo: usuario.cargo || "PROFESSOR",
+            senha: usuario.senha || "",
+          },
+          { merge: true },
+        );
+      }
+    } else if (usuariosAtualizados && usuariosAtualizados.id) {
+      const userRef = doc(db, "usuarios", String(usuariosAtualizados.id));
+      await setDoc(
+        userRef,
+        {
+          codigo: usuariosAtualizados.codigo,
+          nome: usuariosAtualizados.nome || "",
+          cargo: usuariosAtualizados.cargo || "PROFESSOR",
+          senha: usuariosAtualizados.senha || "",
+        },
+        { merge: true },
+      );
+    }
+  };
+
+  const deletarUsuario = async (id) => {
+    await deleteDoc(doc(db, "usuarios", String(id)));
+  };
+
   // --- Operações para Respostas dos Alunos ---
   const salvarRespostaAluno = async (registo) => {
     try {
-      // Limpa e remove acentos ou caracteres especiais do ID para evitar rejeição do Firestore
       const idLimpo =
         `${registo.simuladoId}_${registo.turma}_${registo.nomeAluno}`
           .normalize("NFD")
@@ -104,10 +157,8 @@ export function useFirebase() {
           .replace(/[^a-zA-Z0-9_]/g, "_")
           .toLowerCase();
 
-      // Remove valores 'undefined' recursivamente para o Firestore aceitar o objeto
       const dadosSanitizados = JSON.parse(JSON.stringify(registo));
 
-      // Salva ou atualiza na coleção 'respostas_alunos'
       const docRef = doc(db, "respostas_alunos", idLimpo);
       await setDoc(docRef, dadosSanitizados, { merge: true });
 
@@ -123,11 +174,14 @@ export function useFirebase() {
     simulados,
     turmas,
     respostasAlunos,
+    usuarios,
     loading,
     salvarSimulado,
     deletarSimulado,
     salvarTurma,
     deletarTurma,
+    salvarUsuarios,
+    deletarUsuario,
     salvarRespostaAluno,
   };
 }

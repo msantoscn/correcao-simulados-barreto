@@ -4,7 +4,6 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  // Ler o localStorage diretamente na inicialização do estado (sem useEffect)
   const [user, setUser] = useState(() => {
     try {
       const usuarioSalvo = localStorage.getItem("simulatech_user");
@@ -26,7 +25,10 @@ export function AuthProvider({ children }) {
   };
 
   const isProfessor = user?.cargo === "PROFESSOR";
-  const isGestao = user?.cargo === "COORDENACAO" || user?.cargo === "DIRECAO";
+  const isGestao =
+    user?.cargo === "COORDENACAO" ||
+    user?.cargo === "DIRECAO" ||
+    user?.cargo === "ADMIN";
 
   return (
     <AuthContext.Provider

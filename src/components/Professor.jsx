@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   UserCheck,
-  CheckCircle,
   ArrowLeft,
-  User,
   Award,
   Edit3,
   PlusCircle,
+  Eye,
+  Trash2,
+  Eraser,
+  Lock,
+  Unlock,
+  Calendar,
+  Users,
 } from "lucide-react";
 
 export default function Professor({
@@ -14,19 +20,25 @@ export default function Professor({
   turmas = [],
   respostasAlunos = [],
   onSalvarResposta,
+  onExcluirResposta,
+  onVincularTurma,
 }) {
+  const { user, isGestao } = useAuth();
+
+  // Novos estados para a seleção de bimestre e múltiplos simulados
+  const [bimestreSelecionado, setBimestreSelecionado] = useState(null);
   const [passo, setPasso] = useState(1);
-  const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
-  const [professorAplicador, setProfessorAplicador] = useState("");
+  const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState(""); // Agora o simulado também precisa de ser selecionado
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
 
-  const simuladoAtivo = simulados.find(
-    (s) => String(s.id) === String(simuladoSelecionadoId),
-  );
+  // Turma e Simulado ativos baseados nas seleções
   const turmaAtiva = turmas.find(
     (t) => String(t.id) === String(turmaSelecionadaId),
+  );
+  const simuladoAtivo = simulados.find(
+    (s) => String(s.id) === String(simuladoSelecionadoId),
   );
 
   const totalQuestoesSimulado =
@@ -35,22 +47,36 @@ export default function Professor({
       0,
     ) || 0;
 
-  const handleEntrarNaTurma = (e) => {
-    e.preventDefault();
-    if (
-      !simuladoSelecionadoId ||
-      !turmaSelecionadaId ||
-      !professorAplicador.trim()
-    ) {
-      return alert(
-        "Preencha o Simulado, a Turma e o Nome do Professor Aplicador.",
+  const temPermissaoEdicao = (turma) => {
+    if (isGestao) return true;
+    if (!turma?.professorVinculadoCodigo) return true;
+    return turma.professorVinculadoCodigo === user.codigo;
+  };
+
+  const handleEntrarNaTurma = async (turma, idSimulado) => {
+    if (!turma.professorVinculadoCodigo && !isGestao) {
+      const confirmacao = window.confirm(
+        `Deseja assumir a turma ${turma.nome}? Apenas você e a Gestão poderão lançar notas nela.`,
       );
+      if (!confirmacao) return;
+
+      if (onVincularTurma) {
+        await onVincularTurma(turma.id, {
+          codigo: user.codigo,
+          nome: user.nome,
+        });
+      }
     }
+
+    setTurmaSelecionadaId(turma.id);
+    setSimuladoSelecionadoId(idSimulado);
     setPasso(2);
   };
 
   const handleVoltarSelecao = () => {
     setPasso(1);
+    setTurmaSelecionadaId("");
+    setSimuladoSelecionadoId("");
     setAlunoAtivo(null);
     setRespostasProfessor({});
   };
@@ -60,7 +86,7 @@ export default function Professor({
 
     const respostaExistente = respostasAlunos.find(
       (r) =>
-        String(r.simuladoId) === String(simuladoSelecionadoId) &&
+        String(r.simuladoId) === String(simuladoAtivo?.id) &&
         String(r.turma).trim().toUpperCase() ===
           String(turmaAtiva?.nome).trim().toUpperCase() &&
         String(r.nomeAluno).trim().toUpperCase() ===
@@ -78,70 +104,40 @@ export default function Professor({
     }
   };
 
-  useEffect(() => {
-    if (alunoAtivo && simuladoAtivo?.disciplinas?.[0]) {
-      const primeiraDisc = simuladoAtivo.disciplinas[0].nome;
-      setTimeout(() => {
-        const primeiroInput = document.getElementById(
-          `prof-q-${primeiraDisc}-0`,
-        );
-        if (primeiroInput) primeiroInput.focus();
-      }, 100);
-    }
-  }, [alunoAtivo, simuladoAtivo]);
+  const handleRespostaClick = (disciplinaNome, index, alternativa) => {
+    setRespostasProfessor((prev) => {
+      const respostaAtual = prev[disciplinaNome]?.[index];
+      const novaResposta = respostaAtual === alternativa ? "" : alternativa;
 
-  const handleRespostaProfessor = (disciplinaNome, index, valor, e) => {
-    const val = valor.toUpperCase();
-
-    if (e?.nativeEvent?.inputType === "deleteContentBackward" && !val) {
-      setRespostasProfessor((prev) => ({
+      return {
         ...prev,
         [disciplinaNome]: {
           ...(prev[disciplinaNome] || {}),
-          [index]: "",
+          [index]: novaResposta,
         },
-      }));
-      if (index > 0) {
-        const campoAnterior = document.getElementById(
-          `prof-q-${disciplinaNome}-${index - 1}`,
-        );
-        if (campoAnterior) campoAnterior.focus();
-      }
-      return;
+      };
+    });
+  };
+
+  const handleLimparRespostas = () => {
+    if (
+      window.confirm(
+        `Tem a certeza que deseja limpar as marcações atuais de ${alunoAtivo}?`,
+      )
+    ) {
+      setRespostasProfessor({});
     }
+  };
 
-    if (val && !["A", "B", "C", "D", "E"].includes(val)) {
-      return;
-    }
-
-    setRespostasProfessor((prev) => ({
-      ...prev,
-      [disciplinaNome]: {
-        ...(prev[disciplinaNome] || {}),
-        [index]: val,
-      },
-    }));
-
-    if (["A", "B", "C", "D", "E"].includes(val)) {
-      const proximoCampo = document.getElementById(
-        `prof-q-${disciplinaNome}-${index + 1}`,
-      );
-      if (proximoCampo) {
-        proximoCampo.focus();
-      } else {
-        const discIndex = simuladoAtivo.disciplinas.findIndex(
-          (d) => d.nome === disciplinaNome,
-        );
-        if (
-          discIndex !== -1 &&
-          discIndex + 1 < simuladoAtivo.disciplinas.length
-        ) {
-          const proximaDisc = simuladoAtivo.disciplinas[discIndex + 1].nome;
-          const primeiroCampoProximaDisc = document.getElementById(
-            `prof-q-${proximaDisc}-0`,
-          );
-          if (primeiroCampoProximaDisc) primeiroCampoProximaDisc.focus();
-        }
+  const handleExcluirRespostaAluno = async (registoId, nomeAluno) => {
+    if (
+      window.confirm(
+        `ATENÇÃO: Deseja apagar definitivamente o gabarito e nota de ${nomeAluno}?`,
+      )
+    ) {
+      if (onExcluirResposta) {
+        await onExcluirResposta(registoId);
+        alert(`Registo de ${nomeAluno} excluído com sucesso.`);
       }
     }
   };
@@ -193,9 +189,7 @@ export default function Professor({
       };
     });
 
-    if (!temAlgumaRespostaValida) {
-      return null;
-    }
+    if (!temAlgumaRespostaValida) return null;
 
     const percentualGeral =
       totalQGeral > 0 ? Math.round((totalAcertosGeral / totalQGeral) * 100) : 0;
@@ -239,7 +233,7 @@ export default function Professor({
         simuladoNome: simuladoAtivo.nome,
         turma: turmaAtiva.nome,
         nomeAluno: alunoAtivo,
-        professorAplicador: professorAplicador.trim(),
+        professorAplicador: isGestao ? "GESTÃO" : user.nome,
         totalAcertos: calculo.totalAcertos,
         totalQuestoes: calculo.totalQuestoes,
         percentualGeral: calculo.percentualGeral,
@@ -250,100 +244,191 @@ export default function Professor({
       };
 
       await onSalvarResposta(dadosRegisto);
-
       alert(
         `Respostas guardadas com sucesso! ${alunoAtivo}: ${calculo.percentualGeral}% de acertos`,
       );
-
       setAlunoAtivo(null);
       setRespostasProfessor({});
     } catch (error) {
       console.error("Erro ao guardar respostas:", error);
-      alert(
-        "Erro ao guardar respostas. Verifique a consola para mais detalhes.",
-      );
+      alert("Erro ao guardar respostas.");
     }
   };
 
+  // =========================================================
+  // ETAPA 0: SELEÇÃO DE BIMESTRE
+  // =========================================================
+  if (!bimestreSelecionado) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-200/80 max-w-3xl mx-auto mt-8">
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 border border-blue-100">
+            <Calendar className="w-8 h-8 text-[#4b82f6]" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-wide">
+            Selecione o Bimestre
+          </h2>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">
+            Identificado como: {user.nome} {isGestao && "(Gestão)"}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {["1", "2", "3", "4"].map((b) => (
+            <button
+              key={b}
+              onClick={() => setBimestreSelecionado(b)}
+              className="p-6 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-[#4b82f6] hover:bg-blue-50 hover:shadow-sm transition-all group flex flex-col items-center cursor-pointer"
+            >
+              <span className="text-3xl font-black text-slate-700 group-hover:text-[#4b82f6] transition-colors">
+                {b}º
+              </span>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 group-hover:text-[#4b82f6]">
+                Bimestre
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // ETAPA 1 E 2: LISTAGEM E FORMULÁRIO
+  // =========================================================
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 lg:p-6 border border-slate-200/80">
-      <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-6">
-        <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
-          <UserCheck className="text-slate-600 w-5 h-5" />
-        </div>
-        <h2 className="text-lg font-black tracking-wide uppercase text-slate-800">
-          Aplicação e Correção de{" "}
-          <span className="text-[#4b82f6]">Simulados</span>
-        </h2>
-      </div>
-
-      {passo === 1 && (
-        <form onSubmit={handleEntrarNaTurma} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                Simulado
-              </label>
-              <select
-                value={simuladoSelecionadoId}
-                onChange={(e) => setSimuladoSelecionadoId(e.target.value)}
-                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-base sm:text-sm font-medium outline-none transition-all uppercase"
-                required
-              >
-                <option value="">-- Selecione o Simulado --</option>
-                {simulados.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                Turma
-              </label>
-              <select
-                value={turmaSelecionadaId}
-                onChange={(e) => setTurmaSelecionadaId(e.target.value)}
-                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-base sm:text-sm font-medium outline-none transition-all uppercase"
-                required
-              >
-                <option value="">-- Selecione a Turma --</option>
-                {turmas.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                Professor Aplicador
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Prof. Carlos Santos"
-                value={professorAplicador}
-                onChange={(e) =>
-                  setProfessorAplicador(e.target.value.toUpperCase())
-                }
-                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-base sm:text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400"
-                required
-              />
+      {/* Cabeçalho Principal Partilhado */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
+            <UserCheck className="text-slate-600 w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-black tracking-wide uppercase text-slate-800 leading-tight">
+              Lançamento de <span className="text-[#4b82f6]">Notas</span>
+            </h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
+                {bimestreSelecionado}º BIMESTRE
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {user.nome} {isGestao && "(Gestão)"}
+              </span>
             </div>
           </div>
+        </div>
 
+        {/* Botão para trocar de bimestre se estiver no Passo 1 */}
+        {passo === 1 && (
           <button
-            type="submit"
-            className="w-full py-3.5 lg:py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all text-xs shadow-sm shadow-blue-500/20 cursor-pointer active:scale-[0.98]"
+            onClick={() => setBimestreSelecionado(null)}
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            Acessar Lista da Turma
+            <ArrowLeft className="w-3.5 h-3.5" /> Trocar Bimestre
           </button>
-        </form>
+        )}
+      </div>
+
+      {/* PASSO 1: Dashboard de Turmas */}
+      {passo === 1 && (
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Users className="w-4 h-4 text-slate-400" />
+            Selecione uma Turma e um Simulado
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {turmas.map((turma) => {
+              const podeEditar = temPermissaoEdicao(turma);
+              const idsSimuladosDoBimestre =
+                turma.simuladosVinculados?.[bimestreSelecionado] || [];
+
+              return (
+                <div
+                  key={turma.id}
+                  className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between hover:border-blue-300 transition-colors"
+                >
+                  <div className="mb-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-black text-slate-800 uppercase tracking-wide text-sm">
+                        {turma.nome}
+                      </h4>
+                      {turma.professorVinculadoCodigo ? (
+                        <Lock
+                          className="w-4 h-4 text-red-400"
+                          title="Turma Assumida"
+                        />
+                      ) : (
+                        <Unlock
+                          className="w-4 h-4 text-emerald-400"
+                          title="Turma Livre"
+                        />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                      Responsável:{" "}
+                      <span
+                        className={
+                          turma.professorVinculadoNome
+                            ? "text-slate-700"
+                            : "text-emerald-600"
+                        }
+                      >
+                        {turma.professorVinculadoNome || "Livre"}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 border-t border-slate-200/60 pt-3 mt-auto">
+                    {idsSimuladosDoBimestre.length === 0 ? (
+                      <p className="text-[10px] font-bold text-orange-500 uppercase bg-orange-50 p-2 rounded text-center border border-orange-100">
+                        Nenhum simulado vinculado no {bimestreSelecionado}º Bim
+                      </p>
+                    ) : (
+                      idsSimuladosDoBimestre.map((simId) => {
+                        const simObj = simulados.find((s) => s.id === simId);
+                        return (
+                          <button
+                            key={simId}
+                            onClick={() => handleEntrarNaTurma(turma, simId)}
+                            className={`w-full py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-between gap-2 transition-all active:scale-[0.98] cursor-pointer ${
+                              podeEditar
+                                ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                                : "bg-slate-200 hover:bg-slate-300 text-slate-700"
+                            }`}
+                          >
+                            <span className="truncate">
+                              {simObj?.nome || "Simulado Desconhecido"}
+                            </span>
+                            {podeEditar ? (
+                              turma.professorVinculadoCodigo ? (
+                                <Edit3 className="w-3.5 h-3.5 flex-shrink-0" />
+                              ) : (
+                                <PlusCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                              )
+                            ) : (
+                              <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {turmas.length === 0 && (
+              <div className="col-span-full text-center py-8 text-slate-400 text-xs font-bold uppercase border-2 border-dashed border-slate-200 rounded-xl">
+                Nenhuma turma cadastrada.
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
+      {/* PASSO 2: Tabela de Alunos / Formulário de Respostas */}
       {passo === 2 && (
         <div className="space-y-6">
           <div className="border-b border-slate-100 pb-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -354,20 +439,11 @@ export default function Professor({
               <h3 className="text-xl font-black text-slate-800 uppercase tracking-wide">
                 {turmaAtiva?.nome}
               </h3>
-              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1.5 flex flex-wrap items-center gap-2">
-                <span>
-                  Simulado:{" "}
-                  <strong className="text-slate-700">
-                    {simuladoAtivo?.nome}
-                  </strong>
-                </span>
-                <span className="hidden sm:inline">•</span>
-                <span>
-                  Aplicador:{" "}
-                  <strong className="text-slate-700">
-                    {professorAplicador}
-                  </strong>
-                </span>
+              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-1.5">
+                Simulado:{" "}
+                <strong className="text-[#4b82f6] bg-blue-50 px-2 py-0.5 rounded">
+                  {simuladoAtivo?.nome}
+                </strong>
               </p>
             </div>
 
@@ -376,17 +452,12 @@ export default function Professor({
               onClick={handleVoltarSelecao}
               className="px-4 py-3 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all text-[11px] shadow-sm w-full sm:w-auto cursor-pointer active:scale-95"
             >
-              <ArrowLeft className="w-4 h-4" /> Trocar Turma / Simulado
+              <ArrowLeft className="w-4 h-4" /> Voltar às Turmas
             </button>
           </div>
 
           {!alunoAtivo ? (
             <div>
-              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <User className="w-4 h-4 text-slate-500" /> Resumo de Desempenho
-                da Turma
-              </h3>
-
               {!turmaAtiva?.alunos || turmaAtiva.alunos.length === 0 ? (
                 <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200 border-dashed">
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
@@ -421,23 +492,26 @@ export default function Professor({
 
                         <th className="p-2 border-r border-slate-200 text-center bg-blue-50/40 whitespace-normal break-words align-middle">
                           <span className="block text-blue-700 font-bold leading-tight break-words">
-                            Geral (Total)
+                            Total
                           </span>
                           <span className="text-[9px] text-slate-400 font-normal block mt-0.5">
                             ({totalQuestoesSimulado} Q)
                           </span>
                         </th>
 
-                        <th className="p-3.5 text-center w-[110px] sm:w-[95px] align-middle">
-                          Ação
-                        </th>
+                        {temPermissaoEdicao(turmaAtiva) && (
+                          <th className="p-3.5 text-center w-[110px] align-middle">
+                            Ações
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {turmaAtiva.alunos.map((aluno, idx) => {
                         const registo = respostasAlunos.find(
                           (r) =>
-                            String(r.simuladoId) === String(simuladoAtivo.id) &&
+                            String(r.simuladoId) ===
+                              String(simuladoAtivo?.id) &&
                             String(r.turma).trim().toUpperCase() ===
                               String(turmaAtiva.nome).trim().toUpperCase() &&
                             String(r.nomeAluno).trim().toUpperCase() ===
@@ -448,8 +522,8 @@ export default function Professor({
                           registo && registo.gabaritoBruto
                             ? calcularDesempenhoAluno(registo.gabaritoBruto)
                             : null;
-
                         const concluido = dadosCalculados !== null;
+                        const permissao = temPermissaoEdicao(turmaAtiva);
 
                         return (
                           <tr
@@ -468,7 +542,6 @@ export default function Professor({
                             {simuladoAtivo?.disciplinas.map((disc) => {
                               const infoDisc =
                                 dadosCalculados?.detalhes?.[disc.nome];
-
                               return (
                                 <td
                                   key={disc.nome}
@@ -513,29 +586,45 @@ export default function Professor({
                               )}
                             </td>
 
-                            <td className="p-3 text-center align-middle">
-                              <button
-                                type="button"
-                                onClick={() => handleSelecionarAluno(aluno)}
-                                className={`px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 w-full cursor-pointer active:scale-95 shadow-sm ${
-                                  concluido
-                                    ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-slate-100"
-                                    : "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-blue-500/20"
-                                }`}
-                              >
-                                {concluido ? (
-                                  <>
-                                    <Edit3 className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
-                                    <span>Editar</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <PlusCircle className="w-3.5 h-3.5 flex-shrink-0 text-blue-100" />
-                                    <span>Lançar</span>
-                                  </>
-                                )}
-                              </button>
-                            </td>
+                            {permissao && (
+                              <td className="p-3 text-center align-middle">
+                                {/* BOTÕES DISCRETOS LADO A LADO (EXATAMENTE COMO EM TURMAS E ADMIN) */}
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelecionarAluno(aluno)}
+                                    className={`p-2 rounded-lg transition-all cursor-pointer ${
+                                      concluido
+                                        ? "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                        : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                                    }`}
+                                    title={concluido ? "Editar" : "Lançar"}
+                                  >
+                                    {concluido ? (
+                                      <Edit3 className="w-4 h-4" />
+                                    ) : (
+                                      <PlusCircle className="w-4 h-4" />
+                                    )}
+                                  </button>
+
+                                  {concluido && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleExcluirRespostaAluno(
+                                          registo.id,
+                                          aluno,
+                                        )
+                                      }
+                                      className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -553,70 +642,78 @@ export default function Professor({
                 <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
                   <Award className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   <span className="truncate">
-                    Lançando Gabarito:{" "}
-                    <span className="text-red-600">{alunoAtivo}</span>
+                    Gabarito de:{" "}
+                    <span className="text-[#4b82f6]">{alunoAtivo}</span>
                   </span>
                 </h3>
-                <button
-                  type="button"
-                  onClick={() => setAlunoAtivo(null)}
-                  className="px-4 py-2.5 sm:px-3 sm:py-1.5 w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-95"
-                >
-                  Voltar à Tabela
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleLimparRespostas}
+                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1"
+                  >
+                    <Eraser className="w-3.5 h-3.5" /> Limpar Seleções
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAlunoAtivo(null)}
+                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
 
-              {simuladoAtivo.disciplinas.map((d) => {
+              {simuladoAtivo?.disciplinas.map((d) => {
                 const gabaritoDisc = d.gabarito || [];
-                const qtdQ = gabaritoDisc.length;
-                const valorQuestao = qtdQ > 0 ? (10 / qtdQ).toFixed(2) : "0.00";
+                const alternativas = ["A", "B", "C", "D", "E"];
 
                 return (
                   <div
                     key={d.nome}
-                    className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-sm"
+                    className="p-4 bg-white border border-slate-200 rounded-xl space-y-4 shadow-sm"
                   >
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-xs font-bold uppercase gap-1">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-xs font-bold uppercase gap-1 border-b border-slate-100 pb-2">
                       <span className="text-slate-800">{d.nome}</span>
                       <span className="text-slate-400 text-[10px] tracking-wider">
-                        {qtdQ} Questões (Valor por Questão: {valorQuestao} pts)
+                        {gabaritoDisc.length} Questões
                       </span>
                     </div>
-                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-2.5">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {gabaritoDisc.map((_, qIdx) => {
                         const valAtual =
                           respostasProfessor[d.nome]?.[qIdx] || "";
-                        const invalido =
-                          valAtual !== "" &&
-                          !["A", "B", "C", "D", "E"].includes(valAtual);
 
                         return (
                           <div
                             key={qIdx}
-                            className="flex flex-col items-center gap-1"
+                            className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100"
                           >
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                              Q{qIdx + 1}
+                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider w-8">
+                              Q{String(qIdx + 1).padStart(2, "0")}
                             </span>
-                            <input
-                              id={`prof-q-${d.nome}-${qIdx}`}
-                              type="text"
-                              maxLength="1"
-                              value={valAtual}
-                              onChange={(e) =>
-                                handleRespostaProfessor(
-                                  d.nome,
-                                  qIdx,
-                                  e.target.value,
-                                  e,
-                                )
-                              }
-                              className={`w-11 h-11 sm:w-10 sm:h-10 text-center font-bold uppercase border rounded-xl outline-none text-base sm:text-sm transition-all shadow-sm ${
-                                invalido
-                                  ? "border-red-500 bg-red-50 text-red-700"
-                                  : "border-slate-200 bg-slate-50/50 text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                              }`}
-                            />
+                            <div className="flex gap-1.5">
+                              {alternativas.map((alt) => {
+                                const selecionada = valAtual === alt;
+                                return (
+                                  <button
+                                    key={alt}
+                                    type="button"
+                                    onClick={() =>
+                                      handleRespostaClick(d.nome, qIdx, alt)
+                                    }
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-sm cursor-pointer ${
+                                      selecionada
+                                        ? "bg-[#4b82f6] text-white border-transparent scale-110 shadow-blue-500/30"
+                                        : "bg-white text-slate-400 border border-slate-200 hover:border-blue-300 hover:bg-blue-50"
+                                    }`}
+                                  >
+                                    {alt}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })}
@@ -625,19 +722,12 @@ export default function Professor({
                 );
               })}
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="flex-1 py-3.5 lg:py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold uppercase tracking-wider rounded-xl shadow-sm shadow-emerald-500/20 transition-all text-xs flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                  className="px-6 py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl text-xs shadow-sm shadow-blue-500/20 cursor-pointer transition-all active:scale-95"
                 >
-                  <CheckCircle className="w-4 h-4" /> Salvar Respostas
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAlunoAtivo(null)}
-                  className="px-6 py-3.5 lg:py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold uppercase tracking-wider rounded-xl transition-all text-xs cursor-pointer active:scale-[0.98]"
-                >
-                  Cancelar
+                  Guardar Respostas do Aluno
                 </button>
               </div>
             </form>
