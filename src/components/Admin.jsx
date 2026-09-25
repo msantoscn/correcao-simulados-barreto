@@ -183,23 +183,23 @@ export default function Admin({
   );
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 font-['Arial',sans-serif]">
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-2 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 font-['Arial',sans-serif] box-border">
       {/* ========================================= */}
       {/* COLUNA ESQUERDA - FORMULÁRIO DE CRIAÇÃO   */}
       {/* ========================================= */}
-      <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 sm:p-8 transition-all overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-3 sm:p-8 transition-all overflow-hidden shadow-xs">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 bg-blue-50 text-[#4b82f6] rounded-lg border border-slate-200 shrink-0">
               <Settings className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wide font-['Arial',sans-serif]">
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wide truncate font-['Arial',sans-serif]">
                 {idEmEdicao ? "EDITAR" : "CRIAR"}{" "}
                 <span className="text-red-600 font-bold">SIMULADO</span>
               </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-bold font-['Arial',sans-serif]">
-                Digite o gabarito oficial (A, B, C, D). Avanço automático.
+              <p className="text-[11px] sm:text-xs text-slate-500 font-bold truncate font-['Arial',sans-serif]">
+                Gabarito (A, B, C, D). Avanço automático.
               </p>
             </div>
           </div>
@@ -208,7 +208,7 @@ export default function Admin({
             <button
               type="button"
               onClick={cancelarEdicao}
-              className="w-full sm:w-auto text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-2 rounded uppercase flex items-center justify-center gap-1.5 transition cursor-pointer"
+              className="w-full sm:w-auto text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3 py-2 rounded uppercase flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0"
             >
               <X className="w-4 h-4" /> Cancelar Edição
             </button>
@@ -226,19 +226,19 @@ export default function Admin({
                 placeholder="Ex: Simulado 1 - Trimestral"
                 value={nomeSimulado}
                 onChange={(e) => setNomeSimulado(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition-all uppercase placeholder:normal-case placeholder:font-normal"
+                className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-300 rounded text-sm sm:text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-500 transition-all uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
                 required
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" /> Bimestre Ref.
+                <Calendar className="w-3.5 h-3.5 shrink-0" /> Bimestre Ref.
               </label>
               <select
                 value={bimestre}
                 onChange={(e) => setBimestre(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition-all uppercase cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-300 rounded text-sm sm:text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-500 transition-all uppercase cursor-pointer"
                 required
               >
                 <option value="1">1º Bimestre</option>
@@ -276,14 +276,14 @@ export default function Admin({
             <button
               type="button"
               onClick={adicionarDisciplina}
-              className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-[#4b82f6] border border-slate-200 font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer"
+              className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-[#4b82f6] border border-slate-300 font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" /> Adicionar Outra Disciplina
             </button>
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"
+              className="w-full py-3.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer shadow-xs"
             >
               <Save className="w-4 h-4" />
               {idEmEdicao ? "Atualizar Simulado" : "Salvar Simulado"}
@@ -295,17 +295,17 @@ export default function Admin({
       {/* ========================================= */}
       {/* COLUNA DIREITA - LISTAGEM DE SIMULADOS    */}
       {/* ========================================= */}
-      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-4 sm:p-6 h-fit transition-all">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-200 mb-4">
-          <div className="p-2 bg-slate-50 text-slate-600 rounded-lg border border-slate-200 shrink-0">
+      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-3 sm:p-6 h-fit transition-all shadow-xs">
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-200 mb-4 min-w-0">
+          <div className="p-2 bg-slate-100 text-slate-600 rounded-lg border border-slate-200 shrink-0">
             <FileText className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide font-['Arial',sans-serif]">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide truncate font-['Arial',sans-serif]">
               Simulados{" "}
               <span className="text-[#4b82f6] font-bold">Gerados</span>
             </h3>
-            <p className="text-xs text-slate-500 font-bold font-['Arial',sans-serif]">
+            <p className="text-xs text-slate-500 font-bold truncate font-['Arial',sans-serif]">
               Gestão e alteração
             </p>
           </div>
@@ -321,7 +321,7 @@ export default function Admin({
             placeholder="Buscar simulado..."
             value={termoBusca}
             onChange={(e) => setTermoBusca(e.target.value)}
-            className="w-full pl-9 pr-3 py-2.5 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
+            className="w-full pl-9 pr-3 py-2.5 bg-slate-100 border border-slate-300 rounded text-sm sm:text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
           />
         </div>
 
@@ -375,7 +375,7 @@ function DisciplinaCard({
           <button
             type="button"
             onClick={aoLimpar}
-            className="px-2 py-1 text-[11px] font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded transition cursor-pointer flex items-center gap-1"
+            className="px-2 py-1 text-[11px] font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-300 rounded transition cursor-pointer flex items-center gap-1"
             title="Limpar Respostas"
           >
             <RotateCcw className="w-3 h-3 text-slate-400" /> Limpar
@@ -385,7 +385,7 @@ function DisciplinaCard({
             <button
               type="button"
               onClick={aoRemover}
-              className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition cursor-pointer border border-slate-200 bg-white"
+              className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition cursor-pointer border border-slate-300 bg-white"
               title="Remover Disciplina"
             >
               <Trash2 className="w-4 h-4" />
@@ -404,7 +404,7 @@ function DisciplinaCard({
             placeholder="Ex: Ling. Portuguesa"
             value={disc.nome}
             onChange={(e) => aoAtualizar("nome", e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
+            className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded text-sm sm:text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
             required
           />
         </div>
@@ -419,13 +419,13 @@ function DisciplinaCard({
             max="40"
             value={disc.qtdQuestoes}
             onChange={(e) => aoAtualizar("qtdQuestoes", e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500"
+            className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded text-sm sm:text-xs font-bold text-slate-900 outline-none focus:bg-white focus:border-slate-500"
             required
           />
         </div>
       </div>
 
-      {/* Grid do Gabarito Responsivo */}
+      {/* Grid do Gabarito Otimizado para Mobile */}
       <div className="p-3 bg-white border border-slate-200 rounded overflow-x-auto">
         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center sm:text-left font-['Arial',sans-serif]">
           Respostas Corretas (A, B, C, D)
@@ -442,7 +442,7 @@ function DisciplinaCard({
                 maxLength="1"
                 value={resposta}
                 onChange={(e) => aoAtualizarGabarito(qIdx, e.target.value)}
-                className="w-9 h-9 sm:w-10 sm:h-10 text-center text-xs sm:text-sm font-bold uppercase rounded border border-slate-300 bg-slate-50/80 text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition"
+                className="w-9 h-9 sm:w-10 sm:h-10 text-center text-sm sm:text-base font-bold uppercase rounded border border-slate-300 bg-slate-100 text-slate-900 outline-none focus:bg-white focus:border-slate-500 transition"
                 required
               />
             </div>
@@ -462,9 +462,9 @@ function SimuladoCard({ sim, emEdicao, aoEditar, aoDuplicar, aoRemover }) {
           : "border-slate-200 hover:border-slate-300"
       }`}
     >
-      <div className="flex justify-between items-start mb-1.5 gap-2">
-        <div>
-          <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wide leading-tight font-['Arial',sans-serif]">
+      <div className="flex justify-between items-start mb-1.5 gap-2 min-w-0">
+        <div className="min-w-0">
+          <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wide leading-tight truncate font-['Arial',sans-serif]">
             {sim.nome}
           </h4>
           {sim.bimestre && (
@@ -490,20 +490,20 @@ function SimuladoCard({ sim, emEdicao, aoEditar, aoDuplicar, aoRemover }) {
       <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 flex-wrap sm:flex-nowrap">
         <button
           onClick={aoEditar}
-          className="flex-1 py-1.5 px-2.5 bg-slate-50 hover:bg-[#4b82f6] text-slate-600 hover:text-white border border-slate-200 text-[11px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1 transition cursor-pointer"
+          className="flex-1 py-1.5 px-2.5 bg-slate-100 hover:bg-[#4b82f6] text-slate-600 hover:text-white border border-slate-300 text-[11px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1 transition cursor-pointer"
         >
           <Edit3 className="w-3 h-3" /> Editar
         </button>
         <button
           onClick={aoDuplicar}
-          className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1 transition cursor-pointer"
+          className="py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 text-[11px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1 transition cursor-pointer"
           title="Duplicar Simulado"
         >
           <Copy className="w-3 h-3" />
         </button>
         <button
           onClick={aoRemover}
-          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer border border-slate-200 bg-slate-50"
+          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer border border-slate-300 bg-slate-100"
           title="Excluir Simulado"
         >
           <Trash2 className="w-3.5 h-3.5" />
