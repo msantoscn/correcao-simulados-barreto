@@ -62,7 +62,7 @@ export default function Usuarios({
     const novo = {
       id: Date.now().toString(),
       codigo: codigoFormatado,
-      nome: novoNome.trim().toUpperCase(), // <--- Garante nome em maiúsculas ao enviar
+      nome: novoNome.trim().toUpperCase(),
       cargo: novoCargo,
       senha: "", // Senha vazia, será definida no primeiro acesso
     };
@@ -152,7 +152,7 @@ export default function Usuarios({
         return {
           ...u,
           codigo: codigoFormatado,
-          nome: editNome.trim().toUpperCase(), // <--- Garante nome em maiúsculas na edição
+          nome: editNome.trim().toUpperCase(),
           cargo: editCargo,
           senha: editSenha,
         };
@@ -162,6 +162,23 @@ export default function Usuarios({
 
     await atualizarEPersistir(listaAtualizada);
     setEditId(null);
+  };
+
+  // Função auxiliar para exibir a etiqueta correta conforme o cargo
+  const formatarCargoExibicao = (cargo) => {
+    switch (cargo) {
+      case "COORDENACAO":
+        return { texto: "Coordenador(a)", classe: "bg-blue-100 text-blue-700" };
+      case "DIRECAO":
+        return { texto: "Diretor(a)", classe: "bg-purple-100 text-purple-700" };
+      case "ADMIN":
+        return {
+          texto: "Dev",
+          classe: "bg-amber-100 text-amber-800 border border-amber-300",
+        };
+      default:
+        return { texto: "Professor(a)", classe: "bg-slate-100 text-slate-700" };
+    }
   };
 
   const usuariosFiltrados = usuarios.filter(
@@ -206,7 +223,6 @@ export default function Usuarios({
                 type="text"
                 placeholder="Nome Completo (Opcional)"
                 value={novoNome}
-                // <--- .toUpperCase() garante a formatação imediata no campo de digitação
                 onChange={(e) => setNovoNome(e.target.value.toUpperCase())}
                 className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
               />
@@ -217,8 +233,10 @@ export default function Usuarios({
                 onChange={(e) => setNovoCargo(e.target.value)}
                 className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-bold text-slate-600 outline-none transition-all uppercase"
               >
-                <option value="PROFESSOR">Professor</option>
-                <option value="COORDENACAO">Coordenação / Direção</option>
+                <option value="PROFESSOR">Professor(a)</option>
+                <option value="COORDENACAO">Coordenador(a)</option>
+                <option value="DIRECAO">Diretor(a)</option>
+                <option value="ADMIN">Desenvolvedor (Admin)</option>
               </select>
             </div>
             <button
@@ -328,136 +346,139 @@ export default function Usuarios({
 
               {/* Linhas da Tabela */}
               <div className="divide-y divide-slate-100">
-                {usuariosFiltrados.map((usuario) => (
-                  <div
-                    key={usuario.id}
-                    className={`grid grid-cols-12 gap-3 px-6 py-4 items-center transition-colors group ${
-                      editId === usuario.id
-                        ? "bg-blue-50/50"
-                        : "hover:bg-slate-50/50"
-                    }`}
-                  >
-                    {/* MODO DE EDIÇÃO */}
-                    {editId === usuario.id ? (
-                      <>
-                        <div className="col-span-3">
-                          <input
-                            type="text"
-                            value={editCodigo}
-                            onChange={(e) =>
-                              setEditCodigo(e.target.value.toUpperCase())
-                            }
-                            className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-bold outline-none uppercase"
-                          />
-                        </div>
-                        <div className="col-span-4">
-                          <input
-                            type="text"
-                            value={editNome}
-                            // <--- .toUpperCase() garante formatação imediata em maiúsculas na edição
-                            onChange={(e) =>
-                              setEditNome(e.target.value.toUpperCase())
-                            }
-                            placeholder="Nome..."
-                            className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none uppercase"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <select
-                            value={editCargo}
-                            onChange={(e) => setEditCargo(e.target.value)}
-                            className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-bold uppercase outline-none"
-                          >
-                            <option value="PROFESSOR">Prof</option>
-                            <option value="COORDENACAO">Coord</option>
-                          </select>
-                        </div>
-                        <div className="col-span-2">
-                          <input
-                            type="text"
-                            value={editSenha}
-                            onChange={(e) => setEditSenha(e.target.value)}
-                            placeholder="Nova senha..."
-                            className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none"
-                          />
-                        </div>
-                        <div className="col-span-1 flex justify-end gap-1">
-                          <button
-                            onClick={salvarEdicao}
-                            className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                            title="Salvar"
-                          >
-                            <Save className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={cancelarEdicao}
-                            className="p-1.5 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors"
-                            title="Cancelar"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      /* MODO DE VISUALIZAÇÃO */
-                      <>
-                        <div className="col-span-3 text-sm font-black text-slate-700">
-                          {usuario.codigo}
-                        </div>
-                        <div className="col-span-4 text-xs font-bold text-slate-600 uppercase truncate">
-                          {usuario.nome || (
-                            <span className="text-slate-300 font-medium italic normal-case">
-                              Nome pendente
+                {usuariosFiltrados.map((usuario) => {
+                  const infoCargo = formatarCargoExibicao(usuario.cargo);
+
+                  return (
+                    <div
+                      key={usuario.id}
+                      className={`grid grid-cols-12 gap-3 px-6 py-4 items-center transition-colors group ${
+                        editId === usuario.id
+                          ? "bg-blue-50/50"
+                          : "hover:bg-slate-50/50"
+                      }`}
+                    >
+                      {/* MODO DE EDIÇÃO */}
+                      {editId === usuario.id ? (
+                        <>
+                          <div className="col-span-3">
+                            <input
+                              type="text"
+                              value={editCodigo}
+                              onChange={(e) =>
+                                setEditCodigo(e.target.value.toUpperCase())
+                              }
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-bold outline-none uppercase"
+                            />
+                          </div>
+                          <div className="col-span-4">
+                            <input
+                              type="text"
+                              value={editNome}
+                              onChange={(e) =>
+                                setEditNome(e.target.value.toUpperCase())
+                              }
+                              placeholder="Nome..."
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none uppercase"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <select
+                              value={editCargo}
+                              onChange={(e) => setEditCargo(e.target.value)}
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-bold uppercase outline-none"
+                            >
+                              <option value="PROFESSOR">Professor(a)</option>
+                              <option value="COORDENACAO">
+                                Coordenador(a)
+                              </option>
+                              <option value="DIRECAO">Diretor(a)</option>
+                              <option value="ADMIN">Dev</option>
+                            </select>
+                          </div>
+                          <div className="col-span-2">
+                            <input
+                              type="text"
+                              value={editSenha}
+                              onChange={(e) => setEditSenha(e.target.value)}
+                              placeholder="Nova senha..."
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none"
+                            />
+                          </div>
+                          <div className="col-span-1 flex justify-end gap-1">
+                            <button
+                              onClick={salvarEdicao}
+                              className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                              title="Salvar"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={cancelarEdicao}
+                              className="p-1.5 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors"
+                              title="Cancelar"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        /* MODO DE VISUALIZAÇÃO */
+                        <>
+                          <div className="col-span-3 text-sm font-black text-slate-700">
+                            {usuario.codigo}
+                          </div>
+                          <div className="col-span-4 text-xs font-bold text-slate-600 uppercase truncate">
+                            {usuario.nome || (
+                              <span className="text-slate-300 font-medium italic normal-case">
+                                Nome pendente
+                              </span>
+                            )}
+                          </div>
+                          <div className="col-span-2">
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${infoCargo.classe}`}
+                            >
+                              {infoCargo.texto}
                             </span>
-                          )}
-                        </div>
-                        <div className="col-span-2">
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${
-                              usuario.cargo === "COORDENACAO"
-                                ? "bg-slate-800 text-white"
-                                : "bg-blue-100 text-blue-700"
-                            }`}
-                          >
-                            {usuario.cargo === "COORDENACAO" ? "Coord" : "Prof"}
-                          </span>
-                        </div>
-                        <div className="col-span-1 text-center">
-                          {usuario.senha ? (
-                            <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md font-bold uppercase">
-                              Sim
-                            </span>
-                          ) : (
-                            <span className="text-[10px] bg-red-50 text-red-500 px-2 py-1 rounded-md font-bold uppercase border border-red-100">
-                              Não
-                            </span>
-                          )}
-                        </div>
-                        <div className="col-span-2 flex justify-end gap-2">
-                          <button
-                            onClick={() => iniciarEdicao(usuario)}
-                            className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                            title="Editar Usuário"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              removerUsuario(
-                                usuario.id,
-                                usuario.nome || usuario.codigo,
-                              )
-                            }
-                            className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
-                            title="Eliminar Usuário"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                          </div>
+                          <div className="col-span-1 text-center">
+                            {usuario.senha ? (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md font-bold uppercase">
+                                Sim
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-red-50 text-red-500 px-2 py-1 rounded-md font-bold uppercase border border-red-100">
+                                Não
+                              </span>
+                            )}
+                          </div>
+                          <div className="col-span-2 flex justify-end gap-2">
+                            <button
+                              onClick={() => iniciarEdicao(usuario)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                              title="Editar Usuário"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                removerUsuario(
+                                  usuario.id,
+                                  usuario.nome || usuario.codigo,
+                                )
+                              }
+                              className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                              title="Eliminar Usuário"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
