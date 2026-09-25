@@ -9,6 +9,8 @@ import {
   Edit3,
   Calendar,
   Copy, // Ícone para duplicar
+  Search,
+  RotateCcw,
 } from "lucide-react";
 
 export default function Admin({
@@ -19,6 +21,7 @@ export default function Admin({
   const [idEmEdicao, setIdEmEdicao] = useState(null);
   const [nomeSimulado, setNomeSimulado] = useState("");
   const [bimestre, setBimestre] = useState("3");
+  const [termoBusca, setTermoBusca] = useState("");
 
   const [disciplinas, setDisciplinas] = useState([
     { id: 1, nome: "", qtdQuestoes: 5, gabarito: Array(5).fill("") },
@@ -34,6 +37,17 @@ export default function Admin({
 
   const removerDisciplina = (id) => {
     setDisciplinas((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const limparGabaritoDisciplina = (id) => {
+    setDisciplinas((prev) =>
+      prev.map((d) => {
+        if (d.id === id) {
+          return { ...d, gabarito: Array(d.gabarito.length).fill("") };
+        }
+        return d;
+      }),
+    );
   };
 
   const atualizarDisciplina = (id, campo, valor) => {
@@ -57,7 +71,8 @@ export default function Admin({
   const atualizarGabaritoOficial = (disciplinaId, index, resposta) => {
     const val = resposta.toUpperCase();
 
-    if (val === "" || ["A", "B", "C", "D", "E"].includes(val)) {
+    // Restrito a 4 alternativas: A, B, C, D
+    if (val === "" || ["A", "B", "C", "D"].includes(val)) {
       setDisciplinas((prev) =>
         prev.map((d) => {
           if (d.id === disciplinaId) {
@@ -165,24 +180,29 @@ export default function Admin({
     }
   };
 
+  const simuladosFiltrados = simulados.filter((sim) =>
+    sim.nome.toLowerCase().includes(termoBusca.toLowerCase()),
+  );
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-sans">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-['Arial',sans-serif]">
       {/* ========================================= */}
       {/* COLUNA ESQUERDA - FORMULÁRIO DE CRIAÇÃO   */}
       {/* ========================================= */}
-      <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8 transition-all">
-        <div className="flex flex-wrap justify-between items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+      <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6 sm:p-8 transition-all">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6 pb-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-50 text-[#4b82f6] rounded-xl border border-blue-100/50 shadow-sm">
-              <Settings className="w-6 h-6" />
+            <div className="p-2 bg-blue-50 text-[#4b82f6] rounded-lg border border-slate-200">
+              <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-slate-800 uppercase tracking-wide">
+              <h2 className="text-base font-bold text-slate-800 uppercase tracking-wide font-['Arial',sans-serif]">
                 {idEmEdicao ? "EDITAR" : "CRIAR"}{" "}
-                <span className="text-red-600">SIMULADO</span>
+                <span className="text-red-600 font-bold">SIMULADO</span>
               </h2>
-              <p className="text-xs text-slate-400 font-medium">
-                Digite o gabarito oficial. O cursor avança automaticamente.
+              <p className="text-xs text-slate-500 font-bold font-['Arial',sans-serif]">
+                Digite o gabarito oficial (A, B, C, D). O cursor avança
+                automaticamente.
               </p>
             </div>
           </div>
@@ -191,7 +211,7 @@ export default function Admin({
             <button
               type="button"
               onClick={cancelarEdicao}
-              className="text-xs font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:text-slate-700 px-3.5 py-2 rounded-xl uppercase flex items-center gap-1.5 transition cursor-pointer shadow-sm active:scale-[0.98]"
+              className="text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded uppercase flex items-center gap-1.5 transition cursor-pointer"
             >
               <X className="w-4 h-4" /> Cancelar
             </button>
@@ -201,7 +221,7 @@ export default function Admin({
         <form onSubmit={guardarSimulado} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
                 Nome do Simulado
               </label>
               <input
@@ -209,19 +229,19 @@ export default function Admin({
                 placeholder="Ex: Simulado 1 - Trimestral"
                 value={nomeSimulado}
                 onChange={(e) => setNomeSimulado(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 transition-all uppercase placeholder:normal-case placeholder:font-normal"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" /> Bimestre Ref.
               </label>
               <select
                 value={bimestre}
                 onChange={(e) => setBimestre(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase cursor-pointer"
+                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 transition-all uppercase cursor-pointer"
                 required
               >
                 <option value="1">1º Bimestre</option>
@@ -233,7 +253,7 @@ export default function Admin({
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-2 font-['Arial',sans-serif]">
               Disciplinas e Gabarito Oficial
             </h3>
 
@@ -244,6 +264,7 @@ export default function Admin({
                 disc={disc}
                 podeRemover={disciplinas.length > 1}
                 aoRemover={() => removerDisciplina(disc.id)}
+                aoLimpar={() => limparGabaritoDisciplina(disc.id)}
                 aoAtualizar={(campo, valor) =>
                   atualizarDisciplina(disc.id, campo, valor)
                 }
@@ -258,14 +279,14 @@ export default function Admin({
             <button
               type="button"
               onClick={adicionarDisciplina}
-              className="w-full py-3 bg-blue-50/50 hover:bg-blue-50 text-[#4b82f6] border border-blue-200/60 hover:border-[#4b82f6] font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] shadow-sm"
+              className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-[#4b82f6] border border-slate-200 font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" /> Adicionar Outra Disciplina
             </button>
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99]"
+              className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer"
             >
               <Save className="w-4 h-4" />
               {idEmEdicao ? "Atualizar Simulado" : "Salvar Simulado"}
@@ -277,31 +298,46 @@ export default function Admin({
       {/* ========================================= */}
       {/* COLUNA DIREITA - LISTAGEM DE SIMULADOS    */}
       {/* ========================================= */}
-      <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 h-fit transition-all">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-4">
-          <div className="p-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200/60 shadow-sm">
+      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 h-fit transition-all">
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-200 mb-4">
+          <div className="p-2 bg-slate-50 text-slate-600 rounded-lg border border-slate-200">
             <FileText className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">
-              Simulados <span className="text-[#4b82f6]">Gerados</span>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide font-['Arial',sans-serif]">
+              Simulados{" "}
+              <span className="text-[#4b82f6] font-bold">Gerados</span>
             </h3>
-            <p className="text-[11px] text-slate-400 font-medium">
+            <p className="text-xs text-slate-500 font-bold font-['Arial',sans-serif]">
               Gestão e alteração
             </p>
           </div>
         </div>
 
-        {simulados.length === 0 ? (
-          <div className="text-center py-12 px-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
-            <FileText className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+        {/* Sistema de Busca nos Simulados */}
+        <div className="mb-4 relative">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+            <Search className="w-3.5 h-3.5" />
+          </span>
+          <input
+            type="text"
+            placeholder="Buscar simulado..."
+            value={termoBusca}
+            onChange={(e) => setTermoBusca(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
+          />
+        </div>
+
+        {simuladosFiltrados.length === 0 ? (
+          <div className="text-center py-10 px-4 rounded border border-dashed border-slate-200 bg-slate-50/50">
+            <FileText className="w-6 h-6 text-slate-300 mx-auto mb-2" />
             <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Nenhum simulado cadastrado
+              Nenhum simulado encontrado
             </p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-            {simulados.map((sim) => (
+          <div className="space-y-3 max-h-[550px] overflow-y-auto pr-1">
+            {simuladosFiltrados.map((sim) => (
               <SimuladoCard
                 key={sim.id}
                 sim={sim}
@@ -327,31 +363,43 @@ function DisciplinaCard({
   disc,
   podeRemover,
   aoRemover,
+  aoLimpar,
   aoAtualizar,
   aoAtualizarGabarito,
 }) {
   return (
-    <div className="p-5 bg-slate-50/50 border border-slate-200/80 rounded-2xl relative transition-all hover:border-slate-300">
-      <div className="flex justify-between items-center mb-4">
-        <span className="inline-flex items-center px-2.5 py-1 bg-white border border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm">
+    <div className="p-4 bg-slate-50/50 border border-slate-200 rounded-xl relative transition-all">
+      <div className="flex justify-between items-center mb-3">
+        <span className="inline-flex items-center px-2 py-0.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider rounded font-['Arial',sans-serif]">
           Disciplina {index + 1}
         </span>
 
-        {podeRemover && (
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={aoRemover}
-            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-            title="Remover Disciplina"
+            onClick={aoLimpar}
+            className="px-2 py-1 text-[11px] font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded transition cursor-pointer flex items-center gap-1"
+            title="Limpar Respostas"
           >
-            <Trash2 className="w-4 h-4" />
+            <RotateCcw className="w-3 h-3 text-slate-400" /> Limpar
           </button>
-        )}
+
+          {podeRemover && (
+            <button
+              type="button"
+              onClick={aoRemover}
+              className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition cursor-pointer border border-slate-200 bg-white"
+              title="Remover Disciplina"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div>
-          <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
             Nome da Disciplina
           </label>
           <input
@@ -359,13 +407,13 @@ function DisciplinaCard({
             placeholder="Ex: Ling. Portuguesa"
             value={disc.nome}
             onChange={(e) => aoAtualizar("nome", e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal shadow-sm"
+            className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
             required
           />
         </div>
 
         <div>
-          <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">
             Qtd. de Questões (1-40)
           </label>
           <input
@@ -374,21 +422,21 @@ function DisciplinaCard({
             max="40"
             value={disc.qtdQuestoes}
             onChange={(e) => aoAtualizar("qtdQuestoes", e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+            className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500"
             required
           />
         </div>
       </div>
 
       {/* Grid do Gabarito */}
-      <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
-        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 text-center sm:text-left">
-          Respostas Corretas (A, B, C, D ou E)
+      <div className="p-3 bg-white border border-slate-200 rounded">
+        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center sm:text-left font-['Arial',sans-serif]">
+          Respostas Corretas (A, B, C, D)
         </label>
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-y-3 gap-x-2">
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
           {disc.gabarito.map((resposta, qIdx) => (
             <div key={qIdx} className="flex flex-col items-center">
-              <span className="text-[10px] text-slate-400 font-bold mb-1">
+              <span className="text-[10px] text-slate-400 font-bold mb-1 font-['Arial',sans-serif]">
                 Q{qIdx + 1}
               </span>
               <input
@@ -397,7 +445,7 @@ function DisciplinaCard({
                 maxLength="1"
                 value={resposta}
                 onChange={(e) => aoAtualizarGabarito(qIdx, e.target.value)}
-                className="w-10 h-10 text-center text-sm font-black uppercase rounded-lg border border-slate-200 bg-slate-50 text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                className="w-9 h-9 text-center text-xs font-bold uppercase rounded border border-slate-300 bg-slate-50 text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition"
                 required
               />
             </div>
@@ -411,29 +459,29 @@ function DisciplinaCard({
 function SimuladoCard({ sim, emEdicao, aoEditar, aoDuplicar, aoRemover }) {
   return (
     <div
-      className={`p-4 rounded-xl border transition-all duration-200 bg-white shadow-sm ${
+      className={`p-3.5 rounded-lg border transition-all bg-white ${
         emEdicao
-          ? "border-[#4b82f6] ring-2 ring-blue-50"
-          : "border-slate-200/80 hover:border-slate-300 hover:shadow-md"
+          ? "border-[#4b82f6] bg-blue-50/20"
+          : "border-slate-200 hover:border-slate-300"
       }`}
     >
-      <div className="flex justify-between items-start mb-2 gap-2">
+      <div className="flex justify-between items-start mb-1.5 gap-2">
         <div>
-          <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wide leading-tight">
+          <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wide leading-tight font-['Arial',sans-serif]">
             {sim.nome}
           </h4>
           {sim.bimestre && (
-            <span className="inline-block mt-1 text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-blue-100">
+            <span className="inline-block mt-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-blue-200 font-['Arial',sans-serif]">
               {sim.bimestre}º Bimestre
             </span>
           )}
         </div>
-        <span className="shrink-0 text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-mono font-bold border border-slate-200/60">
+        <span className="shrink-0 text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono font-bold border border-slate-200">
           {sim.dataCriacao || "N/D"}
         </span>
       </div>
 
-      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-4 mt-2">
+      <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-3 mt-1.5 font-['Arial',sans-serif]">
         {sim.disciplinas?.length || 0} disciplina(s) •{" "}
         {sim.disciplinas?.reduce(
           (acc, d) => acc + (parseInt(d.qtdQuestoes) || 0),
@@ -442,26 +490,26 @@ function SimuladoCard({ sim, emEdicao, aoEditar, aoDuplicar, aoRemover }) {
         questões
       </p>
 
-      <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100">
         <button
           onClick={aoEditar}
-          className="flex-1 py-2 px-3 bg-slate-50 hover:bg-[#4b82f6] text-slate-600 hover:text-white border border-slate-200 hover:border-[#4b82f6] text-[11px] font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+          className="flex-1 py-1.5 px-2.5 bg-slate-50 hover:bg-[#4b82f6] text-slate-600 hover:text-white border border-slate-200 text-[11px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1 transition cursor-pointer"
         >
-          <Edit3 className="w-3.5 h-3.5" /> Editar
+          <Edit3 className="w-3 h-3" /> Editar
         </button>
         <button
           onClick={aoDuplicar}
-          className="py-2 px-2.5 bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 border border-slate-200 hover:border-emerald-200 text-[11px] font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+          className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1 transition cursor-pointer"
           title="Duplicar Simulado"
         >
-          <Copy className="w-3.5 h-3.5" />
+          <Copy className="w-3 h-3" />
         </button>
         <button
           onClick={aoRemover}
-          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer border border-transparent hover:border-red-100"
+          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer border border-slate-200 bg-slate-50"
           title="Excluir Simulado"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
