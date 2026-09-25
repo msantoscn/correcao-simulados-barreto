@@ -45,11 +45,18 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Função centralizada para verificar se o utilizador logado é o dono ou gestor
+  // Função centralizada e rigorosa de permissão de edição
   const temPermissaoEdicao = (turma) => {
     if (isGestao) return true;
     if (!turma) return false;
-    if (!turma.professorVinculadoCodigo) return true; // Se estiver livre, qualquer um pode assumir ao clicar
+    // Se não tem professor vinculado, está livre (pode assumir)
+    if (
+      !turma.professorVinculadoCodigo ||
+      String(turma.professorVinculadoCodigo).trim() === ""
+    ) {
+      return true;
+    }
+    // Só tem permissão se o código do usuário logado for exatamente o vinculado
     return (
       String(turma.professorVinculadoCodigo).trim() ===
       String(user.codigo).trim()
@@ -65,7 +72,7 @@ export default function Professor({
         String(user.codigo).trim() &&
       !isGestao;
 
-    // Se já pertence a outro professor, bloqueia imediatamente
+    // Se já pertence a outro professor, avisa e entra estritamente em MODO DE LEITURA
     if (temDonoOutro) {
       alert(
         `Esta turma pertence ao professor ${turma.professorVinculadoNome || "outro colega"}. Apenas visualização de notas permitida.`,
@@ -112,8 +119,11 @@ export default function Professor({
   };
 
   const handleSelecionarAluno = (nomeAluno) => {
+    // BLOQUEIO RIGOROSO: Se não tiver permissão, impede absolutamente de abrir o formulário
     if (!temPermissaoEdicao(turmaAtiva)) {
-      alert("Acesso negado. Esta turma pertence a outro professor.");
+      alert(
+        "Acesso negado. Esta turma pertence a outro professor e está em modo apenas leitura.",
+      );
       return;
     }
 
@@ -140,6 +150,8 @@ export default function Professor({
   };
 
   const handleRespostaClick = (disciplinaNome, index, alternativa) => {
+    if (!temPermissaoEdicao(turmaAtiva)) return;
+
     setRespostasProfessor((prev) => {
       const respostaAtual = prev[disciplinaNome]?.[index];
       const novaResposta = respostaAtual === alternativa ? "" : alternativa;
@@ -155,6 +167,8 @@ export default function Professor({
   };
 
   const handleLimparRespostas = () => {
+    if (!temPermissaoEdicao(turmaAtiva)) return;
+
     if (
       window.confirm(
         `Tem a certeza que deseja limpar as marcações atuais de ${alunoAtivo}?`,
@@ -251,8 +265,11 @@ export default function Professor({
     e.preventDefault();
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
 
+    // BLOQUEIO RIGOROSO NO SUBMIT: Impede gravação caso não tenha permissão
     if (!temPermissaoEdicao(turmaAtiva)) {
-      alert("Não tem permissão para guardar notas nesta turma.");
+      alert(
+        "Ação negada! Você não tem permissão para lançar ou salvar notas nesta turma.",
+      );
       return;
     }
 
@@ -648,14 +665,14 @@ export default function Professor({
                                       ? concluido
                                         ? "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
                                         : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200/60"
-                                      : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                      : "bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200"
                                   }`}
                                   title={
                                     temPermissao
                                       ? concluido
                                         ? "Editar Notas"
                                         : "Lançar Notas"
-                                      : "Apenas Leitura"
+                                      : "Ver Notas (Apenas Leitura)"
                                   }
                                 >
                                   {temPermissao ? (
@@ -720,7 +737,7 @@ export default function Professor({
                     onClick={() => setAlunoAtivo(null)}
                     className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95 flex-1 sm:flex-initial justify-center"
                   >
-                    Cancelar
+                    Voltar
                   </button>
                 </div>
               </div>
