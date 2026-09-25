@@ -67,7 +67,7 @@ export default function Login() {
 
       if (querySnapshot.empty) {
         setErro(
-          "Código não encontrado. Verifique se o seu acesso foi libertado pela gestão.",
+          "Código não encontrado. Verifique se o seu acesso foi liberado pela coordenação.",
         );
         setLoading(false);
         return;
@@ -84,7 +84,7 @@ export default function Login() {
         userData.cargo !== "DIRECAO" &&
         userData.cargo !== "ADMIN"
       ) {
-        setErro("Acesso negado. Este código não tem permissões de Gestão.");
+        setErro("Acesso negado. Este código não tem permissões de Admin.");
         setLoading(false);
         return;
       }
@@ -116,9 +116,7 @@ export default function Login() {
       } else {
         // 4. Lógica de Login Normal
         if (!userData.senha) {
-          setErro(
-            "Senha não cadastrada. Utilize a opção 'Primeiro acesso' para criar a sua senha.",
-          );
+          setErro("Senha não cadastrada. Utilize a opção 'Primeiro acesso' .");
           setLoading(false);
           return;
         }
@@ -242,7 +240,7 @@ export default function Login() {
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                 {perfilSelecionado === "PROFESSOR"
                   ? "Cód. do SIPAE"
-                  : "Cód. Gestão"}
+                  : "Cód. do SIPAE"}
               </label>
               <div className="relative flex items-center">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
@@ -253,8 +251,8 @@ export default function Login() {
                   onChange={(e) => setCodigo(e.target.value)}
                   placeholder={
                     perfilSelecionado === "PROFESSOR"
-                      ? "Ex: SIPAE-1024"
-                      : "Ex: ADMIN-01"
+                      ? "Ex: F12345"
+                      : "Ex: F12345"
                   }
                   className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
                 />
@@ -337,7 +335,7 @@ export default function Login() {
               >
                 {isPrimeiroAcesso
                   ? "Já possui senha? Fazer Login"
-                  : "Primeiro acesso? Cadastre sua senha"}
+                  : "Primeiro acesso?"}
               </button>
             </div>
           </form>
