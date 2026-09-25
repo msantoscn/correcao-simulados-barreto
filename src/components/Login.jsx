@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase"; // Ajuste o caminho se necessário
+import { db } from "../firebase";
 import {
   collection,
   query,
@@ -9,23 +9,12 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import {
-  Award,
-  GraduationCap,
-  Building2,
-  ArrowLeft,
-  User,
-  Lock,
-  KeyRound,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { Award, User, Lock, KeyRound, Loader2 } from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
 
   // Estados da interface
-  const [perfilSelecionado, setPerfilSelecionado] = useState(null);
   const [isPrimeiroAcesso, setIsPrimeiroAcesso] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -58,7 +47,7 @@ export default function Login() {
     const codigoUpper = codigo.trim().toUpperCase();
 
     try {
-      // 1. Busca o utilizador no Firebase
+      // 1. Busca o utilizador no Firebase pelo código SIPAE
       const q = query(
         collection(db, "usuarios"),
         where("codigo", "==", codigoUpper),
@@ -77,19 +66,7 @@ export default function Login() {
       const userData = userDoc.data();
       const userId = userDoc.id;
 
-      // 2. Valida o cargo (impede que um professor entre como gestão)
-      if (
-        perfilSelecionado === "GESTAO" &&
-        userData.cargo !== "COORDENACAO" &&
-        userData.cargo !== "DIRECAO" &&
-        userData.cargo !== "ADMIN"
-      ) {
-        setErro("Acesso negado. Este código não tem permissões de Admin.");
-        setLoading(false);
-        return;
-      }
-
-      // 3. Lógica de Primeiro Acesso
+      // 2. Lógica de Primeiro Acesso
       if (isPrimeiroAcesso) {
         if (userData.senha) {
           setErro(
@@ -114,9 +91,9 @@ export default function Login() {
           cargo: userData.cargo,
         });
       } else {
-        // 4. Lógica de Login Normal
+        // 3. Lógica de Login Normal
         if (!userData.senha) {
-          setErro("Senha não cadastrada. Utilize a opção 'Primeiro acesso' .");
+          setErro("Senha não cadastrada. Utilize a opção 'Primeiro Acesso'.");
           setLoading(false);
           return;
         }
@@ -141,16 +118,6 @@ export default function Login() {
     }
   };
 
-  const voltarSelecao = () => {
-    setPerfilSelecionado(null);
-    setIsPrimeiroAcesso(false);
-    setCodigo("");
-    setSenha("");
-    setConfirmarSenha("");
-    setNome("");
-    setErro("");
-  };
-
   return (
     <div className="min-h-screen bg-slate-100/80 flex items-center justify-center p-4 font-sans selection:bg-blue-500 selection:text-white">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200/80 shadow-xl overflow-hidden transition-all duration-300">
@@ -162,184 +129,116 @@ export default function Login() {
           <h1 className="text-2xl font-black tracking-wider uppercase text-slate-800">
             SIMULA<span className="text-red-600">TECH</span>
           </h1>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            Sistema de Gestão de Simulados
+          </p>
         </div>
 
-        {/* ECRÃ 1: SELEÇÃO DE PERFIL */}
-        {!perfilSelecionado ? (
-          <div className="p-6 space-y-3">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-4">
-              Selecione o perfil
-            </p>
-
-            <button
-              onClick={() => setPerfilSelecionado("PROFESSOR")}
-              className="w-full p-4 rounded-xl border border-slate-200 hover:border-[#4b82f6] bg-white hover:bg-blue-50/50 flex items-center justify-between transition-all duration-200 group cursor-pointer shadow-sm hover:shadow-md"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="p-2.5 bg-blue-500 text-white rounded-lg shadow-sm group-hover:scale-105 transition-transform">
-                  <GraduationCap className="w-5 h-5" />
-                </div>
-                <span className="font-bold text-slate-800 uppercase text-xs tracking-wider">
-                  Área do Professor
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#4b82f6] group-hover:translate-x-0.5 transition-all" />
-            </button>
-
-            <button
-              onClick={() => setPerfilSelecionado("GESTAO")}
-              className="w-full p-4 rounded-xl border border-slate-200 hover:border-slate-800 bg-white hover:bg-slate-50 flex items-center justify-between transition-all duration-200 group cursor-pointer shadow-sm hover:shadow-md"
-            >
-              <div className="flex items-center gap-3.5">
-                <div className="p-2.5 bg-slate-800 text-white rounded-lg shadow-sm group-hover:scale-105 transition-transform">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <span className="font-bold text-slate-800 uppercase text-xs tracking-wider">
-                  Direção / Coordenação
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-800 group-hover:translate-x-0.5 transition-all" />
-            </button>
-          </div>
-        ) : (
-          /* ECRÃ 2: FORMULÁRIO DE LOGIN */
-          <form onSubmit={handleLoginSubmit} className="p-6 space-y-4">
-            <button
-              type="button"
-              onClick={voltarSelecao}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-[#4b82f6] uppercase tracking-wider transition cursor-pointer mb-1"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" /> Voltar
-            </button>
-
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-              {perfilSelecionado === "PROFESSOR" ? (
-                <>
-                  <GraduationCap className="w-4 h-4 text-[#4b82f6]" />
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                    Área do Professor
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Building2 className="w-4 h-4 text-slate-800" />
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                    Direção / Coordenação
-                  </span>
-                </>
-              )}
+        {/* Formulário de Acesso Unificado */}
+        <form onSubmit={handleLoginSubmit} className="p-6 space-y-4">
+          {erro && (
+            <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded-lg border border-red-200 text-center">
+              {erro}
             </div>
+          )}
 
-            {erro && (
-              <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded-lg border border-red-200 text-center">
-                {erro}
-              </div>
-            )}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+              Código do SIPAE
+            </label>
+            <div className="relative flex items-center">
+              <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
+              <input
+                type="text"
+                required
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                placeholder="Ex: F12345"
+                className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
+              />
+            </div>
+          </div>
 
+          {isPrimeiroAcesso && (
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                {perfilSelecionado === "PROFESSOR"
-                  ? "Cód. do SIPAE"
-                  : "Cód. do SIPAE"}
+                Nome Completo
               </label>
               <div className="relative flex items-center">
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
                 <input
                   type="text"
                   required
-                  value={codigo}
-                  onChange={(e) => setCodigo(e.target.value)}
-                  placeholder={
-                    perfilSelecionado === "PROFESSOR"
-                      ? "Ex: F12345"
-                      : "Ex: F12345"
-                  }
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Seu nome"
                   className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
                 />
               </div>
             </div>
+          )}
 
-            {isPrimeiroAcesso && (
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Nome Completo
-                </label>
-                <div className="relative flex items-center">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
-                  <input
-                    type="text"
-                    required
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    placeholder="Seu nome"
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
-                  />
-                </div>
-              </div>
-            )}
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+              Senha
+            </label>
+            <div className="relative flex items-center">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5" />
+              <input
+                type="password"
+                required
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all"
+              />
+            </div>
+          </div>
 
+          {isPrimeiroAcesso && (
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                Senha
+                Confirmar Senha
               </label>
               <div className="relative flex items-center">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5" />
+                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5" />
                 <input
                   type="password"
                   required
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
+                  value={confirmarSenha}
+                  onChange={(e) => setConfirmarSenha(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all"
                 />
               </div>
             </div>
+          )}
 
-            {isPrimeiroAcesso && (
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Confirmar Senha
-                </label>
-                <div className="relative flex items-center">
-                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5" />
-                  <input
-                    type="password"
-                    required
-                    value={confirmarSenha}
-                    onChange={(e) => setConfirmarSenha(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all"
-                  />
-                </div>
-              </div>
-            )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 disabled:bg-blue-400 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer mt-2 active:scale-[0.99] flex items-center justify-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isPrimeiroAcesso ? "Cadastrar e Entrar" : "Entrar"}
+          </button>
 
+          <div className="text-center pt-1">
             <button
-              type="submit"
+              type="button"
               disabled={loading}
-              className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 disabled:bg-blue-400 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer mt-2 active:scale-[0.99] flex items-center justify-center gap-2"
+              onClick={() => {
+                setIsPrimeiroAcesso(!isPrimeiroAcesso);
+                setErro("");
+              }}
+              className="text-[11px] text-[#4b82f6] font-bold uppercase tracking-wider hover:underline cursor-pointer disabled:opacity-50"
             >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isPrimeiroAcesso ? "Cadastrar e Entrar" : "Entrar"}
+              {isPrimeiroAcesso
+                ? "Já possui senha? Fazer Login"
+                : "Primeiro acesso?"}
             </button>
-
-            <div className="text-center pt-1">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  setIsPrimeiroAcesso(!isPrimeiroAcesso);
-                  setErro("");
-                }}
-                className="text-[11px] text-[#4b82f6] font-bold uppercase tracking-wider hover:underline cursor-pointer disabled:opacity-50"
-              >
-                {isPrimeiroAcesso
-                  ? "Já possui senha? Fazer Login"
-                  : "Primeiro acesso?"}
-              </button>
-            </div>
-          </form>
-        )}
+          </div>
+        </form>
       </div>
     </div>
   );
