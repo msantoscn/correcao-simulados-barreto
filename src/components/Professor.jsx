@@ -13,6 +13,7 @@ import {
   Unlock,
   Calendar,
   Users,
+  Search,
 } from "lucide-react";
 
 export default function Professor({
@@ -31,6 +32,7 @@ export default function Professor({
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
+  const [filtroTurma, setFiltroTurma] = useState(""); // <--- Estado para o filtro de turmas
 
   const turmaAtiva = turmas.find(
     (t) => String(t.id) === String(turmaSelecionadaId),
@@ -44,6 +46,11 @@ export default function Professor({
       (acc, d) => acc + (d.gabarito?.length || 0),
       0,
     ) || 0;
+
+  // Filtragem inteligente de turmas pelo nome inserido na barra de pesquisa
+  const turmasFiltradas = turmas.filter((t) =>
+    t.nome.toLowerCase().includes(filtroTurma.toLowerCase()),
+  );
 
   // Permissão de edição baseada na combinação Turma + Simulado
   const temPermissaoEdicao = (turma, idSimulado) => {
@@ -59,7 +66,6 @@ export default function Professor({
       ? String(user.codigo).trim().toUpperCase()
       : "";
 
-    // Se este simulado nesta turma não tem aplicador vinculado ainda, está livre
     if (!codigoTurmaSimulado) {
       return true;
     }
@@ -67,14 +73,12 @@ export default function Professor({
     return codigoTurmaSimulado === codigoUsuario;
   };
 
-  // Ao clicar para entrar na turma num simulado específico
   const handleEntrarNaTurma = async (turma, idSimulado) => {
     const aplicadorSimulado = turma.aplicadoresPorSimulado?.[idSimulado];
     const codigoTurmaSimulado = aplicadorSimulado?.codigo
       ? String(aplicadorSimulado.codigo).trim().toUpperCase()
       : "";
 
-    // Se o simulado nesta turma está LIVRE e o usuário é um professor, vincula definitivamente a este simulado
     if (!codigoTurmaSimulado && !isGestao && onVincularTurmaSimulado) {
       const simuladoObj = simulados.find((s) => s.id === idSimulado);
       const confirmar = window.confirm(
@@ -368,13 +372,27 @@ export default function Professor({
 
       {passo === 1 && (
         <div className="space-y-4">
-          <h3 className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-slate-400 flex-shrink-0" />
-            <span>Selecione uma Turma e um Simulado</span>
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <h3 className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              <Users className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <span>Selecione uma Turma e um Simulado</span>
+            </h3>
+
+            {/* Barra de Pesquisa / Filtro Rápido para Simplificar a Visualização de Muitas Turmas */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Filtrar turma..."
+                value={filtroTurma}
+                onChange={(e) => setFiltroTurma(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-[#4b82f6] transition-all"
+              />
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-            {turmas.map((turma) => {
+            {turmasFiltradas.map((turma) => {
               const idsSimuladosDoBimestre =
                 turma.simuladosVinculados?.[bimestreSelecionado] || [];
 
@@ -469,7 +487,7 @@ export default function Professor({
                             >
                               {meuDono ? (
                                 <>
-                                  <Edit3 className="w-3.5 h-3.5" /> Aceder Notas
+                                  <Edit3 className="w-3.5 h-3.5" /> Lançar Notas
                                 </>
                               ) : (
                                 <>
@@ -487,9 +505,9 @@ export default function Professor({
               );
             })}
 
-            {turmas.length === 0 && (
+            {turmasFiltradas.length === 0 && (
               <div className="col-span-full text-center py-8 text-slate-400 text-xs font-bold uppercase border-2 border-dashed border-slate-200 rounded-xl">
-                Nenhuma turma cadastrada.
+                Nenhuma turma encontrada com esse nome.
               </div>
             )}
           </div>
