@@ -17,7 +17,6 @@ export function useFirebase() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Escuta a coleção de Simulados em tempo real
     const unsubSimulados = onSnapshot(
       collection(db, "simulados"),
       (snapshot) => {
@@ -25,17 +24,14 @@ export function useFirebase() {
       },
     );
 
-    // 2. Escuta a coleção de Turmas em tempo real
     const unsubTurmas = onSnapshot(collection(db, "turmas"), (snapshot) => {
       setTurmas(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 
-    // 3. Escuta a coleção de Usuários (Acessos) em tempo real
     const unsubUsuarios = onSnapshot(collection(db, "usuarios"), (snapshot) => {
       setUsuarios(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 
-    // 4. Escuta a coleção de Respostas e Notas em tempo real
     const unsubRespostas = onSnapshot(
       collection(db, "respostas_alunos"),
       (snapshot) => {
@@ -54,7 +50,6 @@ export function useFirebase() {
     };
   }, []);
 
-  // --- Operações para Simulados ---
   const salvarSimulado = async (simulado) => {
     if (simulado.id) {
       await setDoc(doc(db, "simulados", simulado.id), simulado, {
@@ -69,7 +64,6 @@ export function useFirebase() {
     await deleteDoc(doc(db, "simulados", id));
   };
 
-  // --- Operações para Turmas ---
   const salvarTurma = async (turmasAtualizadas) => {
     if (Array.isArray(turmasAtualizadas)) {
       for (const turma of turmasAtualizadas) {
@@ -79,8 +73,7 @@ export function useFirebase() {
           {
             nome: turma.nome,
             alunos: turma.alunos || [],
-            professorVinculadoCodigo: turma.professorVinculadoCodigo || null,
-            professorVinculadoNome: turma.professorVinculadoNome || null,
+            aplicadoresPorSimulado: turma.aplicadoresPorSimulado || {},
             simuladosVinculados: turma.simuladosVinculados || {
               1: [],
               2: [],
@@ -98,10 +91,8 @@ export function useFirebase() {
         {
           nome: turmasAtualizadas.nome,
           alunos: turmasAtualizadas.alunos || [],
-          professorVinculadoCodigo:
-            turmasAtualizadas.professorVinculadoCodigo || null,
-          professorVinculadoNome:
-            turmasAtualizadas.professorVinculadoNome || null,
+          aplicadoresPorSimulado:
+            turmasAtualizadas.aplicadoresPorSimulado || {},
           simuladosVinculados: turmasAtualizadas.simuladosVinculados || {
             1: [],
             2: [],
@@ -114,22 +105,35 @@ export function useFirebase() {
     }
   };
 
-  const vincularTurma = async (turmaId, professor) => {
+  // Vincula o aplicador especificamente à Turma + Simulado
+  const vincularTurmaSimulado = async (turmaId, simuladoId, professor) => {
     try {
       const turmaRef = doc(db, "turmas", String(turmaId));
+
+      // Encontra a turma atual no estado local para atualizar o objeto aplicadoresPorSimulado
+      const turmaAtual = turmas.find((t) => String(t.id) === String(turmaId));
+      const aplicadoresAtuais = turmaAtual?.aplicadoresPorSimulado || {};
+
+      const novosAplicadores = {
+        ...aplicadoresAtuais,
+        [simuladoId]: {
+          codigo: professor.codigo,
+          nome: professor.nome,
+        },
+      };
+
       await setDoc(
         turmaRef,
         {
-          professorVinculadoCodigo: professor.codigo,
-          professorVinculadoNome: professor.nome,
+          aplicadoresPorSimulado: novosAplicadores,
         },
         { merge: true },
       );
       console.log(
-        `Turma ${turmaId} vinculada com sucesso ao aplicador ${professor.nome}`,
+        `Turma ${turmaId} vinculada no simulado ${simuladoId} ao aplicador ${professor.nome}`,
       );
     } catch (error) {
-      console.error("Erro ao vincular turma:", error);
+      console.error("Erro ao vincular aplicador ao simulado:", error);
       throw error;
     }
   };
@@ -138,7 +142,6 @@ export function useFirebase() {
     await deleteDoc(doc(db, "turmas", String(id)));
   };
 
-  // --- Operações para Usuários (Lista VIP) ---
   const salvarUsuarios = async (usuariosAtualizados) => {
     if (Array.isArray(usuariosAtualizados)) {
       for (const usuario of usuariosAtualizados) {
@@ -173,10 +176,8 @@ export function useFirebase() {
     await deleteDoc(doc(db, "usuarios", String(id)));
   };
 
-  // --- Operações para Respostas dos Alunos (Com Validação de Segurança de Vínculo) ---
   const salvarRespostaAluno = async (registo, userLogado, turmasAtuais) => {
     try {
-      // Validação de segurança no backend/hook
       if (userLogado && userLogado.cargo !== "GESTAO" && turmasAtuais) {
         const turmaCorrespondente = turmasAtuais.find(
           (t) =>
@@ -184,21 +185,21 @@ export function useFirebase() {
             String(registo.turma).trim().toUpperCase(),
         );
 
-        if (
-          turmaCorrespondente &&
-          turmaCorrespondente.professorVinculadoCodigo
-        ) {
-          const donoCodigo = String(
-            turmaCorrespondente.professorVinculadoCodigo,
-          )
-            .trim()
-            .toUpperCase();
-          const meuCodigo = String(userLogado.codigo).trim().toUpperCase();
+        if (turmaCorrespondente && turmaCorrespondente.aplicadoresPorSimulado) {
+          const dadosAplicadorSimulado =
+            turmaCorrespondente.aplicadoresPorSimulado[registo.simuladoId];
 
-          if (donoCodigo !== meuCodigo) {
-            throw new Error(
-              "Acesso negado: Esta turma pertence a outro aplicador.",
-            );
+          if (dadosAplicadorSimulado && dadosAplicadorSimulado.codigo) {
+            const donoCodigo = String(dadosAplicadorSimulado.codigo)
+              .trim()
+              .toUpperCase();
+            const meuCodigo = String(userLogado.codigo).trim().toUpperCase();
+
+            if (donoCodigo !== meuCodigo) {
+              throw new Error(
+                "Acesso negado: Este simulado nesta turma pertence a outro aplicador.",
+              );
+            }
           }
         }
       }
@@ -232,7 +233,7 @@ export function useFirebase() {
     salvarSimulado,
     deletarSimulado,
     salvarTurma,
-    vincularTurma,
+    vincularTurmaSimulado,
     deletarTurma,
     salvarUsuarios,
     deletarUsuario,

@@ -39,7 +39,7 @@ function MainContent() {
     deletarTurma,
     salvarRespostaAluno,
     deletarRespostaAluno,
-    vincularTurma,
+    vincularTurmaSimulado, // <--- Nova função para vincular por simulado e turma
     salvarUsuarios,
     deletarUsuario,
   } = useFirebase();
@@ -200,7 +200,7 @@ function MainContent() {
               salvarRespostaAluno(registo, user, turmas)
             }
             onExcluirResposta={deletarRespostaAluno}
-            onVincularTurma={vincularTurma}
+            onVincularTurmaSimulado={vincularTurmaSimulado}
           />
         )}
 

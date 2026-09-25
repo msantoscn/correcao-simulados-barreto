@@ -21,7 +21,7 @@ export default function Professor({
   respostasAlunos = [],
   onSalvarResposta,
   onExcluirResposta,
-  onVincularTurma,
+  onVincularTurmaSimulado,
 }) {
   const { user, isGestao } = useAuth();
 
@@ -45,55 +45,40 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Função centralizada, rigorosa e normalizada para permissão de edição
-  const temPermissaoEdicao = (turma) => {
+  // Permissão de edição baseada na combinação Turma + Simulado
+  const temPermissaoEdicao = (turma, idSimulado) => {
     if (isGestao) return true;
-    if (!turma) return false;
+    if (!turma || !idSimulado) return false;
 
-    const codigoTurma = turma.professorVinculadoCodigo
-      ? String(turma.professorVinculadoCodigo).trim().toUpperCase()
+    const aplicadorSimulado = turma.aplicadoresPorSimulado?.[idSimulado];
+    const codigoTurmaSimulado = aplicadorSimulado?.codigo
+      ? String(aplicadorSimulado.codigo).trim().toUpperCase()
       : "";
 
     const codigoUsuario = user?.codigo
       ? String(user.codigo).trim().toUpperCase()
       : "";
 
-    // Se não tem professor vinculado, está livre (pode assumir)
-    if (!codigoTurma) {
+    // Se este simulado nesta turma não tem aplicador vinculado ainda, está livre
+    if (!codigoTurmaSimulado) {
       return true;
     }
 
-    // Só tem permissão se o código do usuário logado for exatamente o vinculado
-    return codigoTurma === codigoUsuario;
+    return codigoTurmaSimulado === codigoUsuario;
   };
 
-  // Ao clicar para entrar na turma
+  // Ao clicar para entrar na turma num simulado específico
   const handleEntrarNaTurma = async (turma, idSimulado) => {
-    const codigoTurma = turma.professorVinculadoCodigo
-      ? String(turma.professorVinculadoCodigo).trim().toUpperCase()
-      : "";
-    const codigoUsuario = user?.codigo
-      ? String(user.codigo).trim().toUpperCase()
+    const aplicadorSimulado = turma.aplicadoresPorSimulado?.[idSimulado];
+    const codigoTurmaSimulado = aplicadorSimulado?.codigo
+      ? String(aplicadorSimulado.codigo).trim().toUpperCase()
       : "";
 
-    const temDonoOutro =
-      codigoTurma !== "" && codigoTurma !== codigoUsuario && !isGestao;
-
-    // Se já pertence a outro professor, avisa e entra em MODO DE LEITURA
-    if (temDonoOutro) {
-      alert(
-        `Esta turma pertence ao aplicador ${turma.professorVinculadoNome || "outro colega"}. Apenas visualização de notas permitida.`,
-      );
-      setTurmaSelecionadaId(turma.id);
-      setSimuladoSelecionadoId(idSimulado);
-      setPasso(2);
-      return;
-    }
-
-    // Se a turma está LIVRE e o usuário é um professor, vincula definitivamente
-    if (!codigoTurma && !isGestao && onVincularTurma) {
+    // Se o simulado nesta turma está LIVRE e o usuário é um professor, vincula definitivamente a este simulado
+    if (!codigoTurmaSimulado && !isGestao && onVincularTurmaSimulado) {
+      const simuladoObj = simulados.find((s) => s.id === idSimulado);
       const confirmar = window.confirm(
-        `Deseja assumir a turma ${turma.nome}? A partir de agora, ela ficará vinculada a si e apenas você poderá lançar notas nela.`,
+        `Deseja assumir a aplicação do simulado "${simuladoObj?.nome || "Selecionado"}" para a turma ${turma.nome}?`,
       );
 
       if (!confirmar) {
@@ -101,13 +86,13 @@ export default function Professor({
       }
 
       try {
-        await onVincularTurma(turma.id, {
+        await onVincularTurmaSimulado(turma.id, idSimulado, {
           codigo: user.codigo,
           nome: user.nome,
         });
       } catch (error) {
-        console.error("Erro ao vincular turma:", error);
-        alert("Erro ao vincular a turma. Tente novamente.");
+        console.error("Erro ao vincular aplicador:", error);
+        alert("Erro ao vincular aplicador. Tente novamente.");
         return;
       }
     }
@@ -126,11 +111,7 @@ export default function Professor({
   };
 
   const handleSelecionarAluno = (nomeAluno) => {
-    // BLOQUEIO RIGOROSO: Se não tiver permissão, impede absolutamente de abrir para edição
-    if (!temPermissaoEdicao(turmaAtiva)) {
-      alert(
-        "Acesso negado. Esta turma pertence a outro aplicador e está em modo apenas leitura.",
-      );
+    if (!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId)) {
       return;
     }
 
@@ -157,7 +138,7 @@ export default function Professor({
   };
 
   const handleRespostaClick = (disciplinaNome, index, alternativa) => {
-    if (!temPermissaoEdicao(turmaAtiva)) return;
+    if (!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId)) return;
 
     setRespostasProfessor((prev) => {
       const respostaAtual = prev[disciplinaNome]?.[index];
@@ -174,7 +155,7 @@ export default function Professor({
   };
 
   const handleLimparRespostas = () => {
-    if (!temPermissaoEdicao(turmaAtiva)) return;
+    if (!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId)) return;
 
     if (
       window.confirm(
@@ -186,8 +167,7 @@ export default function Professor({
   };
 
   const handleExcluirRespostaAluno = async (registoId, nomeAluno) => {
-    if (!temPermissaoEdicao(turmaAtiva)) {
-      alert("Não tem permissão para excluir registos desta turma.");
+    if (!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId)) {
       return;
     }
 
@@ -272,11 +252,7 @@ export default function Professor({
     e.preventDefault();
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
 
-    // BLOQUEIO RIGOROSO NO SUBMIT
-    if (!temPermissaoEdicao(turmaAtiva)) {
-      alert(
-        "Ação negada! Você não tem permissão para lançar ou salvar notas nesta turma.",
-      );
+    if (!temPermissaoEdicao(turmaAtiva, simuladoAtivo.id)) {
       return;
     }
 
@@ -402,56 +378,17 @@ export default function Professor({
               const idsSimuladosDoBimestre =
                 turma.simuladosVinculados?.[bimestreSelecionado] || [];
 
-              const codigoTurma = turma.professorVinculadoCodigo
-                ? String(turma.professorVinculadoCodigo).trim().toUpperCase()
-                : "";
-              const codigoUsuario = user?.codigo
-                ? String(user.codigo).trim().toUpperCase()
-                : "";
-
-              const meuDono =
-                !codigoTurma || codigoTurma === codigoUsuario || isGestao;
-
               return (
                 <div
                   key={turma.id}
                   className="border border-slate-200 rounded-xl p-3.5 sm:p-4 bg-slate-50 flex flex-col justify-between hover:border-blue-300 transition-colors"
                 >
                   <div className="mb-3">
-                    <div className="flex items-start justify-between mb-1.5">
-                      <h4 className="font-black text-slate-800 uppercase tracking-wide text-xs sm:text-sm truncate">
-                        {turma.nome}
-                      </h4>
-                      {codigoTurma ? (
-                        meuDono ? (
-                          <Lock
-                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0 ml-1"
-                            title="Sua Turma"
-                          />
-                        ) : (
-                          <Lock
-                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0 ml-1"
-                            title="Turma de Outro Aplicador (Apenas Leitura)"
-                          />
-                        )
-                      ) : (
-                        <Unlock
-                          className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 flex-shrink-0 ml-1"
-                          title="Turma Livre"
-                        />
-                      )}
-                    </div>
-                    <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase truncate">
-                      Aplicador:{" "}
-                      <span
-                        className={
-                          turma.professorVinculadoNome
-                            ? "text-slate-700"
-                            : "text-emerald-600"
-                        }
-                      >
-                        {turma.professorVinculadoNome || "Livre"}
-                      </span>
+                    <h4 className="font-black text-slate-800 uppercase tracking-wide text-xs sm:text-sm truncate mb-1">
+                      {turma.nome}
+                    </h4>
+                    <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">
+                      Turma Cadastrada
                     </p>
                   </div>
 
@@ -463,28 +400,85 @@ export default function Professor({
                     ) : (
                       idsSimuladosDoBimestre.map((simId) => {
                         const simObj = simulados.find((s) => s.id === simId);
+
+                        const aplicadorSimulado =
+                          turma.aplicadoresPorSimulado?.[simId];
+                        const codigoTurmaSimulado = aplicadorSimulado?.codigo
+                          ? String(aplicadorSimulado.codigo)
+                              .trim()
+                              .toUpperCase()
+                          : "";
+                        const codigoUsuario = user?.codigo
+                          ? String(user.codigo).trim().toUpperCase()
+                          : "";
+
+                        const meuDono =
+                          !codigoTurmaSimulado ||
+                          codigoTurmaSimulado === codigoUsuario ||
+                          isGestao;
+
                         return (
-                          <button
+                          <div
                             key={simId}
-                            onClick={() => handleEntrarNaTurma(turma, simId)}
-                            className={`w-full py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-between gap-2 transition-all active:scale-[0.98] cursor-pointer ${
-                              meuDono
-                                ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
-                                : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                            }`}
+                            className="bg-white border border-slate-200/80 p-2.5 rounded-xl space-y-2"
                           >
-                            <span className="truncate">
-                              {simObj?.nome || "Simulado Desconhecido"}
-                            </span>
-                            {meuDono ? (
-                              <Edit3 className="w-3.5 h-3.5 flex-shrink-0" />
-                            ) : (
-                              <Eye
-                                className="w-3.5 h-3.5 flex-shrink-0 text-slate-500"
-                                title="Apenas Leitura"
-                              />
-                            )}
-                          </button>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-slate-700 truncate max-w-[150px]">
+                                {simObj?.nome || "Simulado Desconhecido"}
+                              </span>
+                              {codigoTurmaSimulado ? (
+                                meuDono ? (
+                                  <Lock
+                                    className="w-3.5 h-3.5 text-blue-500 flex-shrink-0"
+                                    title="Sua aplicação neste simulado"
+                                  />
+                                ) : (
+                                  <Lock
+                                    className="w-3.5 h-3.5 text-red-400 flex-shrink-0"
+                                    title="Aplicado por outro colega"
+                                  />
+                                )
+                              ) : (
+                                <Unlock
+                                  className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"
+                                  title="Simulado Livre"
+                                />
+                              )}
+                            </div>
+
+                            <p className="text-[9px] text-slate-400 font-bold uppercase truncate">
+                              Aplicador:{" "}
+                              <span
+                                className={
+                                  aplicadorSimulado?.nome
+                                    ? "text-slate-700"
+                                    : "text-emerald-600"
+                                }
+                              >
+                                {aplicadorSimulado?.nome || "Livre"}
+                              </span>
+                            </p>
+
+                            <button
+                              onClick={() => handleEntrarNaTurma(turma, simId)}
+                              className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer ${
+                                meuDono
+                                  ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
+                                  : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                              }`}
+                            >
+                              {meuDono ? (
+                                <>
+                                  <Edit3 className="w-3.5 h-3.5" /> Aceder Notas
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="w-3.5 h-3.5 text-slate-500" />{" "}
+                                  Ver Notas (Leitura)
+                                </>
+                              )}
+                            </button>
+                          </div>
                         );
                       })
                     )}
@@ -508,7 +502,7 @@ export default function Professor({
             <div>
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
                 Turma Ativa{" "}
-                {!temPermissaoEdicao(turmaAtiva) && (
+                {!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId) && (
                   <span className="text-red-500 font-bold">
                     (Modo Apenas Leitura)
                   </span>
@@ -602,7 +596,10 @@ export default function Professor({
                             ? calcularDesempenhoAluno(registo.gabaritoBruto)
                             : null;
                         const concluido = dadosCalculados !== null;
-                        const temPermissao = temPermissaoEdicao(turmaAtiva);
+                        const temPermissao = temPermissaoEdicao(
+                          turmaAtiva,
+                          simuladoSelecionadoId,
+                        );
 
                         return (
                           <tr
