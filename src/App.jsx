@@ -26,7 +26,7 @@ function MainContent() {
   );
   const abaExibida = isProfessor ? "professor" : abaAtiva;
 
-  // Dados e funções do Firebase
+  // Dados e funções do Firebase atualizados
   const {
     simulados,
     turmas,
@@ -39,7 +39,7 @@ function MainContent() {
     deletarTurma,
     salvarRespostaAluno,
     deletarRespostaAluno,
-    vincularTurmaSimulado, // <--- Nova função para vincular por simulado e turma
+    vincularTurmaSimulado,
     salvarUsuarios,
     deletarUsuario,
   } = useFirebase();

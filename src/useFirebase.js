@@ -7,6 +7,7 @@ import {
   setDoc,
   addDoc,
   deleteDoc,
+  deleteField,
 } from "firebase/firestore";
 
 export function useFirebase() {
@@ -105,35 +106,54 @@ export function useFirebase() {
     }
   };
 
-  // Vincula o aplicador especificamente à Turma + Simulado
+  // Vincula ou Desvincula o aplicador especificamente à Turma + Simulado
   const vincularTurmaSimulado = async (turmaId, simuladoId, professor) => {
     try {
       const turmaRef = doc(db, "turmas", String(turmaId));
 
-      // Encontra a turma atual no estado local para atualizar o objeto aplicadoresPorSimulado
-      const turmaAtual = turmas.find((t) => String(t.id) === String(turmaId));
-      const aplicadoresAtuais = turmaAtual?.aplicadoresPorSimulado || {};
+      if (!professor) {
+        // Se professor for null ou indefinido, desvincula utilizando deleteField() do Firestore
+        await setDoc(
+          turmaRef,
+          {
+            aplicadoresPorSimulado: {
+              [simuladoId]: deleteField(),
+            },
+          },
+          { merge: true },
+        );
+        console.log(
+          `Simulado ${simuladoId} desvinculado com sucesso da turma ${turmaId}`,
+        );
+      } else {
+        // Se for para vincular um professor
+        const turmaAtual = turmas.find((t) => String(t.id) === String(turmaId));
+        const aplicadoresAtuais = turmaAtual?.aplicadoresPorSimulado || {};
 
-      const novosAplicadores = {
-        ...aplicadoresAtuais,
-        [simuladoId]: {
-          codigo: professor.codigo,
-          nome: professor.nome,
-        },
-      };
+        const novosAplicadores = {
+          ...aplicadoresAtuais,
+          [simuladoId]: {
+            codigo: professor.codigo,
+            nome: professor.nome,
+          },
+        };
 
-      await setDoc(
-        turmaRef,
-        {
-          aplicadoresPorSimulado: novosAplicadores,
-        },
-        { merge: true },
-      );
-      console.log(
-        `Turma ${turmaId} vinculada no simulado ${simuladoId} ao aplicador ${professor.nome}`,
-      );
+        await setDoc(
+          turmaRef,
+          {
+            aplicadoresPorSimulado: novosAplicadores,
+          },
+          { merge: true },
+        );
+        console.log(
+          `Turma ${turmaId} vinculada no simulado ${simuladoId} ao aplicador ${professor.nome}`,
+        );
+      }
     } catch (error) {
-      console.error("Erro ao vincular aplicador ao simulado:", error);
+      console.error(
+        "Erro ao vincular/desvincular aplicador ao simulado:",
+        error,
+      );
       throw error;
     }
   };
@@ -224,6 +244,15 @@ export function useFirebase() {
     }
   };
 
+  const deletarRespostaAluno = async (id) => {
+    try {
+      await deleteDoc(doc(db, "respostas_alunos", String(id)));
+    } catch (error) {
+      console.error("Erro ao deletar resposta do aluno:", error);
+      throw error;
+    }
+  };
+
   return {
     simulados,
     turmas,
@@ -238,5 +267,6 @@ export function useFirebase() {
     salvarUsuarios,
     deletarUsuario,
     salvarRespostaAluno,
+    deletarRespostaAluno,
   };
 }

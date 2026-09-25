@@ -12,6 +12,7 @@ import {
   Unlock,
   Calendar,
   Users,
+  UserX,
 } from "lucide-react";
 
 export default function Professor({
@@ -24,18 +25,15 @@ export default function Professor({
 }) {
   const { user, isGestao } = useAuth();
 
-  const [bimestreSelecionado, setBimestreSelecionado] = useState("1"); // Padrão 1º Bimestre
-  const [turmaSelecionadaId, setTurmaSelecionadaId] = useState(
-    turmas.length > 0 ? turmas[0].id : "",
-  );
+  const [bimestreSelecionado, setBimestreSelecionado] = useState("1");
+  const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
 
-  // Garantir seleção padrão de turma caso a lista carregue depois
-  const turmaAtiva =
-    turmas.find((t) => String(t.id) === String(turmaSelecionadaId)) ||
-    turmas[0];
+  const turmaAtiva = turmas.find(
+    (t) => String(t.id) === String(turmaSelecionadaId),
+  );
 
   const simuladoAtivo = simulados.find(
     (s) => String(s.id) === String(simuladoSelecionadoId),
@@ -47,7 +45,6 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Permissão de edição baseada na combinação Turma + Simulado
   const temPermissaoEdicao = (turma, idSimulado) => {
     if (isGestao) return true;
     if (!turma || !idSimulado) return false;
@@ -99,6 +96,32 @@ export default function Professor({
     setSimuladoSelecionadoId(idSimulado);
   };
 
+  const handleDesvincularSimulado = async (
+    e,
+    idSimulado,
+    nomeSimulado,
+    nomeAplicador,
+  ) => {
+    e.stopPropagation();
+    if (!onVincularTurmaSimulado || !turmaAtiva) return;
+
+    const confirmar = window.confirm(
+      `DESVINCULAR PROFESSOR:\n\n• Professor: [ ${(
+        nomeAplicador || "ATUAL"
+      ).toUpperCase()} ]\n• Simulado: [ ${nomeSimulado.toUpperCase()} ]\n\nDeseja realmente liberar este simulado?`,
+    );
+
+    if (!confirmar) return;
+
+    try {
+      await onVincularTurmaSimulado(turmaAtiva.id, idSimulado, null);
+      alert("Simulado liberado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao desvincular:", error);
+      alert("Erro ao liberar simulado. Verifique os dados.");
+    }
+  };
+
   const handleVoltarAosSimulados = () => {
     setSimuladoSelecionadoId("");
     setAlunoAtivo(null);
@@ -118,7 +141,7 @@ export default function Professor({
         String(r.turma).trim().toUpperCase() ===
           String(turmaAtiva?.nome).trim().toUpperCase() &&
         String(r.nomeAluno).trim().toUpperCase() ===
-          String(nomeAluno).trim().toUpperCase(),
+          String(alunoAtivo).trim().toUpperCase(),
     );
 
     if (respostaExistente && respostaExistente.gabaritoBruto) {
@@ -350,129 +373,155 @@ export default function Professor({
               onChange={(e) => setTurmaSelecionadaId(e.target.value)}
               className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 uppercase focus:outline-none focus:border-[#4b82f6] shadow-xs cursor-pointer"
             >
-              {turmas.length === 0 ? (
-                <option value="">Nenhuma turma cadastrada</option>
-              ) : (
-                turmas.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome} ({t.alunos?.length || 0} alunos)
-                  </option>
-                ))
-              )}
+              <option value="">Selecione uma turma...</option>
+              {turmas.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nome}
+                </option>
+              ))}
             </select>
           </div>
         </div>
       )}
 
-      {/* LISTAGEM DE SIMULADOS VINCULADOS À TURMA E BIMESTRE SELECIONADOS */}
+      {/* EXIBIÇÃO APÓS ESCOLHER A TURMA */}
       {!simuladoSelecionadoId ? (
-        <div className="space-y-4">
-          <h3 className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-            <Award className="w-4 h-4 text-slate-400 flex-shrink-0" />
-            <span>
-              Simulados vinculados a {turmaAtiva?.nome || "esta turma"} no{" "}
-              {bimestreSelecionado}º Bimestre
-            </span>
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-            {(() => {
-              const idsSimuladosDoBimestre =
-                turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
-
-              if (idsSimuladosDoBimestre.length === 0) {
-                return (
-                  <div className="col-span-full text-center py-10 text-orange-500 text-xs font-bold uppercase border-2 border-dashed border-orange-200 bg-orange-50 rounded-2xl">
-                    Nenhum simulado vinculado a esta turma no{" "}
-                    {bimestreSelecionado}º Bimestre.
-                  </div>
-                );
-              }
-
-              return idsSimuladosDoBimestre.map((simId) => {
-                const simObj = simulados.find((s) => s.id === simId);
-                const aplicadorSimulado =
-                  turmaAtiva?.aplicadoresPorSimulado?.[simId];
-                const codigoTurmaSimulado = aplicadorSimulado?.codigo
-                  ? String(aplicadorSimulado.codigo).trim().toUpperCase()
-                  : "";
-                const codigoUsuario = user?.codigo
-                  ? String(user.codigo).trim().toUpperCase()
-                  : "";
-
-                const meuDono =
-                  !codigoTurmaSimulado ||
-                  codigoTurmaSimulado === codigoUsuario ||
-                  isGestao;
-
-                return (
-                  <div
-                    key={simId}
-                    className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between hover:border-blue-300 transition-colors space-y-3 shadow-xs"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between mb-1">
-                        <h4 className="font-black text-slate-800 uppercase tracking-wide text-xs sm:text-sm truncate">
-                          {simObj?.nome || "Simulado Desconhecido"}
-                        </h4>
-                        {codigoTurmaSimulado ? (
-                          meuDono ? (
-                            <Lock
-                              className="w-4 h-4 text-blue-500 flex-shrink-0 ml-1"
-                              title="Sua aplicação neste simulado"
-                            />
-                          ) : (
-                            <Lock
-                              className="w-4 h-4 text-red-400 flex-shrink-0 ml-1"
-                              title="Aplicado por outro colega"
-                            />
-                          )
-                        ) : (
-                          <Unlock
-                            className="w-4 h-4 text-emerald-400 flex-shrink-0 ml-1"
-                            title="Simulado Livre"
-                          />
-                        )}
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase truncate">
-                        Aplicador:{" "}
-                        <span
-                          className={
-                            aplicadorSimulado?.nome
-                              ? "text-slate-700"
-                              : "text-emerald-600"
-                          }
-                        >
-                          {aplicadorSimulado?.nome || "Livre"}
-                        </span>
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => handleEntrarNoSimulado(simId)}
-                      className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer ${
-                        meuDono
-                          ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
-                          : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                      }`}
-                    >
-                      {meuDono ? (
-                        <>
-                          <Edit3 className="w-4 h-4" /> add Notas
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4 text-slate-500" /> Ver Notas
-                          (Leitura)
-                        </>
-                      )}
-                    </button>
-                  </div>
-                );
-              });
-            })()}
+        !turmaAtiva ? (
+          <div className="text-center py-12 text-slate-400 text-xs font-bold uppercase border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+            Selecione uma turma acima para exibir os simulados.
           </div>
-        </div>
+        ) : (
+          <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 bg-slate-50/50 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#4b82f6]" />
+                <span>Turma: {turmaAtiva.nome}</span>
+              </h3>
+              <span className="text-[10px] font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200 uppercase">
+                {bimestreSelecionado}º Bimestre
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+              {(() => {
+                const idsSimuladosDoBimestre =
+                  turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
+
+                if (idsSimuladosDoBimestre.length === 0) {
+                  return (
+                    <div className="col-span-full text-center py-10 text-orange-500 text-xs font-bold uppercase border-2 border-dashed border-orange-200 bg-orange-50 rounded-2xl">
+                      Nenhum simulado vinculado a esta turma no{" "}
+                      {bimestreSelecionado}º Bimestre.
+                    </div>
+                  );
+                }
+
+                return idsSimuladosDoBimestre.map((simId) => {
+                  const simObj = simulados.find((s) => s.id === simId);
+                  const aplicadorSimulado =
+                    turmaAtiva?.aplicadoresPorSimulado?.[simId];
+                  const codigoTurmaSimulado = aplicadorSimulado?.codigo
+                    ? String(aplicadorSimulado.codigo).trim().toUpperCase()
+                    : "";
+                  const codigoUsuario = user?.codigo
+                    ? String(user.codigo).trim().toUpperCase()
+                    : "";
+
+                  const meuDono =
+                    !codigoTurmaSimulado ||
+                    codigoTurmaSimulado === codigoUsuario ||
+                    isGestao;
+
+                  return (
+                    <div
+                      key={simId}
+                      className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between hover:border-blue-300 transition-colors space-y-3 shadow-xs"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between mb-1">
+                          <h4 className="font-black text-slate-800 uppercase tracking-wide text-xs sm:text-sm truncate">
+                            {simObj?.nome || "Simulado Desconhecido"}
+                          </h4>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {codigoTurmaSimulado ? (
+                              <>
+                                {meuDono ? (
+                                  <Lock
+                                    className="w-4 h-4 text-blue-500"
+                                    title="Sua aplicação neste simulado"
+                                  />
+                                ) : (
+                                  <Lock
+                                    className="w-4 h-4 text-red-400"
+                                    title="Aplicado por outro colega"
+                                  />
+                                )}
+                                {isGestao && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleDesvincularSimulado(
+                                        e,
+                                        simId,
+                                        simObj?.nome || "Simulado",
+                                        aplicadorSimulado?.nome,
+                                      )
+                                    }
+                                    className="p-1 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                                    title="Desvincular Professor"
+                                  >
+                                    <UserX className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <Unlock
+                                className="w-4 h-4 text-emerald-400"
+                                title="Simulado Livre"
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase truncate">
+                          Aplicador:{" "}
+                          <span
+                            className={
+                              aplicadorSimulado?.nome
+                                ? "text-slate-700"
+                                : "text-emerald-600"
+                            }
+                          >
+                            {aplicadorSimulado?.nome || "Livre"}
+                          </span>
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleEntrarNoSimulado(simId)}
+                        className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer ${
+                          meuDono
+                            ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
+                            : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                        }`}
+                      >
+                        {meuDono ? (
+                          <>
+                            <Edit3 className="w-4 h-4" /> add Notas
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-4 h-4 text-slate-500" /> Ver Notas
+                            (Leitura)
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )
       ) : (
         /* LANÇAMENTO DE NOTAS DOS ALUNOS (QUANDO UM SIMULADO É SELECIONADO) */
         <div className="space-y-5">
