@@ -101,12 +101,10 @@ export default function Admin({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // NOVO: Função para duplicar um simulado existente
   const duplicarSimulado = (simulado) => {
-    setIdEmEdicao(null); // Reseta o ID para garantir que será salvo como um novo registo
+    setIdEmEdicao(null);
     setNomeSimulado(`${simulado.nome} (Cópia)`);
     setBimestre(simulado.bimestre || "3");
-    // Clona as disciplinas garantindo novos IDs temporários para evitar conflitos de DOM
     const disciplinasCopiadas = JSON.parse(
       JSON.stringify(simulado.disciplinas),
     ).map((d) => ({
@@ -185,24 +183,23 @@ export default function Admin({
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-['Arial',sans-serif]">
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 font-['Arial',sans-serif]">
       {/* ========================================= */}
       {/* COLUNA ESQUERDA - FORMULÁRIO DE CRIAÇÃO   */}
       {/* ========================================= */}
-      <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6 sm:p-8 transition-all">
-        <div className="flex flex-wrap justify-between items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+      <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 sm:p-8 transition-all overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 pb-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 text-[#4b82f6] rounded-lg border border-slate-200">
+            <div className="p-2 bg-blue-50 text-[#4b82f6] rounded-lg border border-slate-200 shrink-0">
               <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-800 uppercase tracking-wide font-['Arial',sans-serif]">
+              <h2 className="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wide font-['Arial',sans-serif]">
                 {idEmEdicao ? "EDITAR" : "CRIAR"}{" "}
                 <span className="text-red-600 font-bold">SIMULADO</span>
               </h2>
-              <p className="text-xs text-slate-500 font-bold font-['Arial',sans-serif]">
-                Digite o gabarito oficial (A, B, C, D). O cursor avança
-                automaticamente.
+              <p className="text-[11px] sm:text-xs text-slate-500 font-bold font-['Arial',sans-serif]">
+                Digite o gabarito oficial (A, B, C, D). Avanço automático.
               </p>
             </div>
           </div>
@@ -211,9 +208,9 @@ export default function Admin({
             <button
               type="button"
               onClick={cancelarEdicao}
-              className="text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded uppercase flex items-center gap-1.5 transition cursor-pointer"
+              className="w-full sm:w-auto text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-2 rounded uppercase flex items-center justify-center gap-1.5 transition cursor-pointer"
             >
-              <X className="w-4 h-4" /> Cancelar
+              <X className="w-4 h-4" /> Cancelar Edição
             </button>
           )}
         </div>
@@ -229,7 +226,7 @@ export default function Admin({
                 placeholder="Ex: Simulado 1 - Trimestral"
                 value={nomeSimulado}
                 onChange={(e) => setNomeSimulado(e.target.value)}
-                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 transition-all uppercase placeholder:normal-case placeholder:font-normal"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition-all uppercase placeholder:normal-case placeholder:font-normal"
                 required
               />
             </div>
@@ -241,7 +238,7 @@ export default function Admin({
               <select
                 value={bimestre}
                 onChange={(e) => setBimestre(e.target.value)}
-                className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 transition-all uppercase cursor-pointer"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition-all uppercase cursor-pointer"
                 required
               >
                 <option value="1">1º Bimestre</option>
@@ -279,14 +276,14 @@ export default function Admin({
             <button
               type="button"
               onClick={adicionarDisciplina}
-              className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 text-[#4b82f6] border border-slate-200 font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer"
+              className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-[#4b82f6] border border-slate-200 font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" /> Adicionar Outra Disciplina
             </button>
 
             <button
               type="submit"
-              className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer"
+              className="w-full py-3.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded flex items-center justify-center gap-2 transition cursor-pointer shadow-sm"
             >
               <Save className="w-4 h-4" />
               {idEmEdicao ? "Atualizar Simulado" : "Salvar Simulado"}
@@ -298,9 +295,9 @@ export default function Admin({
       {/* ========================================= */}
       {/* COLUNA DIREITA - LISTAGEM DE SIMULADOS    */}
       {/* ========================================= */}
-      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 h-fit transition-all">
+      <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-4 sm:p-6 h-fit transition-all">
         <div className="flex items-center gap-3 pb-4 border-b border-slate-200 mb-4">
-          <div className="p-2 bg-slate-50 text-slate-600 rounded-lg border border-slate-200">
+          <div className="p-2 bg-slate-50 text-slate-600 rounded-lg border border-slate-200 shrink-0">
             <FileText className="w-5 h-5" />
           </div>
           <div>
@@ -324,7 +321,7 @@ export default function Admin({
             placeholder="Buscar simulado..."
             value={termoBusca}
             onChange={(e) => setTermoBusca(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
+            className="w-full pl-9 pr-3 py-2.5 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
           />
         </div>
 
@@ -368,7 +365,7 @@ function DisciplinaCard({
   aoAtualizarGabarito,
 }) {
   return (
-    <div className="p-4 bg-slate-50/50 border border-slate-200 rounded-xl relative transition-all">
+    <div className="p-3 sm:p-4 bg-slate-50/50 border border-slate-200 rounded-xl relative transition-all">
       <div className="flex justify-between items-center mb-3">
         <span className="inline-flex items-center px-2 py-0.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider rounded font-['Arial',sans-serif]">
           Disciplina {index + 1}
@@ -407,7 +404,7 @@ function DisciplinaCard({
             placeholder="Ex: Ling. Portuguesa"
             value={disc.nome}
             onChange={(e) => aoAtualizar("nome", e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
+            className="w-full px-3 py-2 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500 uppercase placeholder:normal-case placeholder:font-normal"
             required
           />
         </div>
@@ -422,18 +419,18 @@ function DisciplinaCard({
             max="40"
             value={disc.qtdQuestoes}
             onChange={(e) => aoAtualizar("qtdQuestoes", e.target.value)}
-            className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:border-slate-500"
+            className="w-full px-3 py-2 bg-slate-50/70 border border-slate-300 rounded text-xs font-bold text-slate-800 outline-none focus:bg-white focus:border-slate-500"
             required
           />
         </div>
       </div>
 
-      {/* Grid do Gabarito */}
-      <div className="p-3 bg-white border border-slate-200 rounded">
+      {/* Grid do Gabarito Responsivo */}
+      <div className="p-3 bg-white border border-slate-200 rounded overflow-x-auto">
         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center sm:text-left font-['Arial',sans-serif]">
           Respostas Corretas (A, B, C, D)
         </label>
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 min-w-[260px]">
           {disc.gabarito.map((resposta, qIdx) => (
             <div key={qIdx} className="flex flex-col items-center">
               <span className="text-[10px] text-slate-400 font-bold mb-1 font-['Arial',sans-serif]">
@@ -445,7 +442,7 @@ function DisciplinaCard({
                 maxLength="1"
                 value={resposta}
                 onChange={(e) => aoAtualizarGabarito(qIdx, e.target.value)}
-                className="w-9 h-9 text-center text-xs font-bold uppercase rounded border border-slate-300 bg-slate-50 text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition"
+                className="w-9 h-9 sm:w-10 sm:h-10 text-center text-xs sm:text-sm font-bold uppercase rounded border border-slate-300 bg-slate-50/80 text-slate-800 outline-none focus:bg-white focus:border-slate-500 transition"
                 required
               />
             </div>
@@ -490,7 +487,7 @@ function SimuladoCard({ sim, emEdicao, aoEditar, aoDuplicar, aoRemover }) {
         questões
       </p>
 
-      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100">
+      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100 flex-wrap sm:flex-nowrap">
         <button
           onClick={aoEditar}
           className="flex-1 py-1.5 px-2.5 bg-slate-50 hover:bg-[#4b82f6] text-slate-600 hover:text-white border border-slate-200 text-[11px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1 transition cursor-pointer"
