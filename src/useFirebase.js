@@ -69,7 +69,7 @@ export function useFirebase() {
     await deleteDoc(doc(db, "simulados", id));
   };
 
-  // --- Operações para Turmas (Agora salva o professor vinculado) ---
+  // --- Operações para Turmas ---
   const salvarTurma = async (turmasAtualizadas) => {
     if (Array.isArray(turmasAtualizadas)) {
       for (const turma of turmasAtualizadas) {
@@ -114,7 +114,6 @@ export function useFirebase() {
     }
   };
 
-  // Nova função específica para vincular o professor à turma livre
   const vincularTurma = async (turmaId, professor) => {
     try {
       const turmaRef = doc(db, "turmas", String(turmaId));
@@ -127,7 +126,7 @@ export function useFirebase() {
         { merge: true },
       );
       console.log(
-        `Turma ${turmaId} vinculada com sucesso ao professor ${professor.nome}`,
+        `Turma ${turmaId} vinculada com sucesso ao aplicador ${professor.nome}`,
       );
     } catch (error) {
       console.error("Erro ao vincular turma:", error);
@@ -174,9 +173,36 @@ export function useFirebase() {
     await deleteDoc(doc(db, "usuarios", String(id)));
   };
 
-  // --- Operações para Respostas dos Alunos ---
-  const salvarRespostaAluno = async (registo) => {
+  // --- Operações para Respostas dos Alunos (Com Validação de Segurança de Vínculo) ---
+  const salvarRespostaAluno = async (registo, userLogado, turmasAtuais) => {
     try {
+      // Validação de segurança no backend/hook
+      if (userLogado && userLogado.cargo !== "GESTAO" && turmasAtuais) {
+        const turmaCorrespondente = turmasAtuais.find(
+          (t) =>
+            String(t.nome).trim().toUpperCase() ===
+            String(registo.turma).trim().toUpperCase(),
+        );
+
+        if (
+          turmaCorrespondente &&
+          turmaCorrespondente.professorVinculadoCodigo
+        ) {
+          const donoCodigo = String(
+            turmaCorrespondente.professorVinculadoCodigo,
+          )
+            .trim()
+            .toUpperCase();
+          const meuCodigo = String(userLogado.codigo).trim().toUpperCase();
+
+          if (donoCodigo !== meuCodigo) {
+            throw new Error(
+              "Acesso negado: Esta turma pertence a outro aplicador.",
+            );
+          }
+        }
+      }
+
       const idLimpo =
         `${registo.simuladoId}_${registo.turma}_${registo.nomeAluno}`
           .normalize("NFD")
@@ -191,8 +217,8 @@ export function useFirebase() {
 
       console.log("Sucesso absoluto! Gravado no Firestore com ID:", idLimpo);
     } catch (error) {
-      console.error("Erro detalhado ao salvar no Firebase:", error);
-      alert("Erro ao gravar no Firebase: " + error.message);
+      console.error("Erro de permissão ao salvar no Firebase:", error);
+      alert("Operação bloqueada: " + error.message);
       throw error;
     }
   };
@@ -206,7 +232,7 @@ export function useFirebase() {
     salvarSimulado,
     deletarSimulado,
     salvarTurma,
-    vincularTurma, // <--- Exportado aqui
+    vincularTurma,
     deletarTurma,
     salvarUsuarios,
     deletarUsuario,

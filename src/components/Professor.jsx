@@ -142,7 +142,7 @@ export default function Professor({
         String(r.turma).trim().toUpperCase() ===
           String(turmaAtiva?.nome).trim().toUpperCase() &&
         String(r.nomeAluno).trim().toUpperCase() ===
-          String(alunoAtivo).trim().toUpperCase(),
+          String(nomeAluno).trim().toUpperCase(),
     );
 
     if (respostaExistente && respostaExistente.gabaritoBruto) {
@@ -320,7 +320,6 @@ export default function Professor({
       setRespostasProfessor({});
     } catch (error) {
       console.error("Erro ao guardar respostas:", error);
-      alert("Erro ao guardar respostas.");
     }
   };
 
