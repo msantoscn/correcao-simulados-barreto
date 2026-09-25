@@ -25,6 +25,16 @@ export default function Login() {
   const [nome, setNome] = useState("");
   const [erro, setErro] = useState("");
 
+  // Função auxiliar para capitalizar as iniciais corretamente (ex: "francisca maria" -> "Francisca Maria")
+  const formatarNomeProprio = (texto) => {
+    if (!texto) return "";
+    return texto
+      .toLowerCase()
+      .split(" ")
+      .map((palavra) => palavra.charAt(0).toUpperCase() + palavra.slice(1))
+      .join(" ");
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErro("");
@@ -76,18 +86,19 @@ export default function Login() {
           return;
         }
 
-        const nomeFinal =
-          nome.trim() || userData.nome || `Utilizador ${codigoUpper}`;
+        const nomeFormatado = formatarNomeProprio(
+          nome.trim() || userData.nome || `Utilizador ${codigoUpper}`,
+        );
 
-        // Atualiza a senha e o nome no Firebase
+        // Atualiza a senha e o nome formatado no Firebase
         await updateDoc(doc(db, "usuarios", userId), {
           senha: senha,
-          nome: nomeFinal,
+          nome: nomeFormatado,
         });
 
         login({
           codigo: codigoUpper,
-          nome: nomeFinal,
+          nome: nomeFormatado,
           cargo: userData.cargo,
         });
       } else {
@@ -104,9 +115,14 @@ export default function Login() {
           return;
         }
 
+        // Se porventura o nome já gravado no banco estiver em minúsculas, já o entregamos formatado
+        const nomeFormatado = formatarNomeProprio(
+          userData.nome || `Utilizador ${codigoUpper}`,
+        );
+
         login({
           codigo: userData.codigo,
-          nome: userData.nome,
+          nome: nomeFormatado,
           cargo: userData.cargo,
         });
       }
@@ -172,7 +188,7 @@ export default function Login() {
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Seu nome"
-                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
+                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all placeholder:font-normal"
                 />
               </div>
             </div>
