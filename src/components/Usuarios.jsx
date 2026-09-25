@@ -62,7 +62,7 @@ export default function Usuarios({
     const novo = {
       id: Date.now().toString(),
       codigo: codigoFormatado,
-      nome: novoNome.trim(),
+      nome: novoNome.trim().toUpperCase(), // <--- Garante nome em maiúsculas ao enviar
       cargo: novoCargo,
       senha: "", // Senha vazia, será definida no primeiro acesso
     };
@@ -92,8 +92,8 @@ export default function Usuarios({
         listaAtualizada.push({
           id: Date.now().toString() + Math.random(),
           codigo: codigo,
-          nome: "", // Fica em branco para o professor preencher (ou a escola editar depois)
-          cargo: "PROFESSOR", // Padrão da importação em massa
+          nome: "", // Fica em branco para o professor preencher
+          cargo: "PROFESSOR",
           senha: "",
         });
         adicionados++;
@@ -152,9 +152,9 @@ export default function Usuarios({
         return {
           ...u,
           codigo: codigoFormatado,
-          nome: editNome.trim(),
+          nome: editNome.trim().toUpperCase(), // <--- Garante nome em maiúsculas na edição
           cargo: editCargo,
-          senha: editSenha, // Permite à direção redefinir/apagar a senha
+          senha: editSenha,
         };
       }
       return u;
@@ -206,8 +206,9 @@ export default function Usuarios({
                 type="text"
                 placeholder="Nome Completo (Opcional)"
                 value={novoNome}
-                onChange={(e) => setNovoNome(e.target.value)}
-                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium outline-none transition-all placeholder:text-slate-400"
+                // <--- .toUpperCase() garante a formatação imediata no campo de digitação
+                onChange={(e) => setNovoNome(e.target.value.toUpperCase())}
+                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
               />
             </div>
             <div>
@@ -353,9 +354,12 @@ export default function Usuarios({
                           <input
                             type="text"
                             value={editNome}
-                            onChange={(e) => setEditNome(e.target.value)}
+                            // <--- .toUpperCase() garante formatação imediata em maiúsculas na edição
+                            onChange={(e) =>
+                              setEditNome(e.target.value.toUpperCase())
+                            }
                             placeholder="Nome..."
-                            className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none"
+                            className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none uppercase"
                           />
                         </div>
                         <div className="col-span-2">
