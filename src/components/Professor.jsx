@@ -6,7 +6,6 @@ import {
   Award,
   Edit3,
   PlusCircle,
-  Eye,
   Trash2,
   Eraser,
   Lock,
@@ -29,7 +28,7 @@ export default function Professor({
   const [bimestreSelecionado, setBimestreSelecionado] = useState(null);
   const [passo, setPasso] = useState(1);
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
-  const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState(""); // Agora o simulado também precisa de ser selecionado
+  const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
 
@@ -47,25 +46,13 @@ export default function Professor({
       0,
     ) || 0;
 
-  const temPermissaoEdicao = (turma) => {
-    if (isGestao) return true;
-    if (!turma?.professorVinculadoCodigo) return true;
-    return turma.professorVinculadoCodigo === user.codigo;
-  };
-
+  // Entra direto na turma sem perguntar nada ou bloquear
   const handleEntrarNaTurma = async (turma, idSimulado) => {
-    if (!turma.professorVinculadoCodigo && !isGestao) {
-      const confirmacao = window.confirm(
-        `Deseja assumir a turma ${turma.nome}? Apenas você e a Gestão poderão lançar notas nela.`,
-      );
-      if (!confirmacao) return;
-
-      if (onVincularTurma) {
-        await onVincularTurma(turma.id, {
-          codigo: user.codigo,
-          nome: user.nome,
-        });
-      }
+    if (!turma.professorVinculadoCodigo && !isGestao && onVincularTurma) {
+      await onVincularTurma(turma.id, {
+        codigo: user.codigo,
+        nome: user.nome,
+      });
     }
 
     setTurmaSelecionadaId(turma.id);
@@ -260,30 +247,30 @@ export default function Professor({
   // =========================================================
   if (!bimestreSelecionado) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-200/80 max-w-3xl mx-auto mt-8">
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 border border-blue-100">
-            <Calendar className="w-8 h-8 text-[#4b82f6]" />
+      <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-8 border border-slate-200/80 max-w-3xl mx-auto mt-4 sm:mt-8 w-full">
+        <div className="flex flex-col items-center text-center mb-6 sm:mb-8">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 border border-blue-100">
+            <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-[#4b82f6]" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-wide">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-wide">
             Selecione o Bimestre
           </h2>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1 sm:mt-2">
             Identificado como: {user.nome} {isGestao && "(Gestão)"}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {["1", "2", "3", "4"].map((b) => (
             <button
               key={b}
               onClick={() => setBimestreSelecionado(b)}
-              className="p-6 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-[#4b82f6] hover:bg-blue-50 hover:shadow-sm transition-all group flex flex-col items-center cursor-pointer"
+              className="p-5 sm:p-6 bg-slate-50 border-2 border-slate-200 rounded-xl hover:border-[#4b82f6] hover:bg-blue-50 transition-all group flex flex-col items-center cursor-pointer active:scale-[0.98]"
             >
-              <span className="text-3xl font-black text-slate-700 group-hover:text-[#4b82f6] transition-colors">
+              <span className="text-2xl sm:text-3xl font-black text-slate-700 group-hover:text-[#4b82f6] transition-colors">
                 {b}º
               </span>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 group-hover:text-[#4b82f6]">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 group-hover:text-[#4b82f6]">
                 Bimestre
               </span>
             </button>
@@ -297,22 +284,22 @@ export default function Professor({
   // ETAPA 1 E 2: LISTAGEM E FORMULÁRIO
   // =========================================================
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-5 lg:p-6 border border-slate-200/80">
+    <div className="bg-white rounded-2xl shadow-sm p-3 sm:p-5 lg:p-6 border border-slate-200/80 w-full overflow-x-hidden">
       {/* Cabeçalho Principal Partilhado */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
-            <UserCheck className="text-slate-600 w-5 h-5" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 flex-shrink-0">
+            <UserCheck className="text-slate-600 w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <h2 className="text-lg font-black tracking-wide uppercase text-slate-800 leading-tight">
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-lg font-black tracking-wide uppercase text-slate-800 leading-tight truncate">
               Lançamento de <span className="text-[#4b82f6]">Notas</span>
             </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
                 {bimestreSelecionado}º BIMESTRE
               </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[150px] sm:max-w-none">
                 {user.nome} {isGestao && "(Gestão)"}
               </span>
             </div>
@@ -323,7 +310,7 @@ export default function Professor({
         {passo === 1 && (
           <button
             onClick={() => setBimestreSelecionado(null)}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Trocar Bimestre
           </button>
@@ -333,40 +320,39 @@ export default function Professor({
       {/* PASSO 1: Dashboard de Turmas */}
       {passo === 1 && (
         <div className="space-y-4">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Users className="w-4 h-4 text-slate-400" />
-            Selecione uma Turma e um Simulado
+          <h3 className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Users className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <span>Selecione uma Turma e um Simulado</span>
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
             {turmas.map((turma) => {
-              const podeEditar = temPermissaoEdicao(turma);
               const idsSimuladosDoBimestre =
                 turma.simuladosVinculados?.[bimestreSelecionado] || [];
 
               return (
                 <div
                   key={turma.id}
-                  className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between hover:border-blue-300 transition-colors"
+                  className="border border-slate-200 rounded-xl p-3.5 sm:p-4 bg-slate-50 flex flex-col justify-between hover:border-blue-300 transition-colors"
                 >
-                  <div className="mb-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-black text-slate-800 uppercase tracking-wide text-sm">
+                  <div className="mb-3">
+                    <div className="flex items-start justify-between mb-1.5">
+                      <h4 className="font-black text-slate-800 uppercase tracking-wide text-xs sm:text-sm truncate">
                         {turma.nome}
                       </h4>
                       {turma.professorVinculadoCodigo ? (
                         <Lock
-                          className="w-4 h-4 text-red-400"
-                          title="Turma Assumida"
+                          className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0 ml-1"
+                          title="Turma com Professor Vinculado"
                         />
                       ) : (
                         <Unlock
-                          className="w-4 h-4 text-emerald-400"
+                          className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 flex-shrink-0 ml-1"
                           title="Turma Livre"
                         />
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                    <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase truncate">
                       Responsável:{" "}
                       <span
                         className={
@@ -382,8 +368,8 @@ export default function Professor({
 
                   <div className="space-y-2 border-t border-slate-200/60 pt-3 mt-auto">
                     {idsSimuladosDoBimestre.length === 0 ? (
-                      <p className="text-[10px] font-bold text-orange-500 uppercase bg-orange-50 p-2 rounded text-center border border-orange-100">
-                        Nenhum simulado vinculado no {bimestreSelecionado}º Bim
+                      <p className="text-[9px] sm:text-[10px] font-bold text-orange-500 uppercase bg-orange-50 p-2 rounded text-center border border-orange-100">
+                        Nenhum simulado no {bimestreSelecionado}º Bim
                       </p>
                     ) : (
                       idsSimuladosDoBimestre.map((simId) => {
@@ -392,24 +378,12 @@ export default function Professor({
                           <button
                             key={simId}
                             onClick={() => handleEntrarNaTurma(turma, simId)}
-                            className={`w-full py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-between gap-2 transition-all active:scale-[0.98] cursor-pointer ${
-                              podeEditar
-                                ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-sm shadow-blue-500/20"
-                                : "bg-slate-200 hover:bg-slate-300 text-slate-700"
-                            }`}
+                            className="w-full py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-between gap-2 transition-all active:scale-[0.98] cursor-pointer bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
                           >
                             <span className="truncate">
                               {simObj?.nome || "Simulado Desconhecido"}
                             </span>
-                            {podeEditar ? (
-                              turma.professorVinculadoCodigo ? (
-                                <Edit3 className="w-3.5 h-3.5 flex-shrink-0" />
-                              ) : (
-                                <PlusCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                              )
-                            ) : (
-                              <Eye className="w-3.5 h-3.5 flex-shrink-0" />
-                            )}
+                            <Edit3 className="w-3.5 h-3.5 flex-shrink-0" />
                           </button>
                         );
                       })
@@ -430,18 +404,18 @@ export default function Professor({
 
       {/* PASSO 2: Tabela de Alunos / Formulário de Respostas */}
       {passo === 2 && (
-        <div className="space-y-6">
-          <div className="border-b border-slate-100 pb-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-5">
+          <div className="border-b border-slate-100 pb-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
                 Turma Ativa
               </span>
-              <h3 className="text-xl font-black text-slate-800 uppercase tracking-wide">
+              <h3 className="text-lg sm:text-xl font-black text-slate-800 uppercase tracking-wide truncate">
                 {turmaAtiva?.nome}
               </h3>
-              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1.5 flex items-center gap-1.5">
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1 flex items-center gap-1.5 flex-wrap">
                 Simulado:{" "}
-                <strong className="text-[#4b82f6] bg-blue-50 px-2 py-0.5 rounded">
+                <strong className="text-[#4b82f6] bg-blue-50 px-2 py-0.5 rounded truncate max-w-[200px] sm:max-w-none">
                   {simuladoAtivo?.nome}
                 </strong>
               </p>
@@ -450,7 +424,7 @@ export default function Professor({
             <button
               type="button"
               onClick={handleVoltarSelecao}
-              className="px-4 py-3 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all text-[11px] shadow-sm w-full sm:w-auto cursor-pointer active:scale-95"
+              className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 transition-all text-[10px] sm:text-[11px] shadow-xs w-full sm:w-auto cursor-pointer active:scale-95"
             >
               <ArrowLeft className="w-4 h-4" /> Voltar às Turmas
             </button>
@@ -465,11 +439,11 @@ export default function Professor({
                   </p>
                 </div>
               ) : (
-                <div className="w-full overflow-x-auto border border-slate-200 rounded-2xl shadow-sm bg-white">
-                  <table className="w-full min-w-[700px] text-left border-collapse text-xs table-fixed">
+                <div className="w-full overflow-x-auto border border-slate-200 rounded-2xl shadow-xs bg-white">
+                  <table className="w-full min-w-[650px] text-left border-collapse text-xs table-fixed">
                     <thead>
-                      <tr className="bg-slate-50/80 border-b border-slate-200 font-bold text-slate-400 uppercase tracking-widest text-[10px]">
-                        <th className="p-3.5 border-r border-slate-200 w-[28%] sm:w-[22%] align-middle">
+                      <tr className="bg-slate-50/80 border-b border-slate-200 font-bold text-slate-400 uppercase tracking-widest text-[9px] sm:text-[10px]">
+                        <th className="p-3 border-r border-slate-200 w-[26%] sm:w-[22%] align-middle">
                           Aluno
                         </th>
 
@@ -480,7 +454,10 @@ export default function Professor({
                               key={disc.nome}
                               className="p-2 border-r border-slate-200 text-center whitespace-normal break-words align-middle"
                             >
-                              <span className="block text-slate-700 font-bold leading-tight break-words">
+                              <span
+                                className="block text-slate-700 font-bold leading-tight truncate max-w-[90px] mx-auto"
+                                title={disc.nome}
+                              >
                                 {disc.nome}
                               </span>
                               <span className="text-[9px] text-slate-400 font-normal block mt-0.5">
@@ -491,7 +468,7 @@ export default function Professor({
                         })}
 
                         <th className="p-2 border-r border-slate-200 text-center bg-blue-50/40 whitespace-normal break-words align-middle">
-                          <span className="block text-blue-700 font-bold leading-tight break-words">
+                          <span className="block text-blue-700 font-bold leading-tight">
                             Total
                           </span>
                           <span className="text-[9px] text-slate-400 font-normal block mt-0.5">
@@ -499,11 +476,9 @@ export default function Professor({
                           </span>
                         </th>
 
-                        {temPermissaoEdicao(turmaAtiva) && (
-                          <th className="p-3.5 text-center w-[110px] align-middle">
-                            Ações
-                          </th>
-                        )}
+                        <th className="p-3 text-center w-[100px] sm:w-[110px] align-middle">
+                          Ações
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -523,16 +498,15 @@ export default function Professor({
                             ? calcularDesempenhoAluno(registo.gabaritoBruto)
                             : null;
                         const concluido = dadosCalculados !== null;
-                        const permissao = temPermissaoEdicao(turmaAtiva);
 
                         return (
                           <tr
                             key={idx}
-                            className="hover:bg-blue-50/30 transition-colors"
+                            className="hover:bg-blue-50/25 transition-colors"
                           >
-                            <td className="p-3.5 font-bold text-slate-700 border-r border-slate-200 uppercase whitespace-normal break-words align-middle text-xs">
-                              <div className="flex items-start gap-2">
-                                <span className="text-[10px] text-slate-400 font-mono flex-shrink-0 mt-0.5">
+                            <td className="p-3 font-bold text-slate-700 border-r border-slate-200 uppercase whitespace-normal break-words align-middle text-xs">
+                              <div className="flex items-start gap-1.5">
+                                <span className="text-[9px] text-slate-400 font-mono flex-shrink-0 mt-0.5">
                                   {String(idx + 1).padStart(2, "0")}
                                 </span>
                                 <span className="break-words">{aluno}</span>
@@ -549,13 +523,13 @@ export default function Professor({
                                 >
                                   {concluido && infoDisc ? (
                                     <div className="flex flex-col items-center justify-center gap-0.5">
-                                      <span className="font-bold text-slate-700 text-xs">
+                                      <span className="font-bold text-slate-700 text-[11px] sm:text-xs">
                                         {infoDisc.acertos}/{infoDisc.total}{" "}
                                         <span className="text-blue-600 font-semibold">
                                           ({infoDisc.percentagem}%)
                                         </span>
                                       </span>
-                                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
                                         Nota: {infoDisc.nota}
                                       </span>
                                     </div>
@@ -568,63 +542,62 @@ export default function Professor({
                               );
                             })}
 
-                            <td className="p-2 border-r border-slate-200 text-center bg-blue-50/20 uppercase align-middle">
+                            <td className="p-2 border-r border-slate-200 text-center bg-blue-50/15 uppercase align-middle">
                               {concluido ? (
                                 <div className="flex flex-col items-center justify-center gap-0.5">
-                                  <span className="font-bold text-slate-700 text-xs">
+                                  <span className="font-bold text-slate-700 text-[11px] sm:text-xs">
                                     {dadosCalculados.totalAcertos}/
                                     {dadosCalculados.totalQuestoes}
                                   </span>
-                                  <span className="text-[10px] font-bold text-blue-600">
+                                  <span className="text-[9px] sm:text-[10px] font-bold text-blue-600">
                                     ({dadosCalculados.percentualGeral}%)
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                   Pendente
                                 </span>
                               )}
                             </td>
 
-                            {permissao && (
-                              <td className="p-3 text-center align-middle">
-                                {/* BOTÕES DISCRETOS LADO A LADO (EXATAMENTE COMO EM TURMAS E ADMIN) */}
-                                <div className="flex items-center justify-center gap-1">
+                            <td className="p-2.5 text-center align-middle">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelecionarAluno(aluno)}
+                                  className={`p-2 rounded-lg transition-all cursor-pointer ${
+                                    concluido
+                                      ? "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                                      : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200/60"
+                                  }`}
+                                  title={
+                                    concluido ? "Editar Notas" : "Lançar Notas"
+                                  }
+                                >
+                                  {concluido ? (
+                                    <Edit3 className="w-4 h-4" />
+                                  ) : (
+                                    <PlusCircle className="w-4 h-4" />
+                                  )}
+                                </button>
+
+                                {concluido && (
                                   <button
                                     type="button"
-                                    onClick={() => handleSelecionarAluno(aluno)}
-                                    className={`p-2 rounded-lg transition-all cursor-pointer ${
-                                      concluido
-                                        ? "bg-slate-50 text-slate-600 hover:bg-slate-100"
-                                        : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
-                                    }`}
-                                    title={concluido ? "Editar" : "Lançar"}
+                                    onClick={() =>
+                                      handleExcluirRespostaAluno(
+                                        registo.id,
+                                        aluno,
+                                      )
+                                    }
+                                    className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-slate-200/60"
+                                    title="Excluir Resposta"
                                   >
-                                    {concluido ? (
-                                      <Edit3 className="w-4 h-4" />
-                                    ) : (
-                                      <PlusCircle className="w-4 h-4" />
-                                    )}
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
-
-                                  {concluido && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleExcluirRespostaAluno(
-                                          registo.id,
-                                          aluno,
-                                        )
-                                      }
-                                      className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
-                                      title="Excluir"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            )}
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -636,28 +609,28 @@ export default function Professor({
           ) : (
             <form
               onSubmit={submeterRespostasAluno}
-              className="space-y-4 p-4 sm:p-5 lg:p-6 bg-slate-50 border border-slate-200 rounded-2xl"
+              className="space-y-4 p-3.5 sm:p-5 lg:p-6 bg-slate-50 border border-slate-200 rounded-2xl"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2 min-w-0">
                   <Award className="w-4 h-4 text-slate-500 flex-shrink-0" />
                   <span className="truncate">
                     Gabarito de:{" "}
                     <span className="text-[#4b82f6]">{alunoAtivo}</span>
                   </span>
                 </h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <button
                     type="button"
                     onClick={handleLimparRespostas}
-                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1"
+                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95 flex items-center gap-1 flex-1 sm:flex-initial justify-center"
                   >
-                    <Eraser className="w-3.5 h-3.5" /> Limpar Seleções
+                    <Eraser className="w-3.5 h-3.5" /> Limpar
                   </button>
                   <button
                     type="button"
                     onClick={() => setAlunoAtivo(null)}
-                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95"
+                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95 flex-1 sm:flex-initial justify-center"
                   >
                     Cancelar
                   </button>
@@ -671,7 +644,7 @@ export default function Professor({
                 return (
                   <div
                     key={d.nome}
-                    className="p-4 bg-white border border-slate-200 rounded-xl space-y-4 shadow-sm"
+                    className="p-3.5 sm:p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-xs"
                   >
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-xs font-bold uppercase gap-1 border-b border-slate-100 pb-2">
                       <span className="text-slate-800">{d.nome}</span>
@@ -680,7 +653,7 @@ export default function Professor({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {gabaritoDisc.map((_, qIdx) => {
                         const valAtual =
                           respostasProfessor[d.nome]?.[qIdx] || "";
@@ -693,7 +666,7 @@ export default function Professor({
                             <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider w-8">
                               Q{String(qIdx + 1).padStart(2, "0")}
                             </span>
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-1 sm:gap-1.5">
                               {alternativas.map((alt) => {
                                 const selecionada = valAtual === alt;
                                 return (
@@ -703,9 +676,9 @@ export default function Professor({
                                     onClick={() =>
                                       handleRespostaClick(d.nome, qIdx, alt)
                                     }
-                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-sm cursor-pointer ${
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
                                       selecionada
-                                        ? "bg-[#4b82f6] text-white border-transparent scale-110 shadow-blue-500/30"
+                                        ? "bg-[#4b82f6] text-white border-transparent scale-110 shadow-blue-500/20"
                                         : "bg-white text-slate-400 border border-slate-200 hover:border-blue-300 hover:bg-blue-50"
                                     }`}
                                   >
@@ -725,7 +698,7 @@ export default function Professor({
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl text-xs shadow-sm shadow-blue-500/20 cursor-pointer transition-all active:scale-95"
+                  className="w-full sm:w-auto px-6 py-3 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl text-xs shadow-xs shadow-blue-500/20 cursor-pointer transition-all active:scale-95"
                 >
                   Guardar Respostas do Aluno
                 </button>

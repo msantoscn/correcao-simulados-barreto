@@ -21,7 +21,6 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 function MainContent() {
   const { user, logout, isProfessor, isGestao, loadingAuth } = useAuth();
 
-  // Sempre inicia na aba padrão do perfil ao carregar/logar (sem reter abas passadas)
   const [abaAtiva, setAbaAtiva] = useState(() =>
     isProfessor ? "professor" : "admin",
   );
@@ -57,7 +56,7 @@ function MainContent() {
     );
   }
 
-  // 2. Se não estiver autenticado, exibe a Tela de Login obrigatoriamente
+  // 2. Se não estiver autenticado, exibe a Tela de Login
   if (!user) {
     return <Login />;
   }
