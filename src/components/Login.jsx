@@ -119,96 +119,96 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/80 flex items-center justify-center p-4 font-sans selection:bg-blue-500 selection:text-white">
-      <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200/80 shadow-xl overflow-hidden transition-all duration-300">
+    <div className="min-h-screen bg-slate-900/5 backdrop-blur-xs flex items-center justify-center p-4 font-sans selection:bg-blue-500 selection:text-white">
+      <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden transition-all duration-300">
         {/* Cabeçalho */}
-        <div className="pt-8 pb-6 px-6 text-center border-b border-slate-100">
-          <div className="inline-flex p-3 bg-blue-50 text-[#4b82f6] rounded-2xl mb-3 shadow-sm border border-blue-100/50">
-            <Award className="w-8 h-8" />
+        <div className="pt-10 pb-6 px-8 text-center bg-gradient-to-b from-blue-50/60 to-transparent border-b border-slate-100">
+          <div className="inline-flex p-3.5 bg-blue-600 text-white rounded-2xl mb-4 shadow-lg shadow-blue-500/30">
+            <Award className="w-9 h-9" />
           </div>
-          <h1 className="text-2xl font-black tracking-wider uppercase text-slate-800">
+          <h1 className="text-3xl font-black tracking-wider uppercase text-slate-900">
             SIMULA<span className="text-red-600">TECH</span>
           </h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1.5">
             Sistema de Gestão de Simulados
           </p>
         </div>
 
         {/* Formulário de Acesso Unificado */}
-        <form onSubmit={handleLoginSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleLoginSubmit} className="p-8 space-y-5">
           {erro && (
-            <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded-lg border border-red-200 text-center">
+            <div className="bg-red-50 text-red-700 text-xs font-bold p-3.5 rounded-xl border border-red-200 text-center shadow-xs">
               {erro}
             </div>
           )}
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
               Código do SIPAE
             </label>
             <div className="relative flex items-center">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
+              <User className="w-5 h-5 text-slate-400 absolute left-4" />
               <input
                 type="text"
                 required
                 value={codigo}
                 onChange={(e) => setCodigo(e.target.value)}
                 placeholder="Ex: F12345"
-                className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
+                className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
               />
             </div>
           </div>
 
           {isPrimeiroAcesso && (
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
                 Nome Completo
               </label>
               <div className="relative flex items-center">
-                <User className="w-4 h-4 text-slate-400 absolute left-3.5" />
+                <User className="w-5 h-5 text-slate-400 absolute left-4" />
                 <input
                   type="text"
                   required
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Seu nome"
-                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal"
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
               Senha
             </label>
             <div className="relative flex items-center">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5" />
+              <Lock className="w-5 h-5 text-slate-400 absolute left-4" />
               <input
                 type="password"
                 required
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all"
+                className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-400"
               />
             </div>
           </div>
 
           {isPrimeiroAcesso && (
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
                 Confirmar Senha
               </label>
               <div className="relative flex items-center">
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5" />
+                <KeyRound className="w-5 h-5 text-slate-400 absolute left-4" />
                 <input
                   type="password"
                   required
                   value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:bg-white focus:border-[#4b82f6] focus:ring-2 focus:ring-blue-100 transition-all"
+                  className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -217,13 +217,13 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-[#4b82f6] hover:bg-blue-600 disabled:bg-blue-400 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer mt-2 active:scale-[0.99] flex items-center justify-center gap-2"
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-black text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 shadow-lg shadow-blue-600/30 hover:shadow-xl cursor-pointer mt-3 active:scale-[0.99] flex items-center justify-center gap-2.5"
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
             {isPrimeiroAcesso ? "Cadastrar e Entrar" : "Entrar"}
           </button>
 
-          <div className="text-center pt-1">
+          <div className="text-center pt-2">
             <button
               type="button"
               disabled={loading}
@@ -231,7 +231,7 @@ export default function Login() {
                 setIsPrimeiroAcesso(!isPrimeiroAcesso);
                 setErro("");
               }}
-              className="text-[11px] text-[#4b82f6] font-bold uppercase tracking-wider hover:underline cursor-pointer disabled:opacity-50"
+              className="text-xs text-blue-600 hover:text-blue-700 font-extrabold uppercase tracking-wider hover:underline cursor-pointer disabled:opacity-50 transition-colors"
             >
               {isPrimeiroAcesso
                 ? "Já possui senha? Fazer Login"
