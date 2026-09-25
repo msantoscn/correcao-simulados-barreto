@@ -211,7 +211,7 @@ export default function Usuarios({
             <div>
               <input
                 type="text"
-                placeholder="Cód. SIPAE (Ex: SIPAE-1024)"
+                placeholder="Cód. SIPAE (Ex: F12345)"
                 value={novoCodigo}
                 onChange={(e) => setNovoCodigo(e.target.value.toUpperCase())}
                 className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
@@ -221,7 +221,7 @@ export default function Usuarios({
             <div>
               <input
                 type="text"
-                placeholder="Nome Completo (Opcional)"
+                placeholder="Nome Completo"
                 value={novoNome}
                 onChange={(e) => setNovoNome(e.target.value.toUpperCase())}
                 className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
