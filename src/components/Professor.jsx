@@ -6,6 +6,7 @@ import {
   Award,
   Edit3,
   PlusCircle,
+  Eye,
   Trash2,
   Eraser,
   Lock,
@@ -24,7 +25,6 @@ export default function Professor({
 }) {
   const { user, isGestao } = useAuth();
 
-  // Novos estados para a seleção de bimestre e múltiplos simulados
   const [bimestreSelecionado, setBimestreSelecionado] = useState(null);
   const [passo, setPasso] = useState(1);
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
@@ -32,7 +32,6 @@ export default function Professor({
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
 
-  // Turma e Simulado ativos baseados nas seleções
   const turmaAtiva = turmas.find(
     (t) => String(t.id) === String(turmaSelecionadaId),
   );
@@ -46,7 +45,14 @@ export default function Professor({
       0,
     ) || 0;
 
-  // Entra direto na turma sem perguntar nada ou bloquear
+  // Função para verificar se o utilizador atual pode editar esta turma
+  const temPermissaoEdicao = (turma) => {
+    if (isGestao) return true;
+    if (!turma?.professorVinculadoCodigo) return true; // Turma livre pode ser assumida
+    return turma.professorVinculadoCodigo === user.codigo; // Apenas o professor vinculado
+  };
+
+  // Vínculo automático da turma ao clicar se estiver livre
   const handleEntrarNaTurma = async (turma, idSimulado) => {
     if (!turma.professorVinculadoCodigo && !isGestao && onVincularTurma) {
       await onVincularTurma(turma.id, {
@@ -69,6 +75,14 @@ export default function Professor({
   };
 
   const handleSelecionarAluno = (nomeAluno) => {
+    // Se não tiver permissão de edição, impede de abrir para lançar
+    if (!temPermissaoEdicao(turmaAtiva)) {
+      alert(
+        "Esta turma pertence a outro professor. Apenas visualização permitida.",
+      );
+      return;
+    }
+
     setAlunoAtivo(nomeAluno);
 
     const respostaExistente = respostasAlunos.find(
@@ -117,6 +131,11 @@ export default function Professor({
   };
 
   const handleExcluirRespostaAluno = async (registoId, nomeAluno) => {
+    if (!temPermissaoEdicao(turmaAtiva)) {
+      alert("Não tem permissão para excluir registos desta turma.");
+      return;
+    }
+
     if (
       window.confirm(
         `ATENÇÃO: Deseja apagar definitivamente o gabarito e nota de ${nomeAluno}?`,
@@ -242,9 +261,6 @@ export default function Professor({
     }
   };
 
-  // =========================================================
-  // ETAPA 0: SELEÇÃO DE BIMESTRE
-  // =========================================================
   if (!bimestreSelecionado) {
     return (
       <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-8 border border-slate-200/80 max-w-3xl mx-auto mt-4 sm:mt-8 w-full">
@@ -280,12 +296,8 @@ export default function Professor({
     );
   }
 
-  // =========================================================
-  // ETAPA 1 E 2: LISTAGEM E FORMULÁRIO
-  // =========================================================
   return (
     <div className="bg-white rounded-2xl shadow-sm p-3 sm:p-5 lg:p-6 border border-slate-200/80 w-full overflow-x-hidden">
-      {/* Cabeçalho Principal Partilhado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 mb-5">
         <div className="flex items-center gap-2.5">
           <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 flex-shrink-0">
@@ -306,7 +318,6 @@ export default function Professor({
           </div>
         </div>
 
-        {/* Botão para trocar de bimestre se estiver no Passo 1 */}
         {passo === 1 && (
           <button
             onClick={() => setBimestreSelecionado(null)}
@@ -317,7 +328,6 @@ export default function Professor({
         )}
       </div>
 
-      {/* PASSO 1: Dashboard de Turmas */}
       {passo === 1 && (
         <div className="space-y-4">
           <h3 className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -329,6 +339,7 @@ export default function Professor({
             {turmas.map((turma) => {
               const idsSimuladosDoBimestre =
                 turma.simuladosVinculados?.[bimestreSelecionado] || [];
+              const podeEditar = temPermissaoEdicao(turma);
 
               return (
                 <div
@@ -341,10 +352,18 @@ export default function Professor({
                         {turma.nome}
                       </h4>
                       {turma.professorVinculadoCodigo ? (
-                        <Lock
-                          className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0 ml-1"
-                          title="Turma com Professor Vinculado"
-                        />
+                        turma.professorVinculadoCodigo === user.codigo ||
+                        isGestao ? (
+                          <Lock
+                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0 ml-1"
+                            title="Sua Turma"
+                          />
+                        ) : (
+                          <Lock
+                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 flex-shrink-0 ml-1"
+                            title="Turma de Outro Professor (Apenas Leitura)"
+                          />
+                        )
                       ) : (
                         <Unlock
                           className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 flex-shrink-0 ml-1"
@@ -378,12 +397,20 @@ export default function Professor({
                           <button
                             key={simId}
                             onClick={() => handleEntrarNaTurma(turma, simId)}
-                            className="w-full py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-between gap-2 transition-all active:scale-[0.98] cursor-pointer bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
+                            className={`w-full py-2 px-3 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-between gap-2 transition-all active:scale-[0.98] cursor-pointer ${
+                              podeEditar
+                                ? "bg-[#4b82f6] hover:bg-blue-600 text-white shadow-xs shadow-blue-500/20"
+                                : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                            }`}
                           >
                             <span className="truncate">
                               {simObj?.nome || "Simulado Desconhecido"}
                             </span>
-                            <Edit3 className="w-3.5 h-3.5 flex-shrink-0" />
+                            {podeEditar ? (
+                              <Edit3 className="w-3.5 h-3.5 flex-shrink-0" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+                            )}
                           </button>
                         );
                       })
@@ -402,13 +429,17 @@ export default function Professor({
         </div>
       )}
 
-      {/* PASSO 2: Tabela de Alunos / Formulário de Respostas */}
       {passo === 2 && (
         <div className="space-y-5">
           <div className="border-b border-slate-100 pb-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
-                Turma Ativa
+                Turma Ativa{" "}
+                {!temPermissaoEdicao(turmaAtiva) && (
+                  <span className="text-red-500 font-bold">
+                    (Modo Apenas Leitura)
+                  </span>
+                )}
               </span>
               <h3 className="text-lg sm:text-xl font-black text-slate-800 uppercase tracking-wide truncate">
                 {turmaAtiva?.nome}
@@ -498,6 +529,7 @@ export default function Professor({
                             ? calcularDesempenhoAluno(registo.gabaritoBruto)
                             : null;
                         const concluido = dadosCalculados !== null;
+                        const temPermissao = temPermissaoEdicao(turmaAtiva);
 
                         return (
                           <tr
@@ -566,22 +598,32 @@ export default function Professor({
                                   type="button"
                                   onClick={() => handleSelecionarAluno(aluno)}
                                   className={`p-2 rounded-lg transition-all cursor-pointer ${
-                                    concluido
-                                      ? "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
-                                      : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200/60"
+                                    temPermissao
+                                      ? concluido
+                                        ? "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                                        : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200/60"
+                                      : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
                                   }`}
                                   title={
-                                    concluido ? "Editar Notas" : "Lançar Notas"
+                                    temPermissao
+                                      ? concluido
+                                        ? "Editar Notas"
+                                        : "Lançar Notas"
+                                      : "Apenas Leitura"
                                   }
                                 >
-                                  {concluido ? (
-                                    <Edit3 className="w-4 h-4" />
+                                  {temPermissao ? (
+                                    concluido ? (
+                                      <Edit3 className="w-4 h-4" />
+                                    ) : (
+                                      <PlusCircle className="w-4 h-4" />
+                                    )
                                   ) : (
-                                    <PlusCircle className="w-4 h-4" />
+                                    <Eye className="w-4 h-4" />
                                   )}
                                 </button>
 
-                                {concluido && (
+                                {concluido && temPermissao && (
                                   <button
                                     type="button"
                                     onClick={() =>
