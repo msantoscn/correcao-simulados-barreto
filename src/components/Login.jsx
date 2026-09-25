@@ -119,7 +119,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900/5 backdrop-blur-xs flex items-center justify-center p-4 font-sans selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-slate-900/5 backdrop-blur-xs flex flex-col items-center justify-center p-4 font-sans selection:bg-blue-500 selection:text-white">
       <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden transition-all duration-300">
         {/* Cabeçalho */}
         <div className="pt-10 pb-6 px-8 text-center bg-gradient-to-b from-blue-50/60 to-transparent border-b border-slate-100">
@@ -245,6 +245,14 @@ export default function Login() {
           </div>
         </form>
       </div>
+
+      {/* Assinatura no Rodapé */}
+      <footer className="mt-6 text-center">
+        <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">
+          Desenvolvido por:{" "}
+          <span className="text-blue-600">Maciel dos Santos</span>
+        </p>
+      </footer>
     </div>
   );
 }

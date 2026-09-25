@@ -25,7 +25,8 @@ export default function Professor({
 }) {
   const { user, isGestao } = useAuth();
 
-  const [bimestreSelecionado, setBimestreSelecionado] = useState("1");
+  // Alterado de "1" para "" para iniciar vazio com a mensagem de escolha
+  const [bimestreSelecionado, setBimestreSelecionado] = useState("");
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
@@ -141,7 +142,7 @@ export default function Professor({
         String(r.turma).trim().toUpperCase() ===
           String(turmaAtiva?.nome).trim().toUpperCase() &&
         String(r.nomeAluno).trim().toUpperCase() ===
-          String(alunoAtivo).trim().toUpperCase(),
+          String(nomeAluno).trim().toUpperCase(),
     );
 
     if (respostaExistente && respostaExistente.gabaritoBruto) {
@@ -357,6 +358,7 @@ export default function Professor({
               onChange={(e) => setBimestreSelecionado(e.target.value)}
               className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 uppercase focus:outline-none focus:border-[#4b82f6] shadow-xs cursor-pointer"
             >
+              <option value="">Escolha o bimestre...</option>
               <option value="1">1º Bimestre</option>
               <option value="2">2º Bimestre</option>
               <option value="3">3º Bimestre</option>
@@ -384,9 +386,13 @@ export default function Professor({
         </div>
       )}
 
-      {/* EXIBIÇÃO APÓS ESCOLHER A TURMA */}
+      {/* EXIBIÇÃO APÓS ESCOLHER A TURMA E O BIMESTRE */}
       {!simuladoSelecionadoId ? (
-        !turmaAtiva ? (
+        !bimestreSelecionado ? (
+          <div className="text-center py-12 text-slate-400 text-xs font-bold uppercase border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+            Selecione o bimestre acima para continuar.
+          </div>
+        ) : !turmaAtiva ? (
           <div className="text-center py-12 text-slate-400 text-xs font-bold uppercase border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
             Selecione uma turma acima para exibir os simulados.
           </div>
