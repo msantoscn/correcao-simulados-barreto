@@ -168,16 +168,22 @@ export default function Usuarios({
   const formatarCargoExibicao = (cargo) => {
     switch (cargo) {
       case "COORDENACAO":
-        return { texto: "Coordenador(a)", classe: "bg-blue-100 text-blue-700" };
+        return {
+          texto: "Coordenador(a)",
+          classe: "bg-blue-50 text-blue-600 border border-blue-200",
+        };
       case "DIRECAO":
-        return { texto: "Diretor(a)", classe: "bg-purple-100 text-purple-700" };
+        return {
+          texto: "Diretor(a)",
+          classe: "bg-purple-50 text-purple-600 border border-purple-200",
+        };
       case "ADMIN":
         return {
           texto: "Dev",
-          classe: "bg-amber-100 text-amber-800 border border-amber-300",
+          classe: "bg-amber-50 text-amber-700 border border-amber-200",
         };
       default:
-        return { texto: "Professor(a)", classe: "bg-slate-100 text-slate-700" };
+        return { texto: "Professor(a)", classe: "bg-slate-100 text-slate-600" };
     }
   };
 
@@ -299,7 +305,7 @@ export default function Usuarios({
       </div>
 
       {/* =========================================================
-          COLUNA DIREITA: LISTA DE USUÁRIOS E EDIÇÃO
+          COLUNA DIREITA: LISTA SIMPLIFICADA DE USUÁRIOS
           ========================================================= */}
       <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col h-fit lg:min-h-[500px]">
         {/* Cabeçalho e Busca */}
@@ -324,7 +330,7 @@ export default function Usuarios({
           </div>
         </div>
 
-        {/* Tabela de Usuários */}
+        {/* Tabela de Usuários Simplificada */}
         <div className="flex-1 overflow-x-auto">
           {usuariosFiltrados.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center h-full">
@@ -352,7 +358,7 @@ export default function Usuarios({
                   return (
                     <div
                       key={usuario.id}
-                      className={`grid grid-cols-12 gap-3 px-6 py-4 items-center transition-colors group ${
+                      className={`grid grid-cols-12 gap-3 px-6 py-3 items-center transition-colors group text-xs ${
                         editId === usuario.id
                           ? "bg-blue-50/50"
                           : "hover:bg-slate-50/50"
@@ -368,7 +374,7 @@ export default function Usuarios({
                               onChange={(e) =>
                                 setEditCodigo(e.target.value.toUpperCase())
                               }
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-bold outline-none uppercase"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none uppercase"
                             />
                           </div>
                           <div className="col-span-4">
@@ -379,14 +385,14 @@ export default function Usuarios({
                                 setEditNome(e.target.value.toUpperCase())
                               }
                               placeholder="Nome..."
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none uppercase"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-normal outline-none uppercase"
                             />
                           </div>
                           <div className="col-span-2">
                             <select
                               value={editCargo}
                               onChange={(e) => setEditCargo(e.target.value)}
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-bold uppercase outline-none"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-normal uppercase outline-none"
                             >
                               <option value="PROFESSOR">Professor(a)</option>
                               <option value="COORDENACAO">
@@ -402,20 +408,20 @@ export default function Usuarios({
                               value={editSenha}
                               onChange={(e) => setEditSenha(e.target.value)}
                               placeholder="Nova senha..."
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-normal outline-none"
                             />
                           </div>
                           <div className="col-span-1 flex justify-end gap-1">
                             <button
                               onClick={salvarEdicao}
-                              className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                              className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-pointer"
                               title="Salvar"
                             >
                               <Save className="w-4 h-4" />
                             </button>
                             <button
                               onClick={cancelarEdicao}
-                              className="p-1.5 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors"
+                              className="p-1.5 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors cursor-pointer"
                               title="Cancelar"
                             >
                               <X className="w-4 h-4" />
@@ -423,40 +429,40 @@ export default function Usuarios({
                           </div>
                         </>
                       ) : (
-                        /* MODO DE VISUALIZAÇÃO */
+                        /* MODO DE VISUALIZAÇÃO SIMPLIFICADO */
                         <>
-                          <div className="col-span-3 text-sm font-black text-slate-700">
+                          <div className="col-span-3 font-medium text-slate-700">
                             {usuario.codigo}
                           </div>
-                          <div className="col-span-4 text-xs font-bold text-slate-600 uppercase truncate">
+                          <div className="col-span-4 font-normal text-slate-600 uppercase truncate">
                             {usuario.nome || (
-                              <span className="text-slate-300 font-medium italic normal-case">
+                              <span className="text-slate-400 font-normal italic normal-case">
                                 Nome pendente
                               </span>
                             )}
                           </div>
                           <div className="col-span-2">
                             <span
-                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${infoCargo.classe}`}
+                              className={`text-[10px] font-normal uppercase tracking-wider px-2 py-0.5 rounded-md ${infoCargo.classe}`}
                             >
                               {infoCargo.texto}
                             </span>
                           </div>
                           <div className="col-span-1 text-center">
                             {usuario.senha ? (
-                              <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md font-bold uppercase">
+                              <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md font-normal uppercase border border-emerald-100">
                                 Sim
                               </span>
                             ) : (
-                              <span className="text-[10px] bg-red-50 text-red-500 px-2 py-1 rounded-md font-bold uppercase border border-red-100">
+                              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-normal uppercase">
                                 Não
                               </span>
                             )}
                           </div>
-                          <div className="col-span-2 flex justify-end gap-2">
+                          <div className="col-span-2 flex justify-end gap-1">
                             <button
                               onClick={() => iniciarEdicao(usuario)}
-                              className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               title="Editar Usuário"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -468,7 +474,7 @@ export default function Usuarios({
                                   usuario.nome || usuario.codigo,
                                 )
                               }
-                              className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                               title="Eliminar Usuário"
                             >
                               <Trash2 className="w-4 h-4" />

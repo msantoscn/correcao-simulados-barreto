@@ -34,6 +34,7 @@ export default function Relatorios({
   }, [simulados, idsSimuladosVinculados]);
 
   const simuladoAtual = useMemo(() => {
+    if (simuladoSelecionadoId === "GERAL") return "GERAL";
     return (
       simulados.find((s) => String(s.id) === String(simuladoSelecionadoId)) ||
       simuladosDisponiveis[0] ||
@@ -42,7 +43,27 @@ export default function Relatorios({
   }, [simulados, simuladoSelecionadoId, simuladosDisponiveis]);
 
   const disciplinasDoSimulado = useMemo(() => {
-    if (!simuladoAtual?.disciplinas) return [];
+    if (!simuladoAtual) return [];
+
+    if (simuladoAtual === "GERAL") {
+      const mapaDisciplinas = new Map();
+      simuladosDisponiveis.forEach((sim) => {
+        const discList = Array.isArray(sim.disciplinas)
+          ? sim.disciplinas
+          : Object.entries(sim.disciplinas || {}).map(([nome, dados]) => ({
+              nome,
+              ...dados,
+            }));
+
+        discList.forEach((d) => {
+          if (!mapaDisciplinas.has(d.nome)) {
+            mapaDisciplinas.set(d.nome, d);
+          }
+        });
+      });
+      return Array.from(mapaDisciplinas.values());
+    }
+
     if (Array.isArray(simuladoAtual.disciplinas)) {
       return simuladoAtual.disciplinas;
     }
@@ -53,7 +74,7 @@ export default function Relatorios({
       }));
     }
     return [];
-  }, [simuladoAtual]);
+  }, [simuladoAtual, simuladosDisponiveis]);
 
   const respostasDaTurma = useMemo(() => {
     if (!turmaSelecionadaId || !turmaAtual || !simuladoAtual) return [];
@@ -68,6 +89,21 @@ export default function Relatorios({
             .trim()
             .toUpperCase();
 
+      if (!matchTurma) return false;
+
+      if (simuladoAtual === "GERAL") {
+        return simuladosDisponiveis.some(
+          (s) =>
+            String(resp.simuladoId) === String(s.id) ||
+            String(resp.simuladoNome || resp.simulado || "")
+              .trim()
+              .toUpperCase() ===
+              String(s.nome || s.titulo || "")
+                .trim()
+                .toUpperCase(),
+        );
+      }
+
       const matchSimulado =
         String(resp.simuladoId) === String(simuladoAtual.id) ||
         String(resp.simuladoNome || resp.simulado || "")
@@ -77,9 +113,15 @@ export default function Relatorios({
             .trim()
             .toUpperCase();
 
-      return matchTurma && matchSimulado;
+      return matchSimulado;
     });
-  }, [respostasAlunos, turmaSelecionadaId, turmaAtual, simuladoAtual]);
+  }, [
+    respostasAlunos,
+    turmaSelecionadaId,
+    turmaAtual,
+    simuladoAtual,
+    simuladosDisponiveis,
+  ]);
 
   const totalQuestoesSimulado = useMemo(() => {
     return disciplinasDoSimulado.reduce(
@@ -100,22 +142,24 @@ export default function Relatorios({
   const gerarPDF = () => {
     if (!turmaAtual || !simuladoAtual) return;
 
-    const doc = new jsPDF("landscape");
+    const doc = new jsPDF("landscape", "mm", "a4");
     const nomeSimulado =
-      simuladoAtual?.nome || simuladoAtual?.titulo || "Geral";
+      simuladoAtual === "GERAL"
+        ? "GERAL"
+        : simuladoAtual?.nome || simuladoAtual?.titulo || "Geral";
 
-    doc.setFontSize(14);
+    doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.text("RESUMO DE DESEMPENHO DA TURMA", 14, 15);
+    doc.text("RESUMO DE DESEMPENHO DA TURMA", 14, 12);
 
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 116, 139);
     doc.text(
-      `Bimestre: ${bimestreSelecionado}º   |   Turma: ${turmaAtual.nome}   |   Simulado: ${nomeSimulado}`,
+      `Bimestre: ${bimestreSelecionado}º    |    Turma: ${turmaAtual.nome}    |    Simulado: ${nomeSimulado}`,
       14,
-      21,
+      17,
     );
 
     const colunas = [
@@ -138,7 +182,7 @@ export default function Relatorios({
       const numAluno = String(index + 1).padStart(2, "0");
       linhaData.aluno = `${numAluno}  ${String(nomeAluno).toUpperCase()}`;
 
-      const respostaAluno = respostasDaTurma.find(
+      const respostasDoAluno = respostasDaTurma.filter(
         (r) =>
           String(r.nomeAluno || r.aluno || "")
             .trim()
@@ -146,56 +190,101 @@ export default function Relatorios({
       );
 
       disciplinasDoSimulado.forEach((disc) => {
-        let resultadoDisc = null;
-        if (respostaAluno) {
-          const container =
-            respostaAluno.detalhes ||
-            respostaAluno.disciplinas ||
-            respostaAluno;
+        let acertosTotalDisc = 0;
+        let totalDisc = getQtdQuestao(disc);
+        let encontrouAlguma = false;
+
+        respostasDoAluno.forEach((resp) => {
+          const container = resp.detalhes || resp.disciplinas || resp;
           if (container && typeof container === "object") {
             const chave = Object.keys(container).find(
               (k) =>
                 k.trim().toUpperCase() ===
                 String(disc.nome).trim().toUpperCase(),
             );
-            if (chave) resultadoDisc = container[chave];
+            if (chave && container[chave]) {
+              encontrouAlguma = true;
+              acertosTotalDisc += container[chave].acertos ?? 0;
+            }
           }
-        }
+        });
 
-        if (!respostaAluno || !resultadoDisc) {
+        if (!encontrouAlguma) {
           linhaData[disc.nome] = "-";
         } else {
-          const qtd = getQtdQuestao(disc);
-          const acertos = resultadoDisc.acertos ?? 0;
-          const total = resultadoDisc.total ?? qtd;
           const percentual =
-            resultadoDisc.percentagem ??
-            resultadoDisc.percentual ??
-            (total > 0 ? Math.round((acertos / total) * 100) : 0);
-          const nota = Number(resultadoDisc.nota ?? 0).toFixed(1);
-
+            totalDisc > 0
+              ? Math.round((acertosTotalDisc / totalDisc) * 100)
+              : 0;
+          const nota =
+            totalDisc > 0
+              ? ((acertosTotalDisc / totalDisc) * 10).toFixed(1)
+              : "0.0";
           linhaData[disc.nome] =
-            `${acertos}/${total} (${percentual}%)\nNOTA: ${nota}`;
+            `${acertosTotalDisc}/${totalDisc} (${percentual}%)\nNOTA: ${nota}`;
         }
       });
 
-      if (!respostaAluno || respostaAluno.totalAcertos === undefined) {
+      if (respostasDoAluno.length === 0) {
         linhaData.geral = "PENDENTE";
       } else {
-        linhaData.geral = `${respostaAluno.totalAcertos}/${respostaAluno.totalQuestoes}\n(${respostaAluno.percentualGeral}%)`;
+        const somaAcertos = respostasDoAluno.reduce(
+          (acc, r) => acc + (r.totalAcertos || 0),
+          0,
+        );
+        const somaQuestoes = totalQuestoesSimulado;
+        const percentGeral =
+          somaQuestoes > 0 ? Math.round((somaAcertos / somaQuestoes) * 100) : 0;
+        linhaData.geral = `${somaAcertos}/${somaQuestoes}\n(${percentGeral}%)`;
       }
 
       return linhaData;
     });
 
+    // Cálculo dinâmico da largura das colunas para preencher perfeitamente a A4 paisagem (277mm úteis com margem de 10mm)
+    const larguraUtil = 277; // 297mm (A4 landscape) - 20mm de margens totais (10mm cada lado)
+    const totalColunasNotas = disciplinasDoSimulado.length + 1; // Disciplinas + Coluna Geral
+
+    // Se forem poucas disciplinas, distribuímos mais espaço. Se forem muitas, compactamos.
+    let larguraColunaNota = larguraUtil / (totalColunasNotas + 2.5);
+    if (larguraColunaNota < 19) larguraColunaNota = 19;
+    if (larguraColunaNota > 38) larguraColunaNota = 38;
+
+    const larguraAluno = Math.max(
+      72,
+      larguraUtil - larguraColunaNota * totalColunasNotas,
+    );
+
+    const columnStylesConfig = {
+      aluno: {
+        cellWidth: larguraAluno,
+        halign: "left",
+        fontStyle: "bold",
+        textColor: [51, 65, 85],
+      },
+      geral: { cellWidth: larguraColunaNota, halign: "center" },
+    };
+
+    disciplinasDoSimulado.forEach((disc) => {
+      columnStylesConfig[disc.nome] = {
+        cellWidth: larguraColunaNota,
+        halign: "center",
+      };
+    });
+
+    const larguraTotalTabela =
+      larguraAluno + larguraColunaNota * totalColunasNotas;
+    const margemDinamica = Math.max(10, (297 - larguraTotalTabela) / 2);
+
     autoTable(doc, {
-      startY: 25,
+      startY: 21,
       columns: colunas,
       body: linhas,
       theme: "grid",
+      margin: { left: margemDinamica, right: margemDinamica },
       styles: {
-        fontSize: 8,
-        cellPadding: { top: 2, bottom: 2, left: 3, right: 3 },
+        fontSize: 6.5,
+        cellPadding: { top: 1.5, bottom: 1.5, left: 0.5, right: 0.5 },
         halign: "center",
         valign: "middle",
         lineColor: [226, 232, 240],
@@ -205,11 +294,9 @@ export default function Relatorios({
         fillColor: [241, 245, 249],
         textColor: [30, 41, 59],
         fontStyle: "bold",
-        cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+        cellPadding: { top: 2, bottom: 2, left: 0.5, right: 0.5 },
       },
-      columnStyles: {
-        aluno: { halign: "left", fontStyle: "bold", textColor: [51, 65, 85] },
-      },
+      columnStyles: columnStylesConfig,
       alternateRowStyles: {
         fillColor: [248, 250, 252],
       },
@@ -219,8 +306,7 @@ export default function Relatorios({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-12 max-w-7xl mx-auto w-full overflow-x-hidden">
-      {/* Cabeçalho e Filtros Compactos */}
+    <div className="space-y-4 sm:space-y-6 pb-12 max-w-7xl mx-auto w-full">
       <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
           <div>
@@ -295,7 +381,7 @@ export default function Relatorios({
               disabled={
                 !turmaSelecionadaId || simuladosDisponiveis.length === 0
               }
-              value={simuladoSelecionadoId || simuladoAtual?.id || ""}
+              value={simuladoSelecionadoId}
               onChange={(e) => setSimuladoSelecionadoId(e.target.value)}
               className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold text-slate-700 uppercase outline-none focus:border-[#4b82f6] transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -304,6 +390,9 @@ export default function Relatorios({
                   ? "Nenhum vinculado"
                   : "Selecione..."}
               </option>
+              {simuladosDisponiveis.length > 1 && (
+                <option value="GERAL">Geral</option>
+              )}
               {simuladosDisponiveis.map((sim) => (
                 <option key={sim.id} value={sim.id}>
                   {sim.nome || sim.titulo || "Simulado"}
@@ -314,7 +403,6 @@ export default function Relatorios({
         </div>
       </div>
 
-      {/* Tabela Responsiva */}
       {turmaSelecionadaId && simuladoAtual ? (
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
           <div className="flex items-center gap-2 mb-4 text-slate-800 pb-3 border-b border-slate-100">
@@ -322,7 +410,10 @@ export default function Relatorios({
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
               Desempenho:{" "}
               <span className="text-[#4b82f6]">{turmaAtual?.nome}</span> (
-              {simuladoAtual.nome || simuladoAtual.titulo})
+              {simuladoAtual === "GERAL"
+                ? "Geral"
+                : simuladoAtual.nome || simuladoAtual.titulo}
+              )
             </h3>
           </div>
 
@@ -332,10 +423,10 @@ export default function Relatorios({
             </div>
           ) : (
             <div className="w-full overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-left border-collapse bg-white whitespace-nowrap">
+              <table className="w-full text-left border-collapse bg-white">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200">
-                    <th className="p-3.5 align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <th className="p-2.5 align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest min-w-[280px]">
                       Aluno
                     </th>
                     {disciplinasDoSimulado.map((disc, idx) => {
@@ -343,10 +434,14 @@ export default function Relatorios({
                       return (
                         <th
                           key={idx}
-                          className="p-3 text-center align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest border-l border-slate-200"
+                          className="p-1.5 text-center align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest border-l border-slate-200 min-w-[95px]"
                         >
                           <span
-                            className="block text-slate-700 truncate max-w-[120px]"
+                            className="block text-slate-700 whitespace-normal leading-tight"
+                            style={{
+                              wordBreak: "keep-all",
+                              overflowWrap: "normal",
+                            }}
                             title={disc.nome}
                           >
                             {disc.nome}
@@ -357,8 +452,10 @@ export default function Relatorios({
                         </th>
                       );
                     })}
-                    <th className="p-3 text-center align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest border-l border-slate-200 bg-blue-50/30">
-                      <span className="block text-blue-700">Geral</span>
+                    <th className="p-1.5 text-center align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest border-l border-slate-200 bg-blue-50/30 min-w-[95px]">
+                      <span className="block text-blue-700 whitespace-normal leading-tight">
+                        Geral
+                      </span>
                       <span className="text-[9px] text-slate-400 font-normal mt-0.5 block">
                         ({totalQuestoesSimulado} Q)
                       </span>
@@ -367,7 +464,7 @@ export default function Relatorios({
                 </thead>
                 <tbody className="text-xs text-slate-700 divide-y divide-slate-100">
                   {turmaAtual.alunos.map((nomeAluno, index) => {
-                    const respostaAluno = respostasDaTurma.find(
+                    const respostasDoAluno = respostasDaTurma.filter(
                       (r) =>
                         String(r.nomeAluno || r.aluno || "")
                           .trim()
@@ -380,7 +477,7 @@ export default function Relatorios({
                         key={index}
                         className="hover:bg-blue-50/20 transition-colors"
                       >
-                        <td className="p-3.5 align-middle font-bold text-slate-700 uppercase">
+                        <td className="p-2.5 align-middle font-bold text-slate-700 uppercase min-w-[280px]">
                           <span className="text-[10px] text-slate-400 font-mono mr-2">
                             {String(index + 1).padStart(2, "0")}
                           </span>
@@ -389,13 +486,13 @@ export default function Relatorios({
 
                         {disciplinasDoSimulado.map((disc, dIdx) => {
                           const qtdQ = getQtdQuestao(disc);
-                          let resultadoDisc = null;
+                          let acertosTotalDisc = 0;
+                          let totalDisc = qtdQ;
+                          let encontrouAlguma = false;
 
-                          if (respostaAluno) {
+                          respostasDoAluno.forEach((resp) => {
                             const containerDisciplinas =
-                              respostaAluno.detalhes ||
-                              respostaAluno.disciplinas ||
-                              respostaAluno;
+                              resp.detalhes || resp.disciplinas || resp;
 
                             if (
                               containerDisciplinas &&
@@ -408,68 +505,81 @@ export default function Relatorios({
                                   k.trim().toUpperCase() ===
                                   String(disc.nome).trim().toUpperCase(),
                               );
-                              if (chaveEncontrada) {
-                                resultadoDisc =
-                                  containerDisciplinas[chaveEncontrada];
+                              if (
+                                chaveEncontrada &&
+                                containerDisciplinas[chaveEncontrada]
+                              ) {
+                                encontrouAlguma = true;
+                                acertosTotalDisc +=
+                                  containerDisciplinas[chaveEncontrada]
+                                    .acertos ?? 0;
                               }
                             }
-                          }
+                          });
 
-                          if (!respostaAluno || !resultadoDisc) {
+                          if (!encontrouAlguma) {
                             return (
                               <td
                                 key={dIdx}
-                                className="p-3 text-center align-middle text-slate-300 font-bold border-l border-slate-200"
+                                className="p-1.5 text-center align-middle text-slate-300 font-bold border-l border-slate-200 min-w-[95px]"
                               >
                                 -
                               </td>
                             );
                           }
 
-                          const acertos = resultadoDisc.acertos ?? 0;
-                          const total = resultadoDisc.total ?? qtdQ;
                           const percentual =
-                            resultadoDisc.percentagem ??
-                            resultadoDisc.percentual ??
-                            (total > 0
-                              ? Math.round((acertos / total) * 100)
-                              : 0);
-                          const nota = Number(resultadoDisc.nota ?? 0).toFixed(
-                            1,
-                          );
+                            totalDisc > 0
+                              ? Math.round((acertosTotalDisc / totalDisc) * 100)
+                              : 0;
+                          const nota =
+                            totalDisc > 0
+                              ? ((acertosTotalDisc / totalDisc) * 10).toFixed(1)
+                              : "0.0";
 
                           return (
                             <td
                               key={dIdx}
-                              className="p-3 text-center align-middle border-l border-slate-200"
+                              className="p-1.5 text-center align-middle border-l border-slate-200 min-w-[95px]"
                             >
-                              <div className="font-bold text-slate-700 text-xs">
-                                {acertos}/{total}{" "}
+                              <div className="font-bold text-slate-700 text-[10.5px]">
+                                {acertosTotalDisc}/{totalDisc}{" "}
                                 <span className="text-[#4b82f6] font-semibold">
                                   ({percentual}%)
                                 </span>
                               </div>
-                              <div className="mt-1 inline-block px-1.5 py-0.5 text-emerald-700 border border-emerald-200 bg-emerald-50 rounded text-[9px] font-bold">
+                              <div className="mt-0.5 inline-block px-1 py-0.2 text-emerald-700 border border-emerald-200 bg-emerald-50 rounded text-[8.5px] font-bold">
                                 Nota: {nota}
                               </div>
                             </td>
                           );
                         })}
 
-                        <td className="p-3 text-center align-middle border-l border-slate-200 bg-blue-50/20">
-                          {!respostaAluno ||
-                          respostaAluno.totalAcertos === undefined ? (
+                        <td className="p-1.5 text-center align-middle border-l border-slate-200 bg-blue-50/20 min-w-[95px]">
+                          {respostasDoAluno.length === 0 ? (
                             <span className="text-[10px] uppercase font-bold text-slate-400">
                               Pendente
                             </span>
                           ) : (
                             <div>
-                              <div className="font-bold text-slate-700 text-xs">
-                                {respostaAluno.totalAcertos}/
-                                {respostaAluno.totalQuestoes}
+                              <div className="font-bold text-slate-700 text-[10.5px]">
+                                {respostasDoAluno.reduce(
+                                  (acc, r) => acc + (r.totalAcertos || 0),
+                                  0,
+                                )}
+                                /{totalQuestoesSimulado}
                               </div>
-                              <div className="text-[10px] text-[#4b82f6] font-bold mt-0.5">
-                                ({respostaAluno.percentualGeral}%)
+                              <div className="text-[9.5px] text-[#4b82f6] font-bold mt-0.5">
+                                (
+                                {Math.round(
+                                  (respostasDoAluno.reduce(
+                                    (acc, r) => acc + (r.totalAcertos || 0),
+                                    0,
+                                  ) /
+                                    (totalQuestoesSimulado || 1)) *
+                                    100,
+                                )}
+                                %)
                               </div>
                             </div>
                           )}
