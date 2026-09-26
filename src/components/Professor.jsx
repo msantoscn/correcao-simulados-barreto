@@ -596,11 +596,11 @@ export default function Professor({
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs bg-white">
-                  <table className="w-full min-w-[850px] text-left border-collapse text-xs table-auto">
+                  <table className="w-full min-w-[750px] text-left border-collapse text-xs table-auto">
                     <thead>
                       <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
-                        {/* Coluna do Aluno com largura confortável para nomes longos (sem truncamento) */}
-                        <th className="p-2.5 border-r border-[#dbc8b6] w-[260px] sm:w-[300px] align-middle">
+                        {/* Coluna do Aluno expandida para dar total conforto a nomes longos */}
+                        <th className="p-2.5 border-r border-[#dbc8b6] w-[55%] sm:w-[35%] align-middle">
                           Aluno
                         </th>
 
@@ -609,19 +609,19 @@ export default function Professor({
                           return (
                             <th
                               key={disc.nome}
-                              className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-normal break-words align-middle min-w-[120px]"
+                              className="px-1.5 py-2 border-r border-[#dbc8b6] text-center whitespace-normal break-words align-middle min-w-[95px]"
                             >
-                              <span className="block text-gray-800 font-bold leading-normal uppercase tracking-normal">
+                              <span className="block text-gray-800 font-bold leading-tight uppercase text-[10px]">
                                 {disc.nome}
                               </span>
                               <span className="text-[9px] text-gray-400 font-normal block mt-0.5">
-                                ({qtdQ} Questões)
+                                ({qtdQ} Q)
                               </span>
                             </th>
                           );
                         })}
 
-                        <th className="p-2.5 border-r border-[#dbc8b6] text-center bg-blue-50/40 whitespace-normal break-words align-middle min-w-[85px]">
+                        <th className="px-1.5 py-2 border-r border-[#dbc8b6] text-center bg-blue-50/40 whitespace-normal break-words align-middle min-w-[75px]">
                           <span className="block text-blue-700 font-bold leading-tight">
                             Total
                           </span>
@@ -630,7 +630,7 @@ export default function Professor({
                           </span>
                         </th>
 
-                        <th className="p-2.5 text-center w-[90px] align-middle">
+                        <th className="px-2 py-2 text-center w-[80px] align-middle">
                           Ações
                         </th>
                       </tr>
@@ -671,17 +671,17 @@ export default function Professor({
                               return (
                                 <td
                                   key={disc.nome}
-                                  className="p-2 border-r border-[#dbc8b6] text-center uppercase align-middle"
+                                  className="px-1.5 py-2 border-r border-[#dbc8b6] text-center uppercase align-middle"
                                 >
                                   {concluido && infoDisc ? (
                                     <div className="flex flex-col items-center justify-center gap-0.5">
-                                      <span className="font-bold text-gray-800 text-xs">
+                                      <span className="font-bold text-gray-800 text-[11px]">
                                         {infoDisc.acertos}/{infoDisc.total}{" "}
                                         <span className="text-blue-600 font-semibold">
                                           ({infoDisc.percentagem}%)
                                         </span>
                                       </span>
-                                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">
                                         Nota: {infoDisc.nota}
                                       </span>
                                     </div>
@@ -694,10 +694,10 @@ export default function Professor({
                               );
                             })}
 
-                            <td className="p-2 border-r border-[#dbc8b6] text-center bg-blue-50/20 uppercase align-middle">
+                            <td className="px-1.5 py-2 border-r border-[#dbc8b6] text-center bg-blue-50/20 uppercase align-middle">
                               {concluido ? (
                                 <div className="flex flex-col items-center justify-center gap-0.5">
-                                  <span className="font-bold text-gray-800 text-xs">
+                                  <span className="font-bold text-gray-800 text-[11px]">
                                     {dadosCalculados.totalAcertos}/
                                     {dadosCalculados.totalQuestoes}
                                   </span>
@@ -712,7 +712,7 @@ export default function Professor({
                               )}
                             </td>
 
-                            <td className="p-2 text-center align-middle">
+                            <td className="px-1 py-2 text-center align-middle">
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   type="button"
@@ -721,7 +721,7 @@ export default function Professor({
                                     WebkitTapHighlightColor: "transparent",
                                     touchAction: "manipulation",
                                   }}
-                                  className={`p-2 rounded-md transition-all cursor-pointer focus:outline-none focus:ring-0 active:scale-95 ${
+                                  className={`p-1.5 rounded-md transition-all cursor-pointer focus:outline-none focus:ring-0 active:scale-95 ${
                                     temPermissao
                                       ? concluido
                                         ? "bg-white text-gray-700 hover:bg-gray-100 border border-[#dbc8b6] shadow-xs"
@@ -760,7 +760,7 @@ export default function Professor({
                                       WebkitTapHighlightColor: "transparent",
                                       touchAction: "manipulation",
                                     }}
-                                    className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-[#dbc8b6] shadow-xs focus:outline-none focus:ring-0 active:scale-95"
+                                    className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-[#dbc8b6] shadow-xs focus:outline-none focus:ring-0 active:scale-95"
                                     title="Excluir Resposta"
                                   >
                                     <Trash2 className="w-4 h-4" />
