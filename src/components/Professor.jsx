@@ -749,7 +749,7 @@ export default function Professor({
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS (SEM BRILHO AZUL NO CELULAR) */}
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E TOUCH-ACTION BLINDADO */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
@@ -796,8 +796,9 @@ export default function Professor({
                                       }
                                       style={{
                                         WebkitTapHighlightColor: "transparent",
+                                        touchAction: "manipulation",
                                       }}
-                                      className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer select-none ${
+                                      className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-95 shadow-xs cursor-pointer select-none ${
                                         selecionada
                                           ? "bg-blue-600 text-white border-transparent scale-105 shadow-blue-500/30"
                                           : "bg-white text-gray-700 border border-[#dbc8b6] hover:border-blue-400 hover:bg-blue-50"
@@ -817,7 +818,7 @@ export default function Professor({
                 })}
               </div>
 
-              {/* Botão de salvar na posição normal */}
+              {/* Botão de salvar */}
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
