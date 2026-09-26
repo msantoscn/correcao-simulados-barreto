@@ -13,6 +13,9 @@ import {
   Users,
   UserX,
   ArrowLeft,
+  ArrowRightLeft,
+  Check,
+  X,
 } from "lucide-react";
 
 export default function Professor({
@@ -29,7 +32,10 @@ export default function Professor({
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
+  const [alunoOriginal, setAlunoOriginal] = useState(null); // Guarda o aluno de onde veio o gabarito original
   const [respostasProfessor, setRespostasProfessor] = useState({});
+  const [mostrarModalReatribuir, setMostrarModalReatribuir] = useState(false);
+  const [alunoSelecionadoDestino, setAlunoSelecionadoDestino] = useState("");
 
   const turmaAtiva = turmas.find(
     (t) => String(t.id) === String(turmaSelecionadaId),
@@ -114,7 +120,9 @@ export default function Professor({
   const handleVoltarAosSimulados = () => {
     setSimuladoSelecionadoId("");
     setAlunoAtivo(null);
+    setAlunoOriginal(null);
     setRespostasProfessor({});
+    setMostrarModalReatribuir(false);
   };
 
   const encontrarRegistoAluno = (nomeAluno) => {
@@ -166,6 +174,7 @@ export default function Professor({
     }
 
     setAlunoAtivo(nomeAluno);
+    setAlunoOriginal(nomeAluno); // Guarda quem era o aluno inicial da tela
 
     const respostaExistente = encontrarRegistoAluno(nomeAluno);
 
@@ -282,6 +291,7 @@ export default function Professor({
     };
   };
 
+  // Submissão final: Salva no aluno ativo e, se houve troca, limpa o registro antigo do aluno original
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
@@ -296,16 +306,19 @@ export default function Professor({
       return alert("Preencha pelo menos uma resposta.");
     }
 
-    const registoExistente = encontrarRegistoAluno(alunoAtivo);
-
     try {
+      // 1. Verifica se o aluno ativo atual já possui registro
+      const registoExistenteAlunoAtivo = encontrarRegistoAluno(alunoAtivo);
+
       const dadosRegisto = {
-        ...(registoExistente?.id ? { id: registoExistente.id } : {}),
+        ...(registoExistenteAlunoAtivo?.id
+          ? { id: registoExistenteAlunoAtivo.id }
+          : {}),
         simuladoId: simuladoAtivo.id,
         simuladoNome: simuladoAtivo.nome || simuladoAtivo.titulo,
         turmaId: turmaAtiva.id,
         turma: turmaAtiva.nome,
-        nomeAluno: alunoAtivo,
+        nomeAluno: alunoAtivo, // Salva no nome atual da tela
         professorAplicador: isGestao ? "GESTÃO" : user.nome,
         totalAcertos: calculo.totalAcertos,
         totalQuestoes: calculo.totalQuestoes,
@@ -316,13 +329,44 @@ export default function Professor({
         dataRegisto: new Date().toLocaleDateString("pt-PT"),
       };
 
+      // Salva no Firebase para o aluno ativo
       await onSalvarResposta(dadosRegisto, user, turmas);
+
+      // 2. Se o aluno foi trocado em relação ao original, apaga o registro incorreto do original para evitar fantasma
+      if (alunoOriginal && alunoOriginal !== alunoAtivo) {
+        const registoOriginal = encontrarRegistoAluno(alunoOriginal);
+        if (registoOriginal && registoOriginal.id && onExcluirResposta) {
+          await onExcluirResposta(registoOriginal.id);
+        }
+      }
+
       setAlunoAtivo(null);
+      setAlunoOriginal(null);
       setRespostasProfessor({});
     } catch (error) {
       console.error("Erro ao salvar respostas:", error);
     }
   };
+
+  // Apenas troca o nome na tela instantaneamente sem salvar no Firebase ainda
+  const aplicarTrocaAlunoInstantanea = () => {
+    if (!alunoSelecionadoDestino) {
+      return alert("Selecione o aluno correto.");
+    }
+
+    if (
+      alunoSelecionadoDestino.toUpperCase() ===
+      String(alunoAtivo).trim().toUpperCase()
+    ) {
+      return alert("O aluno de destino é o mesmo aluno atual.");
+    }
+
+    setAlunoAtivo(alunoSelecionadoDestino); // Atualiza apenas o nome exibido
+    setMostrarModalReatribuir(false);
+    setAlunoSelecionadoDestino("");
+  };
+
+  const houveTrocaDeAluno = alunoOriginal && alunoOriginal !== alunoAtivo;
 
   return (
     <div className="bg-white rounded-md shadow-sm p-3 sm:p-5 border border-[#dbc8b6] w-full max-w-7xl mx-auto overflow-x-hidden font-sans antialiased">
@@ -720,16 +764,26 @@ export default function Professor({
           ) : (
             <form
               onSubmit={submeterRespostasAluno}
-              className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md"
+              className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md relative"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-[#dbc8b6]">
-                {/* Nome do aluno à esquerda */}
-                <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide whitespace-normal break-words leading-snug">
-                  <span className="text-blue-600 font-bold">{alunoAtivo}</span>
+                {/* Nome do aluno limpo à esquerda */}
+                <h3 className="text-xs sm:text-sm font-black text-blue-600 uppercase tracking-wide whitespace-normal break-words leading-snug">
+                  {alunoAtivo}
                 </h3>
 
-                {/* Botões em ícones à direita */}
+                {/* Botões em ícones unificados à direita */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId) && (
+                    <button
+                      type="button"
+                      onClick={() => setMostrarModalReatribuir(true)}
+                      className="p-2 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-amber-300 focus:outline-none focus:ring-0"
+                      title="Trocar de aluno"
+                    >
+                      <ArrowRightLeft className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleLimparRespostas}
@@ -749,7 +803,56 @@ export default function Professor({
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E TOUCH-ACTION BLINDADO */}
+              {/* MODAL SIMPLIFICADO PARA TROCAR DE ALUNO */}
+              {mostrarModalReatribuir && (
+                <div className="bg-amber-50 border border-amber-300 p-3 rounded-md space-y-2 mb-3 shadow-inner">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-900 uppercase">
+                      Trocar de aluno
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMostrarModalReatribuir(false)}
+                      className="p-1 text-amber-700 hover:bg-amber-200 rounded cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={alunoSelecionadoDestino}
+                      onChange={(e) =>
+                        setAlunoSelecionadoDestino(e.target.value)
+                      }
+                      className="w-full p-2 bg-white border border-amber-300 rounded text-xs font-bold text-gray-800 uppercase focus:outline-none"
+                    >
+                      <option value="">Selecione o aluno...</option>
+                      {turmaAtiva?.alunos
+                        ?.filter(
+                          (a) =>
+                            String(a).trim().toUpperCase() !==
+                            String(alunoAtivo).trim().toUpperCase(),
+                        )
+                        .map((alunoTurma) => (
+                          <option key={alunoTurma} value={alunoTurma}>
+                            {alunoTurma}
+                          </option>
+                        ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={aplicarTrocaAlunoInstantanea}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
+                    >
+                      <Check className="w-4 h-4" /> Confirmar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
@@ -818,13 +921,19 @@ export default function Professor({
                 })}
               </div>
 
-              {/* Botão de salvar */}
+              {/* Botão de salvar dinâmico (Salvar Respostas do Aluno ou Salvar troca de aluno) */}
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider rounded-md text-xs shadow-sm cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-0"
+                  className={`w-full sm:w-auto px-6 py-2.5 text-white font-bold uppercase tracking-wider rounded-md text-xs shadow-sm cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-0 ${
+                    houveTrocaDeAluno
+                      ? "bg-amber-600 hover:bg-amber-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
-                  Salvar Respostas do Aluno
+                  {houveTrocaDeAluno
+                    ? "Salvar troca de aluno"
+                    : "Salvar Respostas do Aluno"}
                 </button>
               </div>
             </form>
