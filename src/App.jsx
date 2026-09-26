@@ -104,14 +104,14 @@ function MainContent() {
               </div>
             </div>
 
-            {/* Botão de Sair Mobile (Apenas para Gestão, ou geral caso necessário) */}
+            {/* Botão de Sair Mobile (Disponível sempre, inclusive para Professor) */}
             <button
               onClick={logout}
               style={{
                 WebkitTapHighlightColor: "transparent",
                 touchAction: "manipulation",
               }}
-              className="md:hidden p-2.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-all cursor-pointer border border-red-100 active:scale-95 flex-shrink-0 ml-2 shadow-xs"
+              className="md:hidden p-2.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl transition-all cursor-pointer border border-red-100 active:scale-95 flex-shrink-0 ml-2 shadow-xs flex items-center justify-center"
               title="Sair da Conta"
             >
               <LogOut className="w-5 h-5" />
@@ -119,7 +119,7 @@ function MainContent() {
           </div>
 
           {/* Navegação Otimizada e Flexível (Oculta para Professor) */}
-          {!isProfessor && (
+          {!isProfessor ? (
             <nav className="flex flex-wrap items-center justify-center md:justify-end gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
               {isGestao && (
                 <>
@@ -182,6 +182,20 @@ function MainContent() {
                 <LogOut className="w-4 h-4" />
               </button>
             </nav>
+          ) : (
+            /* Botão de Sair Desktop específico para o perfil Professor */
+            <button
+              onClick={logout}
+              style={{
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
+              }}
+              className="hidden md:flex ml-1 px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all cursor-pointer border border-red-200 shadow-xs active:scale-95 items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
+              title="Sair da Conta"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Sair</span>
+            </button>
           )}
         </div>
       </header>
