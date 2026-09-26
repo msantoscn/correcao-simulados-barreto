@@ -596,11 +596,11 @@ export default function Professor({
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs bg-white">
-                  <table className="w-full min-w-[700px] text-left border-collapse text-xs table-auto">
+                  <table className="w-full min-w-[850px] text-left border-collapse text-xs table-auto">
                     <thead>
                       <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
-                        {/* Coluna Aluno mais enxuta no número, dando espaço aos nomes completos */}
-                        <th className="p-2.5 border-r border-[#dbc8b6] w-[32%] sm:w-[28%] align-middle">
+                        {/* Coluna do Aluno com largura confortável para nomes longos (sem truncamento) */}
+                        <th className="p-2.5 border-r border-[#dbc8b6] w-[260px] sm:w-[300px] align-middle">
                           Aluno
                         </th>
 
@@ -609,22 +609,19 @@ export default function Professor({
                           return (
                             <th
                               key={disc.nome}
-                              className="p-2 border-r border-[#dbc8b6] text-center whitespace-normal break-words align-middle min-w-[95px]"
+                              className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-normal break-words align-middle min-w-[120px]"
                             >
-                              <span
-                                className="block text-gray-700 font-bold leading-tight uppercase tracking-tight"
-                                title={disc.nome}
-                              >
+                              <span className="block text-gray-800 font-bold leading-normal uppercase tracking-normal">
                                 {disc.nome}
                               </span>
                               <span className="text-[9px] text-gray-400 font-normal block mt-0.5">
-                                ({qtdQ} Q)
+                                ({qtdQ} Questões)
                               </span>
                             </th>
                           );
                         })}
 
-                        <th className="p-2 border-r border-[#dbc8b6] text-center bg-blue-50/40 whitespace-normal break-words align-middle min-w-[75px]">
+                        <th className="p-2.5 border-r border-[#dbc8b6] text-center bg-blue-50/40 whitespace-normal break-words align-middle min-w-[85px]">
                           <span className="block text-blue-700 font-bold leading-tight">
                             Total
                           </span>
@@ -633,8 +630,7 @@ export default function Professor({
                           </span>
                         </th>
 
-                        {/* Coluna de Ações otimizada e estreita para caber os ícones */}
-                        <th className="p-2 text-center w-[85px] sm:w-[90px] align-middle">
+                        <th className="p-2.5 text-center w-[90px] align-middle">
                           Ações
                         </th>
                       </tr>
