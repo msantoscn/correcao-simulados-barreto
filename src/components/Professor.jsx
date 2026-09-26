@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   UserCheck,
@@ -30,6 +30,15 @@ export default function Professor({
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
+
+  // Referência para focar no botão Voltar e evitar seleção acidental de alternativas
+  const botaoVoltarRef = useRef(null);
+
+  useEffect(() => {
+    if (alunoAtivo && botaoVoltarRef.current) {
+      botaoVoltarRef.current.focus();
+    }
+  }, [alunoAtivo]);
 
   const turmaAtiva = turmas.find(
     (t) => String(t.id) === String(turmaSelecionadaId),
@@ -396,7 +405,6 @@ export default function Professor({
         ) : (
           <div className="border border-[#dbc8b6] rounded-md p-3 bg-gray-50 shadow-xs space-y-3">
             <div className="pb-2 border-b border-[#dbc8b6]">
-              {/* Nome da turma extra destacado e maior */}
               <h3 className="text-lg sm:text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
                 <Users className="w-6 h-6 text-blue-500 flex-shrink-0" />
                 <span className="truncate">
@@ -524,11 +532,9 @@ export default function Professor({
         /* LANÇAMENTO DE NOTAS DOS ALUNOS (QUANDO UM SIMULADO É SELECIONADO) */
         <div className="space-y-3">
           <div className="border-b border-[#dbc8b6] pb-2 mb-2 space-y-1">
-            {/* Nome da turma maior */}
             <h3 className="text-lg sm:text-xl font-black text-gray-800 uppercase tracking-wide leading-tight">
               {turmaAtiva?.nome} - {bimestreSelecionado}º Bimestre
             </h3>
-            {/* Nome do simulado maior e destacado */}
             <h4 className="text-base sm:text-lg font-black text-blue-600 uppercase tracking-wide leading-tight">
               {simuladoAtivo?.nome}
             </h4>
@@ -722,41 +728,38 @@ export default function Professor({
               className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-[#dbc8b6]">
-                {/* Botões em ícones movidos para o lado esquerdo junto ao nome do aluno */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={handleLimparRespostas}
-                      className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200"
-                      title="Limpar Respostas Atuais"
-                    >
-                      <Eraser className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAlunoAtivo(null)}
-                      className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs"
-                      title="Voltar para a Lista de Alunos"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                    </button>
-                  </div>
+                {/* Nome do aluno à esquerda */}
+                <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide whitespace-normal break-words leading-snug">
+                  <span className="text-blue-600 font-bold">{alunoAtivo}</span>
+                </h3>
 
-                  {/* Nome do aluno completo */}
-                  <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide whitespace-normal break-words leading-snug">
-                    <span className="text-blue-600 font-bold">
-                      {alunoAtivo}
-                    </span>
-                  </h3>
+                {/* Botões em ícones à direita. O botão voltar recebe o foco inicial */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleLimparRespostas}
+                    className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200"
+                    title="Limpar Respostas Atuais"
+                  >
+                    <Eraser className="w-4 h-4" />
+                  </button>
+                  <button
+                    ref={botaoVoltarRef}
+                    type="button"
+                    onClick={() => setAlunoAtivo(null)}
+                    className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs outline-none focus:ring-2 focus:ring-blue-500"
+                    title="Voltar para a Lista de Alunos"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E BOLINHAS AINDA MAIORES */}
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E BOLINHAS MAIORES */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
-                  const alternativas = ["A", "B", "C", "D"]; // Reduzido estritamente para 4 alternativas
+                  const alternativas = ["A", "B", "C", "D"];
 
                   return (
                     <div
@@ -788,7 +791,6 @@ export default function Professor({
                               <span className="text-xs font-bold text-gray-700 font-mono tracking-wider">
                                 {String(qIdx + 1).padStart(2, "0")}
                               </span>
-                              {/* Bolinhas maiores e espaçamento ideal para 4 alternativas */}
                               <div className="flex gap-2.5">
                                 {alternativas.map((alt) => {
                                   const selecionada = valAtual === alt;
