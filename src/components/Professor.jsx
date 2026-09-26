@@ -396,8 +396,9 @@ export default function Professor({
         ) : (
           <div className="border border-[#dbc8b6] rounded-md p-3 bg-gray-50 shadow-xs space-y-3">
             <div className="pb-2 border-b border-[#dbc8b6]">
-              <h3 className="text-base sm:text-lg font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-500 flex-shrink-0" />
+              {/* Nome da turma extra destacado e maior */}
+              <h3 className="text-lg sm:text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
+                <Users className="w-6 h-6 text-blue-500 flex-shrink-0" />
                 <span className="truncate">
                   {turmaAtiva.nome} - {bimestreSelecionado}º Bimestre
                 </span>
@@ -523,16 +524,13 @@ export default function Professor({
         /* LANÇAMENTO DE NOTAS DOS ALUNOS (QUANDO UM SIMULADO É SELECIONADO) */
         <div className="space-y-3">
           <div className="border-b border-[#dbc8b6] pb-2 mb-2 space-y-1">
-            <h3 className="text-base sm:text-lg font-black text-gray-800 uppercase tracking-wide leading-tight">
+            {/* Nome da turma maior */}
+            <h3 className="text-lg sm:text-xl font-black text-gray-800 uppercase tracking-wide leading-tight">
               {turmaAtiva?.nome} - {bimestreSelecionado}º Bimestre
             </h3>
-            <h4 className="text-sm sm:text-base font-extrabold text-blue-600 uppercase tracking-wide leading-tight">
+            {/* Nome do simulado maior e destacado */}
+            <h4 className="text-base sm:text-lg font-black text-blue-600 uppercase tracking-wide leading-tight">
               {simuladoAtivo?.nome}
-              {!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId) && (
-                <span className="text-red-500 font-bold ml-2 text-xs">
-                  (Modo Apenas Leitura)
-                </span>
-              )}
             </h4>
           </div>
 
@@ -724,37 +722,41 @@ export default function Professor({
               className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-[#dbc8b6]">
-                {/* Nome do aluno completo */}
-                <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide whitespace-normal break-words leading-snug">
-                  <span className="text-blue-600 font-bold">{alunoAtivo}</span>
-                </h3>
+                {/* Botões em ícones movidos para o lado esquerdo junto ao nome do aluno */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleLimparRespostas}
+                      className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200"
+                      title="Limpar Respostas Atuais"
+                    >
+                      <Eraser className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAlunoAtivo(null)}
+                      className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs"
+                      title="Voltar para a Lista de Alunos"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
+                  </div>
 
-                {/* Botões do aluno transformados estritamente em ÍCONES para evitar confusão */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleLimparRespostas}
-                    className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200"
-                    title="Limpar Respostas Atuais"
-                  >
-                    <Eraser className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAlunoAtivo(null)}
-                    className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs"
-                    title="Voltar para a Lista de Alunos"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </button>
+                  {/* Nome do aluno completo */}
+                  <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide whitespace-normal break-words leading-snug">
+                    <span className="text-blue-600 font-bold">
+                      {alunoAtivo}
+                    </span>
+                  </h3>
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM BOLINHAS MAIORES E ERGONÔMICAS NO CELULAR */}
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E BOLINHAS AINDA MAIORES */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
-                  const alternativas = ["A", "B", "C", "D", "E"];
+                  const alternativas = ["A", "B", "C", "D"]; // Reduzido estritamente para 4 alternativas
 
                   return (
                     <div
@@ -779,15 +781,15 @@ export default function Professor({
                           return (
                             <div
                               key={qIdx}
-                              className={`flex items-center justify-between px-2.5 py-2 rounded border border-[#dbc8b6] ${
+                              className={`flex items-center justify-between px-3 py-2 rounded border border-[#dbc8b6] ${
                                 isAlternada ? "bg-amber-50/20" : "bg-white"
                               }`}
                             >
                               <span className="text-xs font-bold text-gray-700 font-mono tracking-wider">
                                 {String(qIdx + 1).padStart(2, "0")}
                               </span>
-                              {/* Espaçamento otimizado e bolinhas maiores (w-9 h-9 no cel, w-8 sm) */}
-                              <div className="flex gap-2">
+                              {/* Bolinhas maiores e espaçamento ideal para 4 alternativas */}
+                              <div className="flex gap-2.5">
                                 {alternativas.map((alt) => {
                                   const selecionada = valAtual === alt;
                                   return (
@@ -797,10 +799,10 @@ export default function Professor({
                                       onClick={() =>
                                         handleRespostaClick(d.nome, qIdx, alt)
                                       }
-                                      className={`w-9 h-9 sm:w-8 sm:h-8 rounded-full text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
+                                      className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
                                         selecionada
                                           ? "bg-blue-600 text-white border-transparent scale-105 shadow-blue-500/30"
-                                          : "bg-white text-gray-600 border border-[#dbc8b6] hover:border-blue-400 hover:bg-blue-50"
+                                          : "bg-white text-gray-700 border border-[#dbc8b6] hover:border-blue-400 hover:bg-blue-50"
                                       }`}
                                     >
                                       {alt}
