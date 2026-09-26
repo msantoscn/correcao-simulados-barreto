@@ -32,7 +32,7 @@ export default function Professor({
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
-  const [alunoOriginal, setAlunoOriginal] = useState(null); // Guarda o aluno de onde veio o gabarito original
+  const [alunoOriginal, setAlunoOriginal] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
   const [mostrarModalReatribuir, setMostrarModalReatribuir] = useState(false);
   const [alunoSelecionadoDestino, setAlunoSelecionadoDestino] = useState("");
@@ -174,7 +174,7 @@ export default function Professor({
     }
 
     setAlunoAtivo(nomeAluno);
-    setAlunoOriginal(nomeAluno); // Guarda quem era o aluno inicial da tela
+    setAlunoOriginal(nomeAluno);
 
     const respostaExistente = encontrarRegistoAluno(nomeAluno);
 
@@ -291,7 +291,6 @@ export default function Professor({
     };
   };
 
-  // Submissão final: Salva no aluno ativo e, se houve troca, limpa o registro antigo do aluno original
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
     if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
@@ -307,7 +306,6 @@ export default function Professor({
     }
 
     try {
-      // 1. Verifica se o aluno ativo atual já possui registro
       const registoExistenteAlunoAtivo = encontrarRegistoAluno(alunoAtivo);
 
       const dadosRegisto = {
@@ -318,7 +316,7 @@ export default function Professor({
         simuladoNome: simuladoAtivo.nome || simuladoAtivo.titulo,
         turmaId: turmaAtiva.id,
         turma: turmaAtiva.nome,
-        nomeAluno: alunoAtivo, // Salva no nome atual da tela
+        nomeAluno: alunoAtivo,
         professorAplicador: isGestao ? "GESTÃO" : user.nome,
         totalAcertos: calculo.totalAcertos,
         totalQuestoes: calculo.totalQuestoes,
@@ -329,10 +327,8 @@ export default function Professor({
         dataRegisto: new Date().toLocaleDateString("pt-PT"),
       };
 
-      // Salva no Firebase para o aluno ativo
       await onSalvarResposta(dadosRegisto, user, turmas);
 
-      // 2. Se o aluno foi trocado em relação ao original, apaga o registro incorreto do original para evitar fantasma
       if (alunoOriginal && alunoOriginal !== alunoAtivo) {
         const registoOriginal = encontrarRegistoAluno(alunoOriginal);
         if (registoOriginal && registoOriginal.id && onExcluirResposta) {
@@ -348,7 +344,6 @@ export default function Professor({
     }
   };
 
-  // Apenas troca o nome na tela instantaneamente sem salvar no Firebase ainda
   const aplicarTrocaAlunoInstantanea = () => {
     if (!alunoSelecionadoDestino) {
       return alert("Selecione o aluno correto.");
@@ -361,7 +356,7 @@ export default function Professor({
       return alert("O aluno de destino é o mesmo aluno atual.");
     }
 
-    setAlunoAtivo(alunoSelecionadoDestino); // Atualiza apenas o nome exibido
+    setAlunoAtivo(alunoSelecionadoDestino);
     setMostrarModalReatribuir(false);
     setAlunoSelecionadoDestino("");
   };
@@ -384,6 +379,10 @@ export default function Professor({
         {simuladoSelecionadoId && (
           <button
             onClick={handleVoltarAosSimulados}
+            style={{
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
             className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#dbc8b6] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 flex-shrink-0 shadow-xs focus:outline-none focus:ring-0"
           >
             &larr; Voltar
@@ -512,6 +511,10 @@ export default function Professor({
                                     onClick={(e) =>
                                       handleDesvincularSimulado(e, simId)
                                     }
+                                    style={{
+                                      WebkitTapHighlightColor: "transparent",
+                                      touchAction: "manipulation",
+                                    }}
                                     className="p-1 hover:bg-red-50 rounded-md text-gray-400 hover:text-red-500 transition-colors cursor-pointer focus:outline-none focus:ring-0"
                                     title="Desvincular Professor"
                                   >
@@ -543,6 +546,10 @@ export default function Professor({
 
                       <button
                         onClick={() => handleEntrarNoSimulado(simId)}
+                        style={{
+                          WebkitTapHighlightColor: "transparent",
+                          touchAction: "manipulation",
+                        }}
                         className={`w-full py-2 px-3 rounded-md text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-0 ${
                           meuDono
                             ? "bg-blue-500 hover:bg-blue-600 text-white shadow-xs"
@@ -589,10 +596,11 @@ export default function Professor({
                 </div>
               ) : (
                 <div className="w-full overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs bg-white">
-                  <table className="w-full min-w-[650px] text-left border-collapse text-xs table-fixed">
+                  <table className="w-full min-w-[700px] text-left border-collapse text-xs table-auto">
                     <thead>
                       <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
-                        <th className="p-2.5 border-r border-[#dbc8b6] w-[26%] sm:w-[22%] align-middle">
+                        {/* Coluna Aluno mais enxuta no número, dando espaço aos nomes completos */}
+                        <th className="p-2.5 border-r border-[#dbc8b6] w-[32%] sm:w-[28%] align-middle">
                           Aluno
                         </th>
 
@@ -601,10 +609,10 @@ export default function Professor({
                           return (
                             <th
                               key={disc.nome}
-                              className="p-2 border-r border-[#dbc8b6] text-center whitespace-normal break-words align-middle"
+                              className="p-2 border-r border-[#dbc8b6] text-center whitespace-normal break-words align-middle min-w-[95px]"
                             >
                               <span
-                                className="block text-gray-700 font-bold leading-tight truncate max-w-[90px] mx-auto"
+                                className="block text-gray-700 font-bold leading-tight uppercase tracking-tight"
                                 title={disc.nome}
                               >
                                 {disc.nome}
@@ -616,7 +624,7 @@ export default function Professor({
                           );
                         })}
 
-                        <th className="p-2 border-r border-[#dbc8b6] text-center bg-blue-50/40 whitespace-normal break-words align-middle">
+                        <th className="p-2 border-r border-[#dbc8b6] text-center bg-blue-50/40 whitespace-normal break-words align-middle min-w-[75px]">
                           <span className="block text-blue-700 font-bold leading-tight">
                             Total
                           </span>
@@ -625,7 +633,8 @@ export default function Professor({
                           </span>
                         </th>
 
-                        <th className="p-2.5 text-center w-[100px] sm:w-[110px] align-middle">
+                        {/* Coluna de Ações otimizada e estreita para caber os ícones */}
+                        <th className="p-2 text-center w-[85px] sm:w-[90px] align-middle">
                           Ações
                         </th>
                       </tr>
@@ -654,7 +663,9 @@ export default function Professor({
                                 <span className="text-[10px] text-gray-400 font-mono flex-shrink-0 mt-0.5">
                                   {String(idx + 1).padStart(2, "0")}
                                 </span>
-                                <span className="break-words">{aluno}</span>
+                                <span className="break-words leading-snug">
+                                  {aluno}
+                                </span>
                               </div>
                             </td>
 
@@ -710,7 +721,11 @@ export default function Professor({
                                 <button
                                   type="button"
                                   onClick={() => handleSelecionarAluno(aluno)}
-                                  className={`p-2 rounded-md transition-all cursor-pointer focus:outline-none focus:ring-0 ${
+                                  style={{
+                                    WebkitTapHighlightColor: "transparent",
+                                    touchAction: "manipulation",
+                                  }}
+                                  className={`p-2 rounded-md transition-all cursor-pointer focus:outline-none focus:ring-0 active:scale-95 ${
                                     temPermissao
                                       ? concluido
                                         ? "bg-white text-gray-700 hover:bg-gray-100 border border-[#dbc8b6] shadow-xs"
@@ -745,7 +760,11 @@ export default function Professor({
                                         aluno,
                                       )
                                     }
-                                    className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-[#dbc8b6] shadow-xs focus:outline-none focus:ring-0"
+                                    style={{
+                                      WebkitTapHighlightColor: "transparent",
+                                      touchAction: "manipulation",
+                                    }}
+                                    className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-[#dbc8b6] shadow-xs focus:outline-none focus:ring-0 active:scale-95"
                                     title="Excluir Resposta"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -778,6 +797,10 @@ export default function Professor({
                     <button
                       type="button"
                       onClick={() => setMostrarModalReatribuir(true)}
+                      style={{
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
+                      }}
                       className="p-2 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-amber-300 focus:outline-none focus:ring-0"
                       title="Trocar de aluno"
                     >
@@ -787,6 +810,10 @@ export default function Professor({
                   <button
                     type="button"
                     onClick={handleLimparRespostas}
+                    style={{
+                      WebkitTapHighlightColor: "transparent",
+                      touchAction: "manipulation",
+                    }}
                     className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200 focus:outline-none focus:ring-0"
                     title="Limpar Respostas Atuais"
                   >
@@ -795,6 +822,10 @@ export default function Professor({
                   <button
                     type="button"
                     onClick={() => setAlunoAtivo(null)}
+                    style={{
+                      WebkitTapHighlightColor: "transparent",
+                      touchAction: "manipulation",
+                    }}
                     className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs focus:outline-none focus:ring-0"
                     title="Voltar para a Lista de Alunos"
                   >
@@ -813,6 +844,10 @@ export default function Professor({
                     <button
                       type="button"
                       onClick={() => setMostrarModalReatribuir(false)}
+                      style={{
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
+                      }}
                       className="p-1 text-amber-700 hover:bg-amber-200 rounded cursor-pointer"
                     >
                       <X className="w-4 h-4" />
@@ -844,7 +879,11 @@ export default function Professor({
                     <button
                       type="button"
                       onClick={aplicarTrocaAlunoInstantanea}
-                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
+                      style={{
+                        WebkitTapHighlightColor: "transparent",
+                        touchAction: "manipulation",
+                      }}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap active:scale-95"
                     >
                       <Check className="w-4 h-4" /> Confirmar
                     </button>
@@ -921,10 +960,14 @@ export default function Professor({
                 })}
               </div>
 
-              {/* Botão de salvar dinâmico (Salvar Respostas do Aluno ou Salvar troca de aluno) */}
+              {/* Botão de salvar dinâmico */}
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
+                  style={{
+                    WebkitTapHighlightColor: "transparent",
+                    touchAction: "manipulation",
+                  }}
                   className={`w-full sm:w-auto px-6 py-2.5 text-white font-bold uppercase tracking-wider rounded-md text-xs shadow-sm cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-0 ${
                     houveTrocaDeAluno
                       ? "bg-amber-600 hover:bg-amber-700"
