@@ -87,8 +87,8 @@ function MainContent() {
                 <Award className="w-6 h-6 sm:w-7 sm:h-7 text-[#4b82f6]" />
               </div>
               <div className="min-w-0 flex flex-col justify-center">
-                <h1 className="text-base sm:text-lg font-black tracking-wide uppercase text-slate-800 leading-tight truncate">
-                  SIMULA<span className="text-[#5C9B14]">TECH</span>
+                <h1 className="text-base sm:text-lg font-black tracking-wide uppercase text-slate-900 leading-tight truncate">
+                  SIMULA<span className="text-red-500">TECH</span>
                 </h1>
 
                 {/* Nome do usuário em destaque fora do contorno antigo, limpo e profissional */}
