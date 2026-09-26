@@ -13,7 +13,6 @@ import {
   Users,
   UserX,
   ArrowLeft,
-  Save,
 } from "lucide-react";
 
 export default function Professor({
@@ -170,7 +169,11 @@ export default function Professor({
 
     const respostaExistente = encontrarRegistoAluno(nomeAluno);
 
-    if (respostaExistente && respostaExistente.gabaritoBruto) {
+    if (
+      respostaExistente &&
+      respostaExistente.gabaritoBruto &&
+      Object.keys(respostaExistente.gabaritoBruto).length > 0
+    ) {
       setRespostasProfessor(respostaExistente.gabaritoBruto);
     } else {
       setRespostasProfessor({});
@@ -322,7 +325,7 @@ export default function Professor({
   };
 
   return (
-    <div className="bg-white rounded-md shadow-sm p-3 sm:p-5 border border-[#dbc8b6] w-full max-w-7xl mx-auto overflow-x-hidden font-sans antialiased pb-20 sm:pb-5">
+    <div className="bg-white rounded-md shadow-sm p-3 sm:p-5 border border-[#dbc8b6] w-full max-w-7xl mx-auto overflow-x-hidden font-sans antialiased">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between pb-3 border-b border-[#dbc8b6] mb-4 gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -717,7 +720,7 @@ export default function Professor({
           ) : (
             <form
               onSubmit={submeterRespostasAluno}
-              className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md relative"
+              className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-[#dbc8b6]">
                 {/* Nome do aluno à esquerda */}
@@ -811,13 +814,12 @@ export default function Professor({
                 })}
               </div>
 
-              {/* Botão de salvar normal no desktop e FLUTUANTE na parte inferior no celular */}
-              <div className="fixed sm:relative bottom-3 left-3 right-3 sm:left-auto sm:right-auto sm:bottom-auto z-40 sm:flex sm:justify-end pt-2">
+              {/* Botão de salvar fixo no final normal */}
+              <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider rounded-md text-xs sm:text-xs shadow-lg sm:shadow-sm cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-0 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider rounded-md text-xs shadow-sm cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-0"
                 >
-                  <Save className="w-4 h-4 sm:hidden" />
                   Salvar Respostas do Aluno
                 </button>
               </div>
