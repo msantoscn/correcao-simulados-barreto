@@ -10,7 +10,7 @@ import {
   doc,
 } from "firebase/firestore";
 import {
-  ClipboardCheck, // O ícone da prancheta de correção com o "Certo"
+  ClipboardCheck,
   User,
   Lock,
   KeyRound,
@@ -182,37 +182,38 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans antialiased selection:bg-blue-500 selection:text-white">
-      <div className="w-full max-w-md bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-3 sm:p-4 font-sans antialiased selection:bg-blue-500 selection:text-white">
+      {/* Bloco principal otimizado e mais estreito (max-w-sm) */}
+      <div className="w-full max-w-sm bg-white rounded-md border border-[#dbc8b6] shadow-sm overflow-hidden">
         {/* Cabeçalho */}
-        <div className="pt-8 pb-6 px-8 text-center border-b border-gray-200">
-          <div className="inline-flex p-3 bg-blue-500 text-white rounded-md mb-4">
-            <ClipboardCheck className="w-8 h-8" />
+        <div className="pt-5 pb-4 px-5 text-center border-b border-[#dbc8b6] bg-gray-50">
+          <div className="inline-flex p-2.5 bg-blue-500 text-white rounded-md mb-2.5 shadow-xs">
+            <ClipboardCheck className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-bold uppercase text-gray-800 tracking-wide">
-            SIMULA<span className="text-red-500">TECH</span>
+          <h1 className="text-lg font-bold uppercase text-gray-800 tracking-wide">
+            SIMULA<span className="text-red-500 font-bold">TECH</span>
           </h1>
-          <div className="mt-4">
-            <p className="text-base font-semibold text-gray-700 uppercase">
+          <div className="mt-2">
+            <p className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">
               Escola Municipal José Barreto de Araújo
             </p>
           </div>
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleLoginSubmit} className="p-8 space-y-4">
+        <form onSubmit={handleLoginSubmit} className="p-4 sm:p-5 space-y-3">
           {erro && (
-            <div className="bg-red-50 text-red-500 text-xs font-medium p-3 rounded-md border border-red-200 text-center">
+            <div className="bg-red-50 text-red-500 text-xs font-medium p-2.5 rounded-md border border-red-200 text-center">
               {erro}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest">
               Código do SIPAE
             </label>
             <div className="relative flex items-center">
-              <User className="w-5 h-5 text-gray-400 absolute left-3" />
+              <User className="w-4 h-4 text-gray-400 absolute left-3" />
               <input
                 type="text"
                 required
@@ -222,53 +223,57 @@ export default function Login() {
                   setAlertaCodigoFaltando(false);
                 }}
                 placeholder="Ex: F12345"
-                className={`w-full pl-10 pr-3 py-2 bg-white border ${alertaCodigoFaltando ? "border-red-500 ring-1 ring-red-500" : "border-gray-300"} rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors uppercase placeholder:normal-case placeholder:font-light placeholder:text-gray-400`}
+                className={`w-full pl-9 pr-3 py-2 bg-white border ${
+                  alertaCodigoFaltando
+                    ? "border-red-500 ring-1 ring-red-500"
+                    : "border-[#dbc8b6]"
+                } rounded-md text-xs font-medium text-gray-700 outline-none focus:border-blue-500 transition-colors uppercase placeholder:normal-case placeholder:font-light placeholder:text-gray-400 shadow-xs`}
               />
             </div>
           </div>
 
           {isPrimeiroAcesso && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest">
                 Nome Completo
               </label>
               <div className="relative flex items-center">
-                <User className="w-5 h-5 text-gray-400 absolute left-3" />
+                <User className="w-4 h-4 text-gray-400 absolute left-3" />
                 <input
                   type="text"
                   required
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Seu nome"
-                  className="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors uppercase placeholder:normal-case placeholder:font-light placeholder:text-gray-400"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-medium text-gray-700 outline-none focus:border-blue-500 transition-colors uppercase placeholder:normal-case placeholder:font-light placeholder:text-gray-400 shadow-xs"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest">
               Senha
             </label>
             <div className="relative flex items-center">
-              <Lock className="w-5 h-5 text-gray-400 absolute left-3" />
+              <Lock className="w-4 h-4 text-gray-400 absolute left-3" />
               <input
                 type={mostrarSenha ? "text" : "password"}
                 required
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:font-light placeholder:text-gray-400"
+                className="w-full pl-9 pr-9 py-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-medium text-gray-700 outline-none focus:border-blue-500 transition-colors placeholder:font-light placeholder:text-gray-400 shadow-xs"
               />
               <button
                 type="button"
                 onClick={() => setMostrarSenha(!mostrarSenha)}
-                className="absolute right-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                className="absolute right-3 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
               >
                 {mostrarSenha ? (
-                  <EyeOff className="w-5 h-5" />
+                  <EyeOff className="w-4 h-4" />
                 ) : (
-                  <Eye className="w-5 h-5" />
+                  <Eye className="w-4 h-4" />
                 )}
               </button>
             </div>
@@ -276,30 +281,30 @@ export default function Login() {
 
           {isPrimeiroAcesso && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest">
                 Confirmar Senha
               </label>
               <div className="relative flex items-center">
-                <KeyRound className="w-5 h-5 text-gray-400 absolute left-3" />
+                <KeyRound className="w-4 h-4 text-gray-400 absolute left-3" />
                 <input
                   type={mostrarConfirmarSenha ? "text" : "password"}
                   required
                   value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:font-light placeholder:text-gray-400"
+                  className="w-full pl-9 pr-9 py-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-medium text-gray-700 outline-none focus:border-blue-500 transition-colors placeholder:font-light placeholder:text-gray-400 shadow-xs"
                 />
                 <button
                   type="button"
                   onClick={() =>
                     setMostrarConfirmarSenha(!mostrarConfirmarSenha)
                   }
-                  className="absolute right-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  className="absolute right-3 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
                 >
                   {mostrarConfirmarSenha ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
               </div>
@@ -309,19 +314,19 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-semibold text-sm uppercase rounded-md transition-colors flex items-center justify-center gap-2 mt-4"
+            className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-bold text-xs uppercase tracking-wider rounded-md transition-all flex items-center justify-center gap-2 mt-2 shadow-xs cursor-pointer"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {isPrimeiroAcesso ? "Cadastrar e Entrar" : "Entrar"}
           </button>
 
-          <div className="text-center pt-2">
+          <div className="text-center pt-1.5">
             {!isPrimeiroAcesso ? (
               <button
                 type="button"
                 disabled={loading}
                 onClick={handlePrimeiroAcessoClick}
-                className="text-xs text-blue-500 hover:text-blue-600 font-medium uppercase hover:underline disabled:opacity-50 transition-colors"
+                className="text-[11px] text-blue-600 hover:text-blue-700 font-bold uppercase hover:underline disabled:opacity-50 transition-colors cursor-pointer tracking-wider"
               >
                 Primeiro acesso?
               </button>
@@ -330,7 +335,7 @@ export default function Login() {
                 type="button"
                 disabled={loading}
                 onClick={handleVoltarLoginClick}
-                className="text-xs text-blue-500 hover:text-blue-600 font-medium uppercase hover:underline disabled:opacity-50 transition-colors"
+                className="text-[11px] text-blue-600 hover:text-blue-700 font-bold uppercase hover:underline disabled:opacity-50 transition-colors cursor-pointer tracking-wider"
               >
                 Já possui senha? Fazer Login
               </button>
@@ -339,10 +344,10 @@ export default function Login() {
         </form>
       </div>
 
-      <footer className="mt-6 text-center">
-        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-widest">
+      <footer className="mt-4 text-center">
+        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
           Desenvolvido por:{" "}
-          <span className="text-blue-500">Maciel dos Santos</span>
+          <span className="text-blue-500 font-bold">Maciel dos Santos</span>
         </p>
       </footer>
     </div>
