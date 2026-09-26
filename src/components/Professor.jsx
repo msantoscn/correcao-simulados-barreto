@@ -12,6 +12,7 @@ import {
   Calendar,
   Users,
   UserX,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function Professor({
@@ -172,10 +173,6 @@ export default function Professor({
       setRespostasProfessor(respostaExistente.gabaritoBruto);
     } else {
       setRespostasProfessor({});
-    }
-
-    if (window.innerWidth < 1024) {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }
   };
 
@@ -339,7 +336,7 @@ export default function Professor({
         {simuladoSelecionadoId && (
           <button
             onClick={handleVoltarAosSimulados}
-            className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#dbc8b6] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 flex-shrink-0"
+            className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#dbc8b6] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 flex-shrink-0 shadow-xs"
           >
             &larr; Voltar
           </button>
@@ -399,8 +396,8 @@ export default function Professor({
         ) : (
           <div className="border border-[#dbc8b6] rounded-md p-3 bg-gray-50 shadow-xs space-y-3">
             <div className="pb-2 border-b border-[#dbc8b6]">
-              <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <h3 className="text-base sm:text-lg font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-500 flex-shrink-0" />
                 <span className="truncate">
                   {turmaAtiva.nome} - {bimestreSelecionado}º Bimestre
                 </span>
@@ -525,14 +522,14 @@ export default function Professor({
       ) : (
         /* LANÇAMENTO DE NOTAS DOS ALUNOS (QUANDO UM SIMULADO É SELECIONADO) */
         <div className="space-y-3">
-          <div className="border-b border-[#dbc8b6] pb-2 mb-2">
-            <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide">
+          <div className="border-b border-[#dbc8b6] pb-2 mb-2 space-y-1">
+            <h3 className="text-base sm:text-lg font-black text-gray-800 uppercase tracking-wide leading-tight">
               {turmaAtiva?.nome} - {bimestreSelecionado}º Bimestre
             </h3>
-            <h4 className="text-xs font-bold text-blue-600 uppercase tracking-wide mt-0.5">
+            <h4 className="text-sm sm:text-base font-extrabold text-blue-600 uppercase tracking-wide leading-tight">
               {simuladoAtivo?.nome}
               {!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId) && (
-                <span className="text-red-500 font-bold ml-1.5 text-[10px]">
+                <span className="text-red-500 font-bold ml-2 text-xs">
                   (Modo Apenas Leitura)
                 </span>
               )}
@@ -727,30 +724,33 @@ export default function Professor({
               className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-[#dbc8b6]">
-                {/* Nome do aluno completo, com quebra de linha natural e palavras inteiras (sem ícone e sem a palavra Gabarito) */}
+                {/* Nome do aluno completo */}
                 <h3 className="text-xs sm:text-sm font-bold text-gray-800 uppercase tracking-wide whitespace-normal break-words leading-snug">
                   <span className="text-blue-600 font-bold">{alunoAtivo}</span>
                 </h3>
 
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                {/* Botões do aluno transformados estritamente em ÍCONES para evitar confusão */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     type="button"
                     onClick={handleLimparRespostas}
-                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer active:scale-95 flex items-center gap-1 flex-1 sm:flex-initial justify-center shadow-xs border border-orange-200"
+                    className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200"
+                    title="Limpar Respostas Atuais"
                   >
-                    <Eraser className="w-3.5 h-3.5" /> Limpar
+                    <Eraser className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setAlunoAtivo(null)}
-                    className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer active:scale-95 flex-1 sm:flex-initial justify-center shadow-xs"
+                    className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs"
+                    title="Voltar para a Lista de Alunos"
                   >
-                    Voltar
+                    <ArrowLeft className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES (ESTILO GABARITO IMPRESSO) */}
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM BOLINHAS MAIORES E ERGONÔMICAS NO CELULAR */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
@@ -779,14 +779,15 @@ export default function Professor({
                           return (
                             <div
                               key={qIdx}
-                              className={`flex items-center justify-between px-2 py-1.5 rounded border border-[#dbc8b6] ${
+                              className={`flex items-center justify-between px-2.5 py-2 rounded border border-[#dbc8b6] ${
                                 isAlternada ? "bg-amber-50/20" : "bg-white"
                               }`}
                             >
-                              <span className="text-[11px] font-bold text-gray-700 font-mono tracking-wider w-8">
+                              <span className="text-xs font-bold text-gray-700 font-mono tracking-wider">
                                 {String(qIdx + 1).padStart(2, "0")}
                               </span>
-                              <div className="flex gap-1.5">
+                              {/* Espaçamento otimizado e bolinhas maiores (w-9 h-9 no cel, w-8 sm) */}
+                              <div className="flex gap-2">
                                 {alternativas.map((alt) => {
                                   const selecionada = valAtual === alt;
                                   return (
@@ -796,7 +797,7 @@ export default function Professor({
                                       onClick={() =>
                                         handleRespostaClick(d.nome, qIdx, alt)
                                       }
-                                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
+                                      className={`w-9 h-9 sm:w-8 sm:h-8 rounded-full text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
                                         selecionada
                                           ? "bg-blue-600 text-white border-transparent scale-105 shadow-blue-500/30"
                                           : "bg-white text-gray-600 border border-[#dbc8b6] hover:border-blue-400 hover:bg-blue-50"
