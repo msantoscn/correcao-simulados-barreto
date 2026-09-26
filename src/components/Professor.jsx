@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   UserCheck,
@@ -30,15 +30,6 @@ export default function Professor({
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
   const [alunoAtivo, setAlunoAtivo] = useState(null);
   const [respostasProfessor, setRespostasProfessor] = useState({});
-
-  // Referência para focar no botão Voltar e evitar seleção acidental de alternativas
-  const botaoVoltarRef = useRef(null);
-
-  useEffect(() => {
-    if (alunoAtivo && botaoVoltarRef.current) {
-      botaoVoltarRef.current.focus();
-    }
-  }, [alunoAtivo]);
 
   const turmaAtiva = turmas.find(
     (t) => String(t.id) === String(turmaSelecionadaId),
@@ -345,7 +336,7 @@ export default function Professor({
         {simuladoSelecionadoId && (
           <button
             onClick={handleVoltarAosSimulados}
-            className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#dbc8b6] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 flex-shrink-0 shadow-xs"
+            className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#dbc8b6] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 flex-shrink-0 shadow-xs focus:outline-none focus:ring-0"
           >
             &larr; Voltar
           </button>
@@ -473,7 +464,7 @@ export default function Professor({
                                     onClick={(e) =>
                                       handleDesvincularSimulado(e, simId)
                                     }
-                                    className="p-1 hover:bg-red-50 rounded-md text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                                    className="p-1 hover:bg-red-50 rounded-md text-gray-400 hover:text-red-500 transition-colors cursor-pointer focus:outline-none focus:ring-0"
                                     title="Desvincular Professor"
                                   >
                                     <UserX className="w-4 h-4" />
@@ -504,7 +495,7 @@ export default function Professor({
 
                       <button
                         onClick={() => handleEntrarNoSimulado(simId)}
-                        className={`w-full py-2 px-3 rounded-md text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer ${
+                        className={`w-full py-2 px-3 rounded-md text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer focus:outline-none focus:ring-0 ${
                           meuDono
                             ? "bg-blue-500 hover:bg-blue-600 text-white shadow-xs"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-[#dbc8b6]"
@@ -671,7 +662,7 @@ export default function Professor({
                                 <button
                                   type="button"
                                   onClick={() => handleSelecionarAluno(aluno)}
-                                  className={`p-2 rounded-md transition-all cursor-pointer ${
+                                  className={`p-2 rounded-md transition-all cursor-pointer focus:outline-none focus:ring-0 ${
                                     temPermissao
                                       ? concluido
                                         ? "bg-white text-gray-700 hover:bg-gray-100 border border-[#dbc8b6] shadow-xs"
@@ -706,7 +697,7 @@ export default function Professor({
                                         aluno,
                                       )
                                     }
-                                    className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-[#dbc8b6] shadow-xs"
+                                    className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-[#dbc8b6] shadow-xs focus:outline-none focus:ring-0"
                                     title="Excluir Resposta"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -733,21 +724,20 @@ export default function Professor({
                   <span className="text-blue-600 font-bold">{alunoAtivo}</span>
                 </h3>
 
-                {/* Botões em ícones à direita. O botão voltar recebe o foco inicial */}
+                {/* Botões em ícones à direita sem foco visual prévio */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     type="button"
                     onClick={handleLimparRespostas}
-                    className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200"
+                    className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md transition-all cursor-pointer active:scale-95 shadow-xs border border-orange-200 focus:outline-none focus:ring-0"
                     title="Limpar Respostas Atuais"
                   >
                     <Eraser className="w-4 h-4" />
                   </button>
                   <button
-                    ref={botaoVoltarRef}
                     type="button"
                     onClick={() => setAlunoAtivo(null)}
-                    className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs outline-none focus:ring-2 focus:ring-blue-500"
+                    className="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] rounded-md transition-all cursor-pointer active:scale-95 shadow-xs focus:outline-none focus:ring-0"
                     title="Voltar para a Lista de Alunos"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -755,7 +745,7 @@ export default function Professor({
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E BOLINHAS MAIORES */}
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E ZERO FOCO AUTOMÁTICO */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
@@ -801,7 +791,7 @@ export default function Professor({
                                       onClick={() =>
                                         handleRespostaClick(d.nome, qIdx, alt)
                                       }
-                                      className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
+                                      className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer focus:outline-none focus:ring-0 ${
                                         selecionada
                                           ? "bg-blue-600 text-white border-transparent scale-105 shadow-blue-500/30"
                                           : "bg-white text-gray-700 border border-[#dbc8b6] hover:border-blue-400 hover:bg-blue-50"
@@ -824,7 +814,7 @@ export default function Professor({
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider rounded-md text-xs shadow-sm cursor-pointer transition-all active:scale-95"
+                  className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-wider rounded-md text-xs shadow-sm cursor-pointer transition-all active:scale-95 focus:outline-none focus:ring-0"
                 >
                   Salvar Respostas do Aluno
                 </button>
