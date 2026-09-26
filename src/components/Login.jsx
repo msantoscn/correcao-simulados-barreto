@@ -182,9 +182,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans antialiased selection:bg-blue-500 selection:text-white">
-      {/* Container responsivo: estreito/vertical no celular (w-[90%] max-w-[280px]) e proporcional no computador (sm:max-w-md sm:w-full) */}
-      <div className="w-[92%] max-w-[280px] sm:max-w-md sm:w-full bg-white rounded-md border border-[#dbc8b6] shadow-sm overflow-hidden my-auto">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 overflow-y-auto font-sans antialiased selection:bg-blue-500 selection:text-white">
+      {/* Container fluido: 100% de largura com margens seguras no celular e max-w-md centralizado no computador */}
+      <div className="w-full max-w-[340px] sm:max-w-md bg-white rounded-md border border-[#dbc8b6] shadow-sm overflow-hidden my-auto">
         {/* Cabeçalho */}
         <div className="pt-5 pb-4 px-4 sm:px-6 text-center border-b border-[#dbc8b6] bg-gray-50">
           <div className="inline-flex p-2.5 sm:p-3 bg-blue-500 text-white rounded-md mb-2.5 shadow-xs">
@@ -203,7 +203,7 @@ export default function Login() {
         {/* Formulário */}
         <form
           onSubmit={handleLoginSubmit}
-          className="p-4 sm:p-6 space-y-3 sm:space-y-4"
+          className="p-4 sm:p-6 space-y-3.5 sm:space-y-4"
         >
           {erro && (
             <div className="bg-red-50 text-red-500 text-xs font-medium p-2.5 sm:p-3 rounded-md border border-red-200 text-center leading-snug">
