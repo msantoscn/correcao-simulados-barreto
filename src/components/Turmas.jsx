@@ -10,6 +10,8 @@ import {
   Search,
   Link as LinkIcon,
   Unlink,
+  Edit3,
+  Save,
 } from "lucide-react";
 
 export default function Turmas({
@@ -18,7 +20,8 @@ export default function Turmas({
   onSalvarTurmas,
   onDeletarTurma,
 }) {
-  const [nomeNovaTurma, setNomeNovaTurma] = useState("");
+  const [nomeTurmaInput, setNomeTurmaInput] = useState("");
+  const [turmaEmEdicaoId, setTurmaEmEdicaoId] = useState(null);
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState(null);
   const [modoVisualizacao, setModoVisualizacao] = useState("alunos");
 
@@ -40,19 +43,46 @@ export default function Turmas({
     }
   };
 
-  const adicionarTurma = async (e) => {
+  const lidarComSubmissaoTurma = async (e) => {
     e.preventDefault();
-    if (!nomeNovaTurma.trim()) return;
+    if (!nomeTurmaInput.trim()) return;
 
-    const nomeFormatado = nomeNovaTurma.trim().toUpperCase();
+    const nomeFormatado = nomeTurmaInput.trim().toUpperCase();
 
+    // Se estivermos a editar uma turma existente
+    if (turmaEmEdicaoId) {
+      if (
+        turmas.some(
+          (t) =>
+            t.nome === nomeFormatado &&
+            String(t.id) !== String(turmaEmEdicaoId),
+        )
+      ) {
+        alert("Já existe outra turma com este nome.");
+        return;
+      }
+
+      const listaAtualizada = turmas.map((t) => {
+        if (String(t.id) === String(turmaEmEdicaoId)) {
+          return { ...t, nome: nomeFormatado };
+        }
+        return t;
+      });
+
+      await atualizarEPersistir(listaAtualizada);
+      cancelarEdicao();
+      return;
+    }
+
+    // Criar nova turma
     if (turmas.some((t) => t.nome === nomeFormatado)) {
       alert("Já existe uma turma com este nome.");
       return;
     }
 
+    const idGerado = `turma_${turmas.length + 1}_${nomeFormatado.replace(/\s+/g, "")}`;
     const nova = {
-      id: Date.now().toString(),
+      id: idGerado,
       nome: nomeFormatado,
       alunos: [],
       simuladosVinculados: { 1: [], 2: [], 3: [], 4: [] },
@@ -60,9 +90,19 @@ export default function Turmas({
 
     const listaAtualizada = [...turmas, nova];
     await atualizarEPersistir(listaAtualizada);
-    setNomeNovaTurma("");
+    setNomeTurmaInput("");
     setTurmaSelecionadaId(nova.id);
     setModoVisualizacao("alunos");
+  };
+
+  const iniciarEdicaoTurma = (turma) => {
+    setTurmaEmEdicaoId(turma.id);
+    setNomeTurmaInput(turma.nome);
+  };
+
+  const cancelarEdicao = () => {
+    setTurmaEmEdicaoId(null);
+    setNomeTurmaInput("");
   };
 
   const removerTurma = async (id) => {
@@ -70,6 +110,7 @@ export default function Turmas({
     try {
       await onDeletarTurma(id);
       if (turmaSelecionadaId === id) setTurmaSelecionadaId(null);
+      if (turmaEmEdicaoId === id) cancelarEdicao();
     } catch (error) {
       console.error("Erro ao eliminar turma do Firebase:", error);
       alert("Erro ao eliminar turma.");
@@ -246,58 +287,101 @@ export default function Turmas({
     (sim) => String(sim.bimestre) === String(bimestre) || !sim.bimestre,
   );
 
+  // Formata o nome da turma separando o último caractere (a letra, ex: '6º ANO A' -> '6º ANO' + 'A')
+  const formatarNomeTurmaBicolor = (nome) => {
+    if (!nome) return "";
+    const trimmed = nome.trim();
+    const ultimaLetra = trimmed.slice(-1);
+    const restante = trimmed.slice(0, -1).trim();
+
+    // Se o último caractere for uma letra (A-Z)
+    if (/^[A-Z]$/i.test(ultimaLetra) && restante) {
+      return (
+        <>
+          {restante}{" "}
+          <span className="text-red-500 font-bold">{ultimaLetra}</span>
+        </>
+      );
+    }
+    return trimmed;
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 font-sans antialiased">
       {/* =========================================================
           COLUNA ESQUERDA: LISTA DE TURMAS
           ========================================================= */}
-      <div className="lg:col-span-4 bg-white rounded-2xl shadow-sm p-4 sm:p-5 lg:p-6 border border-slate-200/80 h-fit">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-5">
-          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
-            <Users className="text-slate-600 w-5 h-5" />
+      <div className="lg:col-span-4 bg-white rounded-md shadow-sm p-4 sm:p-5 lg:p-6 border border-gray-200 h-fit">
+        <div className="flex items-center gap-3 pb-4 border-b border-gray-200 mb-5">
+          <div className="p-2 bg-blue-500 text-white rounded-md">
+            <Users className="w-5 h-5" />
           </div>
-          <h2 className="text-lg font-black tracking-wide uppercase text-slate-800">
-            Gerir <span className="text-[#4b82f6]">Turmas</span>
+          {/* Título com padrão bicolor */}
+          <h2 className="text-lg font-bold tracking-wide uppercase text-gray-800">
+            GERIR <span className="text-red-500 font-bold">TURMAS</span>
           </h2>
         </div>
 
-        <form onSubmit={adicionarTurma} className="mb-6">
-          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-            Nome da Nova Turma
-          </label>
+        {/* FORMULÁRIO DE CRIAÇÃO / EDIÇÃO DE TURMA */}
+        <form onSubmit={lidarComSubmissaoTurma} className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              {turmaEmEdicaoId ? "Editar Nome da Turma" : "Nome da Turma"}
+            </label>
+            {turmaEmEdicaoId && (
+              <button
+                type="button"
+                onClick={cancelarEdicao}
+                className="text-[10px] text-red-500 font-bold hover:underline uppercase"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               type="text"
               placeholder="Ex: 9º ANO A"
-              value={nomeNovaTurma}
-              onChange={(e) => setNomeNovaTurma(e.target.value.toUpperCase())}
-              className="flex-1 p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-base sm:text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400"
+              value={nomeTurmaInput}
+              onChange={(e) => setNomeTurmaInput(e.target.value.toUpperCase())}
+              className="flex-1 p-2.5 bg-white border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium outline-none transition-all uppercase placeholder:text-gray-400 placeholder:font-light"
               required
             />
             <button
               type="submit"
-              className="px-4 py-3 lg:py-2.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl flex items-center gap-1.5 transition-all text-[11px] shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer"
+              className={`px-4 py-2.5 text-white font-bold uppercase tracking-wider rounded-md flex items-center justify-center gap-1.5 transition-all text-xs shadow-sm cursor-pointer ${
+                turmaEmEdicaoId
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-blue-500 hover:bg-blue-600"
+              }`}
+              title={turmaEmEdicaoId ? "Salvar Edição" : "Criar Turma"}
             >
-              <Plus className="w-4 h-4" /> Criar
+              {turmaEmEdicaoId ? (
+                <Save className="w-4 h-4" />
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" /> Criar
+                </>
+              )}
             </button>
           </div>
         </form>
 
-        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center justify-between">
           <span>Turmas Registadas</span>
-          <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+          <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md font-medium">
             {turmas.length}
           </span>
         </h3>
 
         {turmas.length === 0 ? (
-          <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-200 border-dashed">
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+          <div className="text-center py-8 bg-gray-50 rounded-md border border-gray-200 border-dashed">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
               Nenhuma turma cadastrada.
             </p>
           </div>
         ) : (
-          <div className="space-y-3 lg:space-y-2.5">
+          <div className="space-y-2">
             {turmas.map((turma) => (
               <div
                 key={turma.id}
@@ -313,24 +397,24 @@ export default function Turmas({
                     });
                   }
                 }}
-                className={`p-4 lg:p-3.5 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer group ${
+                className={`p-3 rounded-md border transition-all flex items-center justify-between cursor-pointer group ${
                   String(turmaSelecionadaId) === String(turma.id)
-                    ? "border-blue-400 bg-blue-50/40 shadow-sm"
-                    : "border-transparent bg-slate-50 hover:bg-slate-100 hover:border-slate-200"
+                    ? "border-blue-500 bg-blue-50/40 shadow-sm"
+                    : "border-gray-200 bg-white hover:bg-gray-50"
                 }`}
               >
                 <div>
                   <h4
-                    className={`font-bold text-sm lg:text-sm uppercase mb-0.5 ${String(turmaSelecionadaId) === String(turma.id) ? "text-blue-700" : "text-slate-700"}`}
+                    className={`font-bold text-sm uppercase mb-0.5 ${String(turmaSelecionadaId) === String(turma.id) ? "text-blue-700" : "text-gray-800"}`}
                   >
                     {turma.nome}
                   </h4>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
                     {turma.alunos?.length || 0} aluno(s)
                   </p>
                 </div>
 
-                {/* BOTÕES NO CARTÃO DA TURMA (VINCULAR E EXCLUIR) */}
+                {/* BOTÕES NO CARTÃO DA TURMA (VINCULAR, EDITAR E EXCLUIR) */}
                 <div
                   className="flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
@@ -347,7 +431,7 @@ export default function Turmas({
                         });
                       }
                     }}
-                    className={`p-2 rounded-lg transition-all cursor-pointer ${
+                    className={`p-1.5 rounded-md transition-all cursor-pointer ${
                       String(turmaSelecionadaId) === String(turma.id) &&
                       modoVisualizacao === "simulados"
                         ? "bg-emerald-600 text-white shadow-sm"
@@ -357,10 +441,20 @@ export default function Turmas({
                   >
                     <LinkIcon className="w-4 h-4" />
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => iniciarEdicaoTurma(turma)}
+                    className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
+                    title="Editar Nome da Turma"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => removerTurma(turma.id)}
-                    className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
+                    className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
                     title="Eliminar Turma"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -375,64 +469,37 @@ export default function Turmas({
       {/* =========================================================
           COLUNA DIREITA: GESTÃO EXCLUSIVA (ALUNOS OU SIMULADOS)
           ========================================================= */}
-      <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col h-fit lg:min-h-[500px]">
+      <div className="lg:col-span-8 bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden flex flex-col h-fit lg:min-h-[500px]">
         {!turmaAtiva ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50/50 min-h-[300px]">
-            <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center mb-4">
-              <BookOpen className="w-8 h-8 text-slate-300" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-50/50 min-h-[300px]">
+            <div className="w-14 h-14 bg-white rounded-md shadow-sm border border-gray-200 flex items-center justify-center mb-4">
+              <BookOpen className="w-7 h-7 text-gray-300" />
             </div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-xs leading-relaxed">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest max-w-xs leading-relaxed">
               Selecione ou crie uma turma para gerir alunos e simulados.
             </p>
           </div>
         ) : (
           <div className="flex flex-col h-full">
-            {/* Cabeçalho da Turma com seletor rápido de visualização */}
-            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 bg-white">
+            {/* Cabeçalho da Turma */}
+            <div className="p-4 sm:p-5 lg:p-6 border-b border-gray-200 bg-gray-50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">
-                    Turma Selecionada
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-black text-slate-800 uppercase tracking-wide">
-                      {turmaAtiva.nome}
-                    </h3>
-
-                    {/* Botões alternadores rápidos de painel */}
-                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-                      <button
-                        onClick={() => setModoVisualizacao("alunos")}
-                        className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
-                          modoVisualizacao === "alunos"
-                            ? "bg-white text-blue-600 shadow-sm"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                      >
-                        Alunos ({turmaAtiva.alunos?.length || 0})
-                      </button>
-                      <button
-                        onClick={() => setModoVisualizacao("simulados")}
-                        className={`px-3 py-1 text-[10px] font-bold uppercase rounded-lg transition-all ${
-                          modoVisualizacao === "simulados"
-                            ? "bg-white text-emerald-600 shadow-sm"
-                            : "text-slate-500 hover:text-slate-800"
-                        }`}
-                      >
-                        Simulados
-                      </button>
-                    </div>
-                  </div>
+                  {/* Nome da turma com o mesmo tamanho (text-lg font-bold) e padrão bicolor do GERIR TURMAS */}
+                  <h3 className="text-lg font-bold tracking-wide uppercase text-gray-800">
+                    {formatarNomeTurmaBicolor(turmaAtiva.nome)}
+                  </h3>
                 </div>
 
+                {/* Botão de adicionar alunos limpo e posicionado */}
                 {modoVisualizacao === "alunos" && (
                   <button
                     type="button"
                     onClick={() => setMostrarAddAlunos(!mostrarAddAlunos)}
-                    className={`w-full sm:w-auto px-4 py-3 lg:py-2.5 font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all text-[11px] shadow-sm cursor-pointer ${
+                    className={`w-full sm:w-auto px-4 py-2 font-bold uppercase tracking-wider rounded-md flex items-center justify-center gap-2 transition-all text-xs shadow-sm cursor-pointer ${
                       mostrarAddAlunos
-                        ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        : "bg-[#4b82f6] text-white hover:bg-blue-600"
+                        ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        : "bg-blue-500 text-white hover:bg-blue-600"
                     }`}
                   >
                     {mostrarAddAlunos ? (
@@ -451,26 +518,26 @@ export default function Turmas({
 
             {/* CONTEÚDO CONDICIONAL: SE MODO FOR SIMULADOS */}
             {modoVisualizacao === "simulados" ? (
-              <div className="p-4 sm:p-6 bg-slate-50/50 flex-1 flex flex-col">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+              <div className="p-4 sm:p-6 bg-white flex-1 flex flex-col">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 bg-gray-50 p-4 rounded-md border border-gray-200">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
                     <LinkIcon className="w-4 h-4 text-emerald-600" /> Gestão de
                     Simulados por Bimestre
                   </h4>
 
                   {/* Seletor de Bimestre */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase">
                       Bimestre:
                     </span>
                     {["1", "2", "3", "4"].map((b) => (
                       <button
                         key={b}
                         onClick={() => setBimestre(b)}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
                           bimestre === b
-                            ? "bg-slate-800 text-white shadow-sm"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            ? "bg-gray-800 text-white shadow-sm"
+                            : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-100"
                         }`}
                       >
                         {b}º
@@ -480,16 +547,16 @@ export default function Turmas({
                 </div>
 
                 {/* Grid de Vinculados vs Disponíveis */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Já Vinculados */}
-                  <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm flex flex-col">
+                  <div className="bg-gray-50 p-4 rounded-md border border-emerald-200 shadow-sm flex flex-col">
                     <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block mb-3 border-b border-emerald-100 pb-2">
                       Vinculados no {bimestre}º Bimestre (
                       {idsVinculadosNoBimestre.length}/2)
                     </span>
                     <div className="space-y-2.5 flex-1 overflow-auto max-h-[250px]">
                       {idsVinculadosNoBimestre.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic text-center py-6">
+                        <p className="text-xs text-gray-400 italic text-center py-6">
                           Nenhum simulado vinculado neste período.
                         </p>
                       ) : (
@@ -500,19 +567,19 @@ export default function Turmas({
                           .map((sim) => (
                             <div
                               key={sim.id}
-                              className="flex items-center justify-between p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 text-xs shadow-sm"
+                              className="flex items-center justify-between p-3 bg-white rounded-md border border-emerald-200 text-xs shadow-sm"
                             >
                               <div>
-                                <span className="font-bold text-slate-700 uppercase block">
+                                <span className="font-bold text-gray-800 uppercase block">
                                   {sim.nome || sim.titulo}
                                 </span>
-                                <span className="text-[10px] text-slate-400">
+                                <span className="text-[10px] text-gray-400">
                                   {sim.dataCriacao || "N/D"}
                                 </span>
                               </div>
                               <button
                                 onClick={() => desvincularSimulado(sim.id)}
-                                className="text-red-500 hover:bg-red-100 p-2 rounded-lg transition-colors cursor-pointer"
+                                className="text-red-500 hover:bg-red-50 p-1.5 rounded-md transition-colors cursor-pointer"
                                 title="Remover vínculo"
                               >
                                 <Unlink className="w-4 h-4" />
@@ -524,15 +591,15 @@ export default function Turmas({
                   </div>
 
                   {/* Disponíveis para Adicionar */}
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-3 border-b border-emerald-100 pb-2">
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200 shadow-sm flex flex-col">
+                    <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-3 border-b border-gray-200 pb-2">
                       Disponíveis para Vincular ({bimestre}º Bimestre)
                     </span>
                     <div className="space-y-2.5 flex-1 overflow-auto max-h-[250px]">
                       {simuladosDesteBimestre.filter(
                         (sim) => !idsVinculadosNoBimestre.includes(sim.id),
                       ).length === 0 ? (
-                        <p className="text-xs text-slate-400 italic text-center py-6">
+                        <p className="text-xs text-gray-400 italic text-center py-6">
                           Sem simulados disponíveis para este bimestre.
                         </p>
                       ) : (
@@ -543,13 +610,13 @@ export default function Turmas({
                           .map((sim) => (
                             <div
                               key={sim.id}
-                              className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs shadow-sm"
+                              className="flex items-center justify-between p-3 bg-white rounded-md border border-gray-200 text-xs shadow-sm"
                             >
                               <div>
-                                <span className="font-bold text-slate-700 uppercase block">
+                                <span className="font-bold text-gray-800 uppercase block">
                                   {sim.nome || sim.titulo}
                                 </span>
-                                <span className="text-[10px] text-slate-400">
+                                <span className="text-[10px] text-gray-400">
                                   {sim.dataCriacao || "N/D"}
                                 </span>
                               </div>
@@ -557,10 +624,10 @@ export default function Turmas({
                                 type="button"
                                 onClick={() => vincularSimulado(sim.id)}
                                 disabled={idsVinculadosNoBimestre.length >= 2}
-                                className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                                className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
                                   idsVinculadosNoBimestre.length >= 2
-                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200/60"
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
                                 }`}
                               >
                                 <Plus className="w-3.5 h-3.5" /> Vincular
@@ -576,9 +643,9 @@ export default function Turmas({
               /* CONTEÚDO CONDICIONAL: SE MODO FOR ALUNOS */
               <>
                 {mostrarAddAlunos && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 sm:p-5 lg:p-6 bg-slate-50 border-b border-slate-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 sm:p-5 bg-gray-50 border-b border-gray-200">
                     <div>
-                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                      <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5 mb-2">
                         <UserPlus className="w-3.5 h-3.5" /> Adicionar
                         Individual
                       </h4>
@@ -591,19 +658,19 @@ export default function Turmas({
                           placeholder="Nome completo do aluno"
                           value={novoAlunoUnico}
                           onChange={(e) => setNovoAlunoUnico(e.target.value)}
-                          className="w-full p-3 lg:p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 text-sm outline-none uppercase"
+                          className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 text-xs font-medium outline-none uppercase placeholder:text-gray-400 placeholder:font-light"
                           required
                         />
                         <button
                           type="submit"
-                          className="w-full py-2.5 bg-white border-2 border-[#4b82f6] text-[#4b82f6] text-[11px] font-bold uppercase rounded-xl hover:bg-blue-50 cursor-pointer"
+                          className="w-full py-2 bg-blue-500 text-white text-xs font-bold uppercase tracking-wider rounded-md hover:bg-blue-600 cursor-pointer transition-colors"
                         >
                           Gravar Aluno
                         </button>
                       </form>
                     </div>
                     <div>
-                      <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                      <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5 mb-2">
                         <ClipboardList className="w-3.5 h-3.5" /> Importar Lista
                       </h4>
                       <form onSubmit={colarListaAlunos} className="space-y-3">
@@ -612,11 +679,11 @@ export default function Turmas({
                           placeholder="Cole a lista (um por linha)"
                           value={textoListaAlunos}
                           onChange={(e) => setTextoListaAlunos(e.target.value)}
-                          className="w-full p-3 lg:p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 text-sm outline-none uppercase resize-none"
+                          className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-1 focus:ring-green-500 text-xs font-medium uppercase resize-none placeholder:text-gray-400 placeholder:font-light"
                         ></textarea>
                         <button
                           type="submit"
-                          className="w-full py-2.5 bg-emerald-500 text-white text-[11px] font-bold uppercase rounded-xl hover:bg-emerald-600 cursor-pointer"
+                          className="w-full py-2 bg-green-500 text-white text-xs font-bold uppercase tracking-wider rounded-md hover:bg-green-600 cursor-pointer transition-colors"
                         >
                           Importar Todos
                         </button>
@@ -626,43 +693,46 @@ export default function Turmas({
                 )}
 
                 {/* LISTA DE ALUNOS DA TURMA */}
-                <div className="flex-1 flex flex-col p-4 sm:p-5 lg:p-6 bg-slate-50/30">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                    Alunos Matriculados ({turmaAtiva.alunos?.length || 0})
-                  </h4>
+                <div className="flex-1 flex flex-col p-4 sm:p-5 bg-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      Alunos Matriculados ({turmaAtiva.alunos?.length || 0})
+                    </h4>
+                  </div>
 
                   {!turmaAtiva.alunos || turmaAtiva.alunos.length === 0 ? (
-                    <div className="flex-1 flex items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-white">
-                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
+                    <div className="flex-1 flex items-center justify-center p-8 border border-dashed border-gray-200 rounded-md bg-gray-50">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider text-center">
                         Nenhum aluno registado nesta turma.
                       </p>
                     </div>
                   ) : (
-                    <div className="flex-1 flex flex-col h-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                      <div className="bg-slate-50 border-b border-slate-200 p-3 flex justify-between gap-3">
+                    <div className="flex-1 flex flex-col h-full bg-white border border-gray-200 rounded-md overflow-hidden shadow-xs">
+                      <div className="bg-gray-50 border-b border-gray-200 p-3 flex justify-between gap-3">
                         <div className="relative w-full sm:max-w-xs">
-                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                           <input
                             type="text"
                             placeholder="Buscar aluno..."
                             value={buscaAluno}
                             onChange={(e) => setBuscaAluno(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-400 uppercase"
+                            className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs font-medium outline-none focus:border-blue-500 uppercase placeholder:text-gray-400 placeholder:font-light"
                           />
                         </div>
                       </div>
-                      <div className="divide-y divide-slate-100 flex-1 overflow-auto max-h-[300px]">
+                      <div className="divide-y divide-gray-200 flex-1 overflow-auto max-h-[300px]">
                         {alunosFiltrados.map((aluno, idx) => (
                           <div
                             key={idx}
-                            className="flex justify-between items-center px-4 py-3 hover:bg-blue-50/30 group"
+                            className="flex justify-between items-center px-4 py-2.5 hover:bg-blue-50/30 group"
                           >
-                            <span className="text-xs font-bold text-slate-700 uppercase">
+                            <span className="text-xs font-medium text-gray-700 uppercase">
                               {aluno}
                             </span>
                             <button
                               onClick={() => removerAluno(turmaAtiva.id, aluno)}
-                              className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
+                              className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
+                              title="Remover aluno"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

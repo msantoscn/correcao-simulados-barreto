@@ -48,11 +48,23 @@ export default function Usuarios({
     }
   };
 
+  // Função auxiliar para garantir que o código comece com F
+  const formatarCodigoSipae = (codigoBruto) => {
+    let codigo = codigoBruto.trim().toUpperCase();
+    if (codigo && !codigo.startsWith("F")) {
+      codigo = "F" + codigo;
+    }
+    return codigo;
+  };
+
   const adicionarUsuarioUnico = async (e) => {
     e.preventDefault();
-    if (!novoCodigo.trim()) return;
+    if (!novoCodigo.trim() || !novoNome.trim()) {
+      alert("Preencha o código e o nome completo.");
+      return;
+    }
 
-    const codigoFormatado = novoCodigo.trim().toUpperCase();
+    const codigoFormatado = formatarCodigoSipae(novoCodigo);
 
     if (usuarios.some((u) => u.codigo === codigoFormatado)) {
       alert("Já existe um usuário com este código.");
@@ -64,7 +76,7 @@ export default function Usuarios({
       codigo: codigoFormatado,
       nome: novoNome.trim().toUpperCase(),
       cargo: novoCargo,
-      senha: "", // Senha vazia, será definida no primeiro acesso
+      senha: "",
     };
 
     await atualizarEPersistir([...usuarios, novo]);
@@ -77,22 +89,36 @@ export default function Usuarios({
     e.preventDefault();
     if (!textoListaCodigos.trim()) return;
 
-    const novosCodigos = textoListaCodigos
+    // Divide o texto colado por linhas
+    const linhas = textoListaCodigos
       .split("\n")
-      .map((linha) => linha.trim().toUpperCase())
+      .map((linha) => linha.trim())
       .filter((linha) => linha.length > 0);
 
-    if (novosCodigos.length === 0) return;
+    if (linhas.length === 0) return;
 
     let adicionados = 0;
     const listaAtualizada = [...usuarios];
 
-    novosCodigos.forEach((codigo) => {
-      if (!listaAtualizada.some((u) => u.codigo === codigo)) {
+    linhas.forEach((linha) => {
+      const partes = linha.split(/\s+/);
+      if (partes.length === 0) return;
+
+      const codigoBruto = partes[0];
+      const codigoFormatado = formatarCodigoSipae(codigoBruto);
+
+      const nomeBruto = partes.slice(1).join(" ").trim();
+      const nomeFormatado = nomeBruto ? nomeBruto.toUpperCase() : "";
+
+      if (
+        codigoFormatado.length > 1 &&
+        nomeFormatado &&
+        !listaAtualizada.some((u) => u.codigo === codigoFormatado)
+      ) {
         listaAtualizada.push({
           id: Date.now().toString() + Math.random(),
-          codigo: codigo,
-          nome: "", // Fica em branco para o professor preencher
+          codigo: codigoFormatado,
+          nome: nomeFormatado,
           cargo: "PROFESSOR",
           senha: "",
         });
@@ -104,9 +130,11 @@ export default function Usuarios({
       await atualizarEPersistir(listaAtualizada);
       setTextoListaCodigos("");
       setMostrarAddMassa(false);
-      alert(`${adicionados} código(s) importado(s) com sucesso!`);
+      alert(`${adicionados} usuário(s) importado(s) com sucesso!`);
     } else {
-      alert("Nenhum código novo foi adicionado (todos já existiam).");
+      alert(
+        "Nenhum usuário novo foi adicionado (todos já existiam ou formato inválido).",
+      );
     }
   };
 
@@ -134,14 +162,13 @@ export default function Usuarios({
   };
 
   const salvarEdicao = async () => {
-    if (!editCodigo.trim()) {
-      alert("O código é obrigatório.");
+    if (!editCodigo.trim() || !editNome.trim()) {
+      alert("O código e o nome são obrigatórios.");
       return;
     }
 
-    const codigoFormatado = editCodigo.trim().toUpperCase();
+    const codigoFormatado = formatarCodigoSipae(editCodigo);
 
-    // Verifica se o novo código já existe em OUTRO usuário
     if (usuarios.some((u) => u.codigo === codigoFormatado && u.id !== editId)) {
       alert("Este código já está em uso por outro usuário.");
       return;
@@ -164,26 +191,28 @@ export default function Usuarios({
     setEditId(null);
   };
 
-  // Função auxiliar para exibir a etiqueta correta conforme o cargo
   const formatarCargoExibicao = (cargo) => {
     switch (cargo) {
       case "COORDENACAO":
         return {
           texto: "Coordenador(a)",
-          classe: "bg-blue-50 text-blue-600 border border-blue-200",
+          classe: "bg-blue-100 text-blue-700",
         };
       case "DIRECAO":
         return {
           texto: "Diretor(a)",
-          classe: "bg-purple-50 text-purple-600 border border-purple-200",
+          classe: "bg-orange-100 text-orange-700",
         };
       case "ADMIN":
         return {
           texto: "Dev",
-          classe: "bg-amber-50 text-amber-700 border border-amber-200",
+          classe: "bg-red-100 text-red-700",
         };
       default:
-        return { texto: "Professor(a)", classe: "bg-slate-100 text-slate-600" };
+        return {
+          texto: "Professor(a)",
+          classe: "bg-gray-100 text-gray-700",
+        };
     }
   };
 
@@ -194,50 +223,52 @@ export default function Usuarios({
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 font-sans antialiased">
       {/* =========================================================
           COLUNA ESQUERDA: ADICIONAR USUÁRIOS
           ========================================================= */}
-      <div className="lg:col-span-4 bg-white rounded-2xl shadow-sm p-4 sm:p-5 lg:p-6 border border-slate-200/80 h-fit">
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 mb-5">
-          <div className="p-2 bg-slate-50 rounded-xl border border-slate-200">
-            <UserCog className="text-slate-600 w-5 h-5" />
+      <div className="lg:col-span-4 bg-white rounded-md p-4 sm:p-5 lg:p-6 border border-gray-200 h-fit shadow-sm">
+        <div className="flex items-center gap-3 pb-4 border-b border-gray-200 mb-5">
+          <div className="p-2 bg-blue-500 text-white rounded-md">
+            <UserCog className="w-5 h-5" />
           </div>
-          <h2 className="text-lg font-black tracking-wide uppercase text-slate-800">
-            Gerir <span className="text-[#4b82f6]">Acessos</span>
+          <h2 className="text-lg font-bold tracking-wide uppercase text-gray-800">
+            GERIR <span className="text-red-500">ACESSOS</span>
           </h2>
         </div>
 
         {/* Formulário: Adicionar Único */}
         <div className="mb-6">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-3">
-            <UserPlus className="w-3.5 h-3.5" /> Adicionar Individual
+          <h3 className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1.5 mb-3">
+            <UserPlus className="w-4 h-4" /> Adicionar Individual
           </h3>
           <form onSubmit={adicionarUsuarioUnico} className="space-y-3">
             <div>
               <input
                 type="text"
-                placeholder="Cód. SIPAE (Ex: F12345)"
+                placeholder="Cód. SIPAE (Ex: 12345)"
                 value={novoCodigo}
                 onChange={(e) => setNovoCodigo(e.target.value.toUpperCase())}
-                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
+                className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium outline-none transition-colors uppercase placeholder:text-gray-400 placeholder:font-light"
                 required
               />
             </div>
             <div>
+              {/* Nome Completo obrigatório */}
               <input
                 type="text"
-                placeholder="Nome Completo"
+                placeholder="Nome Completo *"
                 value={novoNome}
                 onChange={(e) => setNovoNome(e.target.value.toUpperCase())}
-                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-medium outline-none transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
+                className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium outline-none transition-colors uppercase placeholder:text-gray-400 placeholder:font-light"
+                required
               />
             </div>
             <div>
               <select
                 value={novoCargo}
                 onChange={(e) => setNovoCargo(e.target.value)}
-                className="w-full p-3 lg:p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm font-bold text-slate-600 outline-none transition-all uppercase"
+                className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 outline-none transition-colors uppercase"
               >
                 <option value="PROFESSOR">Professor(a)</option>
                 <option value="COORDENACAO">Coordenador(a)</option>
@@ -247,21 +278,21 @@ export default function Usuarios({
             </div>
             <button
               type="submit"
-              className="w-full py-3 lg:py-2.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-xl transition-all text-[11px] shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer"
+              className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-bold uppercase tracking-wider rounded-md transition-colors text-xs flex items-center justify-center mt-2"
             >
               Registar Acesso
             </button>
           </form>
         </div>
 
-        <div className="border-t border-slate-100 pt-5">
+        <div className="border-t border-gray-200 pt-5">
           <button
             type="button"
             onClick={() => setMostrarAddMassa(!mostrarAddMassa)}
-            className={`w-full py-3 lg:py-2.5 font-bold uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all text-[11px] shadow-sm active:scale-95 cursor-pointer ${
+            className={`w-full py-2.5 font-bold uppercase tracking-wider rounded-md flex items-center justify-center gap-2 transition-colors text-xs border ${
               mostrarAddMassa
-                ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200"
+                ? "bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200"
+                : "bg-green-500 text-white border-green-500 hover:bg-green-600"
             }`}
           >
             {mostrarAddMassa ? (
@@ -275,27 +306,24 @@ export default function Usuarios({
             )}
           </button>
 
-          {/* Formulário: Adicionar em Massa */}
+          {/* Formulário: Adicionar em Massa com exemplo limpo */}
           {mostrarAddMassa && (
-            <form
-              onSubmit={colarListaUsuarios}
-              className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2"
-            >
-              <div className="text-[10px] text-slate-500 leading-relaxed bg-slate-50 p-2 rounded-lg border border-slate-200">
-                Cole os códigos (um por linha). Todos serão registados como{" "}
-                <strong>PROFESSOR</strong>. O nome e a senha poderão ser
-                definidos no primeiro acesso.
+            <form onSubmit={colarListaUsuarios} className="mt-4 space-y-3">
+              <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-200 font-medium">
+                Cole a lista no formato <strong>12345 NOME DO USUÁRIO</strong>{" "}
+                (um por linha)[cite: 4]. O "F" será adicionado automaticamente
+                ao código e o nome preenchido.
               </div>
               <textarea
                 rows="4"
-                placeholder="SIPAE-101&#10;SIPAE-102&#10;SIPAE-103"
+                placeholder="12345 NOME DO USUÁRIO 1&#10;67890 NOME DO USUÁRIO 2"
                 value={textoListaCodigos}
                 onChange={(e) => setTextoListaCodigos(e.target.value)}
-                className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm font-mono outline-none transition-all uppercase placeholder:text-slate-400 resize-none"
+                className="w-full p-2.5 bg-white border border-gray-300 rounded-md focus:ring-1 focus:ring-green-500 focus:border-green-500 text-sm font-medium outline-none transition-colors uppercase placeholder:text-gray-400 resize-none placeholder:font-light"
               ></textarea>
               <button
                 type="submit"
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-sm shadow-emerald-500/20 transition-all cursor-pointer"
+                className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold uppercase tracking-wider rounded-md transition-colors"
               >
                 Confirmar Importação
               </button>
@@ -307,25 +335,25 @@ export default function Usuarios({
       {/* =========================================================
           COLUNA DIREITA: LISTA SIMPLIFICADA DE USUÁRIOS
           ========================================================= */}
-      <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col h-fit lg:min-h-[500px]">
+      <div className="lg:col-span-8 bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden flex flex-col h-fit lg:min-h-[500px]">
         {/* Cabeçalho e Busca */}
-        <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 sm:p-5 lg:p-6 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-              Usuários Registados
-              <span className="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-md">
+            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+              USUÁRIOS <span className="text-red-500">REGISTADOS</span>
+              <span className="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-md font-medium">
                 {usuarios.length}
               </span>
             </h3>
           </div>
           <div className="relative w-full sm:max-w-xs">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Buscar código ou nome..."
               value={buscaUsuario}
               onChange={(e) => setBuscaUsuario(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all uppercase placeholder:text-slate-400 placeholder:normal-case"
+              className="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors uppercase placeholder:text-gray-400 placeholder:normal-case placeholder:font-light"
             />
           </div>
         </div>
@@ -334,15 +362,15 @@ export default function Usuarios({
         <div className="flex-1 overflow-x-auto">
           {usuariosFiltrados.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center h-full">
-              <ShieldAlert className="w-12 h-12 text-slate-200 mb-3" />
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <ShieldAlert className="w-12 h-12 text-gray-300 mb-3" />
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                 Nenhum usuário encontrado.
               </p>
             </div>
           ) : (
             <div className="min-w-[600px] w-full">
               {/* Header Tabela */}
-              <div className="grid grid-cols-12 gap-3 px-6 py-3 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">
+              <div className="grid grid-cols-12 gap-3 px-6 py-3 bg-gray-100 text-[10px] font-bold text-gray-600 uppercase tracking-widest border-b border-gray-200">
                 <div className="col-span-3">Código</div>
                 <div className="col-span-4">Nome</div>
                 <div className="col-span-2">Cargo</div>
@@ -351,7 +379,7 @@ export default function Usuarios({
               </div>
 
               {/* Linhas da Tabela */}
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-gray-200">
                 {usuariosFiltrados.map((usuario) => {
                   const infoCargo = formatarCargoExibicao(usuario.cargo);
 
@@ -360,8 +388,8 @@ export default function Usuarios({
                       key={usuario.id}
                       className={`grid grid-cols-12 gap-3 px-6 py-3 items-center transition-colors group text-xs ${
                         editId === usuario.id
-                          ? "bg-blue-50/50"
-                          : "hover:bg-slate-50/50"
+                          ? "bg-blue-50"
+                          : "hover:bg-gray-50"
                       }`}
                     >
                       {/* MODO DE EDIÇÃO */}
@@ -374,7 +402,7 @@ export default function Usuarios({
                               onChange={(e) =>
                                 setEditCodigo(e.target.value.toUpperCase())
                               }
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-medium outline-none uppercase"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-md text-xs font-medium outline-none uppercase focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
                           <div className="col-span-4">
@@ -385,14 +413,15 @@ export default function Usuarios({
                                 setEditNome(e.target.value.toUpperCase())
                               }
                               placeholder="Nome..."
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-normal outline-none uppercase"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-md text-xs font-medium outline-none uppercase focus:ring-1 focus:ring-blue-500"
+                              required
                             />
                           </div>
                           <div className="col-span-2">
                             <select
                               value={editCargo}
                               onChange={(e) => setEditCargo(e.target.value)}
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-normal uppercase outline-none"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-md text-xs font-medium uppercase outline-none focus:ring-1 focus:ring-blue-500"
                             >
                               <option value="PROFESSOR">Professor(a)</option>
                               <option value="COORDENACAO">
@@ -408,20 +437,20 @@ export default function Usuarios({
                               value={editSenha}
                               onChange={(e) => setEditSenha(e.target.value)}
                               placeholder="Nova senha..."
-                              className="w-full p-2 bg-white border border-blue-300 rounded-lg text-xs font-normal outline-none"
+                              className="w-full p-2 bg-white border border-blue-300 rounded-md text-xs font-medium outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
                           <div className="col-span-1 flex justify-end gap-1">
                             <button
                               onClick={salvarEdicao}
-                              className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors cursor-pointer"
+                              className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                               title="Salvar"
                             >
                               <Save className="w-4 h-4" />
                             </button>
                             <button
                               onClick={cancelarEdicao}
-                              className="p-1.5 bg-slate-200 text-slate-600 rounded-md hover:bg-slate-300 transition-colors cursor-pointer"
+                              className="p-1.5 bg-gray-200 text-gray-600 rounded-md hover:bg-gray-300 transition-colors"
                               title="Cancelar"
                             >
                               <X className="w-4 h-4" />
@@ -431,30 +460,30 @@ export default function Usuarios({
                       ) : (
                         /* MODO DE VISUALIZAÇÃO SIMPLIFICADO */
                         <>
-                          <div className="col-span-3 font-medium text-slate-700">
+                          <div className="col-span-3 font-medium text-gray-800">
                             {usuario.codigo}
                           </div>
-                          <div className="col-span-4 font-normal text-slate-600 uppercase truncate">
+                          <div className="col-span-4 font-medium text-gray-700 uppercase truncate">
                             {usuario.nome || (
-                              <span className="text-slate-400 font-normal italic normal-case">
-                                Nome pendente
+                              <span className="text-gray-400 font-light normal-case">
+                                Não definido
                               </span>
                             )}
                           </div>
                           <div className="col-span-2">
                             <span
-                              className={`text-[10px] font-normal uppercase tracking-wider px-2 py-0.5 rounded-md ${infoCargo.classe}`}
+                              className={`text-[10px] font-bold uppercase px-2 py-1 rounded-md ${infoCargo.classe}`}
                             >
                               {infoCargo.texto}
                             </span>
                           </div>
                           <div className="col-span-1 text-center">
                             {usuario.senha ? (
-                              <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md font-normal uppercase border border-emerald-100">
+                              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-md font-bold uppercase">
                                 Sim
                               </span>
                             ) : (
-                              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-normal uppercase">
+                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-md font-bold uppercase">
                                 Não
                               </span>
                             )}
@@ -462,7 +491,7 @@ export default function Usuarios({
                           <div className="col-span-2 flex justify-end gap-1">
                             <button
                               onClick={() => iniciarEdicao(usuario)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                              className="p-1.5 rounded-md text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
                               title="Editar Usuário"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -474,7 +503,7 @@ export default function Usuarios({
                                   usuario.nome || usuario.codigo,
                                 )
                               }
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                              className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                               title="Eliminar Usuário"
                             >
                               <Trash2 className="w-4 h-4" />

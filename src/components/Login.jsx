@@ -9,7 +9,15 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import { Award, User, Lock, KeyRound, Loader2 } from "lucide-react";
+import {
+  ClipboardCheck, // O ícone da prancheta de correção com o "Certo"
+  User,
+  Lock,
+  KeyRound,
+  Loader2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 export default function Login() {
   const { login } = useAuth();
@@ -17,6 +25,11 @@ export default function Login() {
   // Estados da interface
   const [isPrimeiroAcesso, setIsPrimeiroAcesso] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+
+  // Estado para alertar se tentou abrir o primeiro acesso sem código
+  const [alertaCodigoFaltando, setAlertaCodigoFaltando] = useState(false);
 
   // Formulário
   const [codigo, setCodigo] = useState("");
@@ -25,9 +38,63 @@ export default function Login() {
   const [nome, setNome] = useState("");
   const [erro, setErro] = useState("");
 
+  const handlePrimeiroAcessoClick = async () => {
+    setErro("");
+
+    // Só deve abrir se tiver código digitado. Se não, alerta e vermelho.
+    if (!codigo.trim()) {
+      setAlertaCodigoFaltando(true);
+      setErro("Digite o codigo do SIPAE!");
+      return;
+    }
+
+    setAlertaCodigoFaltando(false);
+    setLoading(true);
+    const codigoUpper = codigo.trim().toUpperCase();
+
+    try {
+      // Busca o nome do banco de dados automaticamente
+      const q = query(
+        collection(db, "usuarios"),
+        where("codigo", "==", codigoUpper),
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        setErro("Código não encontrado. Verifique com a coordenação.");
+        setLoading(false);
+        return;
+      }
+
+      const userData = querySnapshot.docs[0].data();
+
+      if (userData.senha) {
+        setErro("Este código já possui senha. Faça o login normalmente.");
+        setLoading(false);
+        return;
+      }
+
+      // Preenche o nome puxado do banco (ou deixa vazio se não houver)
+      setNome(userData.nome || "");
+      setIsPrimeiroAcesso(true);
+    } catch (error) {
+      console.error("Erro ao buscar dados:", error);
+      setErro("Erro ao comunicar com o servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVoltarLoginClick = () => {
+    setIsPrimeiroAcesso(false);
+    setErro("");
+    setAlertaCodigoFaltando(false);
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setErro("");
+    setAlertaCodigoFaltando(false);
 
     if (!codigo.trim() || !senha.trim()) {
       setErro("Preencha todos os campos obrigatórios.");
@@ -47,7 +114,6 @@ export default function Login() {
     const codigoUpper = codigo.trim().toUpperCase();
 
     try {
-      // 1. Busca o utilizador no Firebase pelo código SIPAE
       const q = query(
         collection(db, "usuarios"),
         where("codigo", "==", codigoUpper),
@@ -66,7 +132,6 @@ export default function Login() {
       const userData = userDoc.data();
       const userId = userDoc.id;
 
-      // 2. Lógica de Primeiro Acesso
       if (isPrimeiroAcesso) {
         if (userData.senha) {
           setErro(
@@ -79,7 +144,6 @@ export default function Login() {
         const nomeFinal =
           nome.trim() || userData.nome || `Utilizador ${codigoUpper}`;
 
-        // Atualiza a senha e o nome no Firebase
         await updateDoc(doc(db, "usuarios", userId), {
           senha: senha,
           nome: nomeFinal,
@@ -91,7 +155,6 @@ export default function Login() {
           cargo: userData.cargo,
         });
       } else {
-        // 3. Lógica de Login Normal
         if (!userData.senha) {
           setErro("Senha não cadastrada. Utilize a opção 'Primeiro Acesso'.");
           setLoading(false);
@@ -119,102 +182,126 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900/5 backdrop-blur-xs flex flex-col items-center justify-center p-4 font-sans selection:bg-blue-500 selection:text-white">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden transition-all duration-300">
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans antialiased selection:bg-blue-500 selection:text-white">
+      <div className="w-full max-w-md bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
         {/* Cabeçalho */}
-        <div className="pt-10 pb-6 px-8 text-center bg-gradient-to-b from-blue-50/60 to-transparent border-b border-slate-100">
-          <div className="inline-flex p-3.5 bg-blue-600 text-white rounded-2xl mb-4 shadow-lg shadow-blue-500/30">
-            <Award className="w-9 h-9" />
+        <div className="pt-8 pb-6 px-8 text-center border-b border-gray-200">
+          <div className="inline-flex p-3 bg-blue-500 text-white rounded-md mb-4">
+            <ClipboardCheck className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-black tracking-wider uppercase text-slate-900">
-            SIMULA<span className="text-red-600">TECH</span>
+          <h1 className="text-2xl font-bold uppercase text-gray-800 tracking-wide">
+            SIMULA<span className="text-red-500">TECH</span>
           </h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1.5">
-            Sistema de Gestão de Simulados
-          </p>
-          <div className="mt-2.5 inline-block px-3 py-1 bg-slate-100 border border-slate-200 rounded-full">
-            <p className="text-[10px] font-black tracking-wider text-slate-700 uppercase">
-              ESCOLA MUNICIPAL JOSÉ BARRETO DE ARAÚJO
+          <div className="mt-4">
+            <p className="text-base font-semibold text-gray-700 uppercase">
+              Escola Municipal José Barreto de Araújo
             </p>
           </div>
         </div>
 
-        {/* Formulário de Acesso Unificado */}
-        <form onSubmit={handleLoginSubmit} className="p-8 space-y-5">
+        {/* Formulário */}
+        <form onSubmit={handleLoginSubmit} className="p-8 space-y-4">
           {erro && (
-            <div className="bg-red-50 text-red-700 text-xs font-bold p-3.5 rounded-xl border border-red-200 text-center shadow-xs">
+            <div className="bg-red-50 text-red-500 text-xs font-medium p-3 rounded-md border border-red-200 text-center">
               {erro}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
               Código do SIPAE
             </label>
             <div className="relative flex items-center">
-              <User className="w-5 h-5 text-slate-400 absolute left-4" />
+              <User className="w-5 h-5 text-gray-400 absolute left-3" />
               <input
                 type="text"
                 required
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
+                onChange={(e) => {
+                  setCodigo(e.target.value);
+                  setAlertaCodigoFaltando(false);
+                }}
                 placeholder="Ex: F12345"
-                className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
+                className={`w-full pl-10 pr-3 py-2 bg-white border ${alertaCodigoFaltando ? "border-red-500 ring-1 ring-red-500" : "border-gray-300"} rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors uppercase placeholder:normal-case placeholder:font-light placeholder:text-gray-400`}
               />
             </div>
           </div>
 
           {isPrimeiroAcesso && (
             <div>
-              <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
                 Nome Completo
               </label>
               <div className="relative flex items-center">
-                <User className="w-5 h-5 text-slate-400 absolute left-4" />
+                <User className="w-5 h-5 text-gray-400 absolute left-3" />
                 <input
                   type="text"
                   required
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Seu nome"
-                  className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all uppercase placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
+                  className="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors uppercase placeholder:normal-case placeholder:font-light placeholder:text-gray-400"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
               Senha
             </label>
             <div className="relative flex items-center">
-              <Lock className="w-5 h-5 text-slate-400 absolute left-4" />
+              <Lock className="w-5 h-5 text-gray-400 absolute left-3" />
               <input
-                type="password"
+                type={mostrarSenha ? "text" : "password"}
                 required
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-400"
+                className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:font-light placeholder:text-gray-400"
               />
+              <button
+                type="button"
+                onClick={() => setMostrarSenha(!mostrarSenha)}
+                className="absolute right-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                {mostrarSenha ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
             </div>
           </div>
 
           {isPrimeiroAcesso && (
             <div>
-              <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
                 Confirmar Senha
               </label>
               <div className="relative flex items-center">
-                <KeyRound className="w-5 h-5 text-slate-400 absolute left-4" />
+                <KeyRound className="w-5 h-5 text-gray-400 absolute left-3" />
                 <input
-                  type="password"
+                  type={mostrarConfirmarSenha ? "text" : "password"}
                   required
                   value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all placeholder:text-slate-400"
+                  className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:font-light placeholder:text-gray-400"
                 />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMostrarConfirmarSenha(!mostrarConfirmarSenha)
+                  }
+                  className="absolute right-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {mostrarConfirmarSenha ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
           )}
@@ -222,35 +309,40 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-black text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 shadow-lg shadow-blue-600/30 hover:shadow-xl cursor-pointer mt-3 active:scale-[0.99] flex items-center justify-center gap-2.5"
+            className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-semibold text-sm uppercase rounded-md transition-colors flex items-center justify-center gap-2 mt-4"
           >
-            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {isPrimeiroAcesso ? "Cadastrar e Entrar" : "Entrar"}
           </button>
 
           <div className="text-center pt-2">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => {
-                setIsPrimeiroAcesso(!isPrimeiroAcesso);
-                setErro("");
-              }}
-              className="text-xs text-blue-600 hover:text-blue-700 font-extrabold uppercase tracking-wider hover:underline cursor-pointer disabled:opacity-50 transition-colors"
-            >
-              {isPrimeiroAcesso
-                ? "Já possui senha? Fazer Login"
-                : "Primeiro acesso?"}
-            </button>
+            {!isPrimeiroAcesso ? (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handlePrimeiroAcessoClick}
+                className="text-xs text-blue-500 hover:text-blue-600 font-medium uppercase hover:underline disabled:opacity-50 transition-colors"
+              >
+                Primeiro acesso?
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleVoltarLoginClick}
+                className="text-xs text-blue-500 hover:text-blue-600 font-medium uppercase hover:underline disabled:opacity-50 transition-colors"
+              >
+                Já possui senha? Fazer Login
+              </button>
+            )}
           </div>
         </form>
       </div>
 
-      {/* Assinatura no Rodapé */}
       <footer className="mt-6 text-center">
-        <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">
+        <p className="text-[11px] font-medium text-gray-500 uppercase tracking-widest">
           Desenvolvido por:{" "}
-          <span className="text-blue-600">Maciel dos Santos</span>
+          <span className="text-blue-500">Maciel dos Santos</span>
         </p>
       </footer>
     </div>

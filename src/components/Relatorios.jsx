@@ -56,8 +56,22 @@ export default function Relatorios({
             }));
 
         discList.forEach((d) => {
-          if (!mapaDisciplinas.has(d.nome)) {
-            mapaDisciplinas.set(d.nome, d);
+          const nomeDisc = String(d.nome).trim().toUpperCase();
+          const qtd =
+            d.gabarito?.length ||
+            d.questoes?.length ||
+            d.totalQuestoes ||
+            d.qtd ||
+            0;
+          if (!mapaDisciplinas.has(nomeDisc)) {
+            mapaDisciplinas.set(nomeDisc, {
+              ...d,
+              nome: d.nome,
+              totalQuestoes: qtd,
+            });
+          } else {
+            const existente = mapaDisciplinas.get(nomeDisc);
+            existente.totalQuestoes += qtd;
           }
         });
       });
@@ -127,15 +141,15 @@ export default function Relatorios({
     return disciplinasDoSimulado.reduce(
       (acc, d) =>
         acc +
-        (d.gabarito?.length || d.questoes?.length || d.totalQuestoes || 0),
+        (d.totalQuestoes || d.gabarito?.length || d.questoes?.length || 0),
       0,
     );
   }, [disciplinasDoSimulado]);
 
   const getQtdQuestao = (disc) =>
+    disc.totalQuestoes ||
     disc.gabarito?.length ||
     disc.questoes?.length ||
-    disc.totalQuestoes ||
     disc.qtd ||
     0;
 
@@ -151,15 +165,15 @@ export default function Relatorios({
     doc.setFontSize(13);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(30, 41, 59);
-    doc.text("RESUMO DE DESEMPENHO DA TURMA", 14, 12);
+    doc.text("RESUMO DE DESEMPENHO DA TURMA", 10, 10);
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 116, 139);
     doc.text(
       `Bimestre: ${bimestreSelecionado}º    |    Turma: ${turmaAtual.nome}    |    Simulado: ${nomeSimulado}`,
-      14,
-      17,
+      10,
+      15,
     );
 
     const colunas = [
@@ -172,7 +186,7 @@ export default function Relatorios({
         };
       }),
       {
-        header: `GERAL (TOTAL)\n(${totalQuestoesSimulado} Q)`,
+        header: `GERAL\n(${totalQuestoesSimulado} Q)`,
         dataKey: "geral",
       },
     ];
@@ -241,19 +255,21 @@ export default function Relatorios({
       return linhaData;
     });
 
-    // Cálculo dinâmico da largura das colunas para preencher perfeitamente a A4 paisagem (277mm úteis com margem de 10mm)
-    const larguraUtil = 277; // 297mm (A4 landscape) - 20mm de margens totais (10mm cada lado)
-    const totalColunasNotas = disciplinasDoSimulado.length + 1; // Disciplinas + Coluna Geral
+    // CÁLCULO DINÂMICO SEGURO PARA CABER NA PÁGINA (A4 Landscape = 297mm largura total)
+    const larguraUtil = 287; // Deixando 5mm de margem em cada lado (10mm total)
+    const totalColunasNotas = disciplinasDoSimulado.length + 1; // Disciplinas + coluna Geral
 
-    // Se forem poucas disciplinas, distribuímos mais espaço. Se forem muitas, compactamos.
-    let larguraColunaNota = larguraUtil / (totalColunasNotas + 2.5);
-    if (larguraColunaNota < 19) larguraColunaNota = 19;
-    if (larguraColunaNota > 38) larguraColunaNota = 38;
+    // Aloca um espaço adaptativo para o nome do aluno e para as colunas de notas
+    let larguraAluno = 55;
+    let larguraColunaNota = (larguraUtil - larguraAluno) / totalColunasNotas;
 
-    const larguraAluno = Math.max(
-      72,
-      larguraUtil - larguraColunaNota * totalColunasNotas,
-    );
+    if (larguraColunaNota < 14) {
+      larguraColunaNota = 14; // Tamanho mínimo seguro para caber tudo sem cortar
+      larguraAluno = Math.max(
+        45,
+        larguraUtil - larguraColunaNota * totalColunasNotas,
+      );
+    }
 
     const columnStylesConfig = {
       aluno: {
@@ -272,19 +288,15 @@ export default function Relatorios({
       };
     });
 
-    const larguraTotalTabela =
-      larguraAluno + larguraColunaNota * totalColunasNotas;
-    const margemDinamica = Math.max(10, (297 - larguraTotalTabela) / 2);
-
     autoTable(doc, {
-      startY: 21,
+      startY: 19,
       columns: colunas,
       body: linhas,
       theme: "grid",
-      margin: { left: margemDinamica, right: margemDinamica },
+      margin: { left: 5, right: 5 },
       styles: {
-        fontSize: 6.5,
-        cellPadding: { top: 1.5, bottom: 1.5, left: 0.5, right: 0.5 },
+        fontSize: 5.5, // Fonte levemente menor para acomodar muitas colunas sem transbordar
+        cellPadding: { top: 1, bottom: 1, left: 0.3, right: 0.3 },
         halign: "center",
         valign: "middle",
         lineColor: [226, 232, 240],
@@ -294,7 +306,7 @@ export default function Relatorios({
         fillColor: [241, 245, 249],
         textColor: [30, 41, 59],
         fontStyle: "bold",
-        cellPadding: { top: 2, bottom: 2, left: 0.5, right: 0.5 },
+        cellPadding: { top: 1.5, bottom: 1.5, left: 0.3, right: 0.3 },
       },
       columnStyles: columnStylesConfig,
       alternateRowStyles: {
@@ -306,15 +318,15 @@ export default function Relatorios({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-12 max-w-7xl mx-auto w-full">
-      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+    <div className="space-y-4 sm:space-y-6 pb-12 max-w-7xl mx-auto w-full font-sans antialiased">
+      <div className="bg-white p-4 sm:p-6 rounded-md shadow-sm border border-gray-200">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-200">
           <div>
-            <h2 className="text-base sm:text-lg font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-[#4b82f6]" /> Relatório
-              de Desempenho
+            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-blue-500" /> RELATÓRIO DE{" "}
+              <span className="text-red-500 font-bold">DESEMPENHO</span>
             </h2>
-            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">
               Filtre por bimestre, turma e simulado.
             </p>
           </div>
@@ -322,7 +334,7 @@ export default function Relatorios({
           {turmaSelecionadaId && simuladoAtual && (
             <button
               onClick={gerarPDF}
-              className="w-full sm:w-auto px-4 py-2.5 bg-[#4b82f6] hover:bg-blue-600 text-white font-bold text-xs uppercase rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer active:scale-95"
+              className="w-full sm:w-auto px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs uppercase rounded-md flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer active:scale-95"
             >
               <Download className="w-4 h-4" /> Exportar PDF
             </button>
@@ -331,8 +343,8 @@ export default function Relatorios({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-[#4b82f6]" /> 1. Bimestre
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 tracking-widest flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-blue-500" /> 1. Bimestre
             </label>
             <select
               value={bimestreSelecionado}
@@ -341,7 +353,7 @@ export default function Relatorios({
                 setTurmaSelecionadaId("");
                 setSimuladoSelecionadoId("");
               }}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold text-slate-700 uppercase outline-none focus:border-[#4b82f6] transition shadow-xs cursor-pointer"
+              className="w-full p-2.5 border border-gray-300 rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer"
             >
               <option value="">Selecione...</option>
               <option value="1">1º Bimestre</option>
@@ -352,8 +364,8 @@ export default function Relatorios({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-[#4b82f6]" /> 2. Turma
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 tracking-widest flex items-center gap-1">
+              <Layers className="w-3.5 h-3.5 text-blue-500" /> 2. Turma
             </label>
             <select
               disabled={!bimestreSelecionado || turmas.length === 0}
@@ -362,7 +374,7 @@ export default function Relatorios({
                 setTurmaSelecionadaId(e.target.value);
                 setSimuladoSelecionadoId("");
               }}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold text-slate-700 uppercase outline-none focus:border-[#4b82f6] transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full p-2.5 border border-gray-300 rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Selecione...</option>
               {turmas.map((turma) => (
@@ -374,8 +386,8 @@ export default function Relatorios({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 tracking-widest flex items-center gap-1">
-              <BookOpen className="w-3.5 h-3.5 text-[#4b82f6]" /> 3. Simulado
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 tracking-widest flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5 text-blue-500" /> 3. Simulado
             </label>
             <select
               disabled={
@@ -383,7 +395,7 @@ export default function Relatorios({
               }
               value={simuladoSelecionadoId}
               onChange={(e) => setSimuladoSelecionadoId(e.target.value)}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold text-slate-700 uppercase outline-none focus:border-[#4b82f6] transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full p-2.5 border border-gray-300 rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">
                 {simuladosDisponiveis.length === 0
@@ -404,12 +416,12 @@ export default function Relatorios({
       </div>
 
       {turmaSelecionadaId && simuladoAtual ? (
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
-          <div className="flex items-center gap-2 mb-4 text-slate-800 pb-3 border-b border-slate-100">
-            <User className="w-4 h-4 text-[#4b82f6]" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">
+        <div className="bg-white p-4 sm:p-6 rounded-md shadow-sm border border-gray-200">
+          <div className="flex items-center gap-2 mb-4 text-gray-800 pb-3 border-b border-gray-200">
+            <User className="w-4 h-4 text-blue-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
               Desempenho:{" "}
-              <span className="text-[#4b82f6]">{turmaAtual?.nome}</span> (
+              <span className="text-blue-600">{turmaAtual?.nome}</span> (
               {simuladoAtual === "GERAL"
                 ? "Geral"
                 : simuladoAtual.nome || simuladoAtual.titulo}
@@ -418,15 +430,15 @@ export default function Relatorios({
           </div>
 
           {!turmaAtual?.alunos || turmaAtual.alunos.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-xs uppercase font-bold border border-dashed border-slate-200 rounded-xl">
+            <div className="p-8 text-center text-gray-400 text-xs uppercase font-bold border border-dashed border-gray-200 rounded-md">
               Não existem alunos inscritos nesta turma.
             </div>
           ) : (
-            <div className="w-full overflow-x-auto rounded-xl border border-slate-200">
+            <div className="w-full overflow-x-auto rounded-md border border-gray-200">
               <table className="w-full text-left border-collapse bg-white">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200">
-                    <th className="p-2.5 align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest min-w-[280px]">
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="p-2.5 align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest min-w-[220px]">
                       Aluno
                     </th>
                     {disciplinasDoSimulado.map((disc, idx) => {
@@ -434,35 +446,31 @@ export default function Relatorios({
                       return (
                         <th
                           key={idx}
-                          className="p-1.5 text-center align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest border-l border-slate-200 min-w-[95px]"
+                          className="p-1.5 text-center align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 min-w-[85px]"
                         >
                           <span
-                            className="block text-slate-700 whitespace-normal leading-tight"
-                            style={{
-                              wordBreak: "keep-all",
-                              overflowWrap: "normal",
-                            }}
+                            className="block text-gray-800 whitespace-normal leading-tight font-bold"
                             title={disc.nome}
                           >
                             {disc.nome}
                           </span>
-                          <span className="text-[9px] text-slate-400 font-normal mt-0.5 block">
+                          <span className="text-[9px] text-gray-400 font-normal mt-0.5 block">
                             ({qtdQ} Q)
                           </span>
                         </th>
                       );
                     })}
-                    <th className="p-1.5 text-center align-middle text-[10px] font-bold text-slate-400 uppercase tracking-widest border-l border-slate-200 bg-blue-50/30 min-w-[95px]">
-                      <span className="block text-blue-700 whitespace-normal leading-tight">
+                    <th className="p-1.5 text-center align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 bg-blue-50/40 min-w-[85px]">
+                      <span className="block text-blue-700 whitespace-normal leading-tight font-bold">
                         Geral
                       </span>
-                      <span className="text-[9px] text-slate-400 font-normal mt-0.5 block">
+                      <span className="text-[9px] text-gray-400 font-normal mt-0.5 block">
                         ({totalQuestoesSimulado} Q)
                       </span>
                     </th>
                   </tr>
                 </thead>
-                <tbody className="text-xs text-slate-700 divide-y divide-slate-100">
+                <tbody className="text-xs text-gray-700 divide-y divide-gray-200">
                   {turmaAtual.alunos.map((nomeAluno, index) => {
                     const respostasDoAluno = respostasDaTurma.filter(
                       (r) =>
@@ -475,10 +483,10 @@ export default function Relatorios({
                     return (
                       <tr
                         key={index}
-                        className="hover:bg-blue-50/20 transition-colors"
+                        className="hover:bg-blue-50/30 transition-colors"
                       >
-                        <td className="p-2.5 align-middle font-bold text-slate-700 uppercase min-w-[280px]">
-                          <span className="text-[10px] text-slate-400 font-mono mr-2">
+                        <td className="p-2.5 align-middle font-bold text-gray-800 uppercase min-w-[220px]">
+                          <span className="text-[10px] text-gray-400 font-mono mr-2">
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           {nomeAluno}
@@ -521,7 +529,7 @@ export default function Relatorios({
                             return (
                               <td
                                 key={dIdx}
-                                className="p-1.5 text-center align-middle text-slate-300 font-bold border-l border-slate-200 min-w-[95px]"
+                                className="p-1.5 text-center align-middle text-gray-300 font-bold border-l border-gray-200 min-w-[85px]"
                               >
                                 -
                               </td>
@@ -540,36 +548,36 @@ export default function Relatorios({
                           return (
                             <td
                               key={dIdx}
-                              className="p-1.5 text-center align-middle border-l border-slate-200 min-w-[95px]"
+                              className="p-1.5 text-center align-middle border-l border-gray-200 min-w-[85px]"
                             >
-                              <div className="font-bold text-slate-700 text-[10.5px]">
+                              <div className="font-bold text-gray-800 text-[10px]">
                                 {acertosTotalDisc}/{totalDisc}{" "}
-                                <span className="text-[#4b82f6] font-semibold">
+                                <span className="text-blue-600 font-semibold">
                                   ({percentual}%)
                                 </span>
                               </div>
-                              <div className="mt-0.5 inline-block px-1 py-0.2 text-emerald-700 border border-emerald-200 bg-emerald-50 rounded text-[8.5px] font-bold">
+                              <div className="mt-0.5 inline-block px-1 py-0.2 text-emerald-700 border border-emerald-200 bg-emerald-50 rounded text-[8px] font-bold">
                                 Nota: {nota}
                               </div>
                             </td>
                           );
                         })}
 
-                        <td className="p-1.5 text-center align-middle border-l border-slate-200 bg-blue-50/20 min-w-[95px]">
+                        <td className="p-1.5 text-center align-middle border-l border-gray-200 bg-blue-50/20 min-w-[85px]">
                           {respostasDoAluno.length === 0 ? (
-                            <span className="text-[10px] uppercase font-bold text-slate-400">
+                            <span className="text-[10px] uppercase font-bold text-gray-400">
                               Pendente
                             </span>
                           ) : (
                             <div>
-                              <div className="font-bold text-slate-700 text-[10.5px]">
+                              <div className="font-bold text-gray-800 text-[10px]">
                                 {respostasDoAluno.reduce(
                                   (acc, r) => acc + (r.totalAcertos || 0),
                                   0,
                                 )}
                                 /{totalQuestoesSimulado}
                               </div>
-                              <div className="text-[9.5px] text-[#4b82f6] font-bold mt-0.5">
+                              <div className="text-[9px] text-blue-600 font-bold mt-0.5">
                                 (
                                 {Math.round(
                                   (respostasDoAluno.reduce(
@@ -593,9 +601,9 @@ export default function Relatorios({
           )}
         </div>
       ) : (
-        <div className="bg-white p-12 rounded-2xl border border-dashed border-slate-200 text-center">
-          <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+        <div className="bg-white p-12 rounded-md border border-dashed border-gray-200 text-center shadow-sm">
+          <FileSpreadsheet className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
             Selecione o bimestre, turma e simulado para ver os resultados.
           </p>
         </div>

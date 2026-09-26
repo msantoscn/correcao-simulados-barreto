@@ -198,7 +198,17 @@ export function useFirebase() {
 
   const salvarRespostaAluno = async (registo, userLogado, turmasAtuais) => {
     try {
-      if (userLogado && userLogado.cargo !== "GESTAO" && turmasAtuais) {
+      // Verificação inteligente e flexível do cargo de gestão/administração
+      const cargoUpper = String(userLogado?.cargo || "")
+        .trim()
+        .toUpperCase();
+      const isCargoGestao =
+        cargoUpper === "GESTAO" ||
+        cargoUpper === "ADMIN" ||
+        cargoUpper === "DIRETOR" ||
+        cargoUpper === "COORDENADOR";
+
+      if (userLogado && !isCargoGestao && turmasAtuais) {
         const turmaCorrespondente = turmasAtuais.find(
           (t) =>
             String(t.nome).trim().toUpperCase() ===
