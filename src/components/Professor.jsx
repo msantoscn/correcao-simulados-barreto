@@ -749,7 +749,7 @@ export default function Professor({
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS USANDO DIVS (ELIMINA 100% O FOCO FANTASMA DO MOBILE) */}
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS (SEM BRILHO AZUL NO CELULAR) */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
@@ -794,6 +794,9 @@ export default function Professor({
                                       onClick={() =>
                                         handleRespostaClick(d.nome, qIdx, alt)
                                       }
+                                      style={{
+                                        WebkitTapHighlightColor: "transparent",
+                                      }}
                                       className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer select-none ${
                                         selecionada
                                           ? "bg-blue-600 text-white border-transparent scale-105 shadow-blue-500/30"
@@ -814,7 +817,7 @@ export default function Professor({
                 })}
               </div>
 
-              {/* Botão de salvar fixo no final normal */}
+              {/* Botão de salvar na posição normal */}
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"
