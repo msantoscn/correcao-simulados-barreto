@@ -176,8 +176,14 @@ export default function Professor({
     }
   };
 
-  const handleRespostaClick = (disciplinaNome, index, alternativa) => {
+  const handleRespostaClick = (e, disciplinaNome, index, alternativa) => {
     if (!temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId)) return;
+
+    // Força a remoção imediata do foco e toque ativo no mobile
+    e.currentTarget.blur();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
 
     setRespostasProfessor((prev) => {
       const respostaAtual = prev[disciplinaNome]?.[index];
@@ -745,7 +751,7 @@ export default function Professor({
                 </div>
               </div>
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E ZERO FOCO AUTOMÁTICO */}
+              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS E SEM ESTADO DE FOCO FANTASMA NO MOBILE */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
@@ -788,10 +794,16 @@ export default function Professor({
                                     <button
                                       key={alt}
                                       type="button"
-                                      onClick={() =>
-                                        handleRespostaClick(d.nome, qIdx, alt)
+                                      onClick={(e) =>
+                                        handleRespostaClick(
+                                          e,
+                                          d.nome,
+                                          qIdx,
+                                          alt,
+                                        )
                                       }
-                                      className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer focus:outline-none focus:ring-0 ${
+                                      style={{ touchAction: "manipulation" }}
+                                      className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full text-sm font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer outline-none focus:outline-none focus:ring-0 ${
                                         selecionada
                                           ? "bg-blue-600 text-white border-transparent scale-105 shadow-blue-500/30"
                                           : "bg-white text-gray-700 border border-[#dbc8b6] hover:border-blue-400 hover:bg-blue-50"
