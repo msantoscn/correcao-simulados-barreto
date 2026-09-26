@@ -325,21 +325,21 @@ export default function Professor({
   };
 
   return (
-    <div className="bg-white rounded-md shadow-sm p-4 sm:p-5 lg:p-6 border border-gray-200 w-full overflow-x-hidden font-sans antialiased">
+    <div className="bg-white rounded-md shadow-sm p-3.5 sm:p-5 border border-[#dbc8b6] w-full overflow-x-hidden font-sans antialiased">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3 pb-4 border-b border-gray-200 mb-5">
-        <div className="p-2 bg-blue-500 text-white rounded-md flex-shrink-0">
+      <div className="flex items-center gap-2.5 pb-3 border-b border-[#dbc8b6] mb-4">
+        <div className="p-1.5 bg-blue-500 text-white rounded-md flex-shrink-0">
           <UserCheck className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0 flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-wide uppercase text-gray-800 leading-tight">
+          <h2 className="text-base font-bold tracking-wide uppercase text-gray-800 leading-tight">
             LANÇAMENTO DE <span className="text-red-500 font-bold">NOTAS</span>
           </h2>
 
           {simuladoSelecionadoId && (
             <button
               onClick={handleVoltarAosSimulados}
-              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#dbc8b6] rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
             >
               &larr; Voltar aos Simulados
             </button>
@@ -347,9 +347,9 @@ export default function Professor({
         </div>
       </div>
 
-      {/* SELETORES NO TOPO (DROPDOWNS: BIMESTRE E TURMA) */}
+      {/* SELETORES NO TOPO (DROPDOWNS: BIMESTRE E TURMA - TAMANHO CONFORTÁVEL MANTIDO) */}
       {!simuladoSelecionadoId && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 bg-gray-50 p-4 rounded-md border border-gray-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-5 bg-gray-50 p-3.5 rounded-md border border-[#dbc8b6]">
           <div>
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-blue-500" /> Bimestre
@@ -357,7 +357,7 @@ export default function Professor({
             <select
               value={bimestreSelecionado}
               onChange={(e) => setBimestreSelecionado(e.target.value)}
-              className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
+              className="w-full p-2.5 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
             >
               <option value="">Escolha o bimestre...</option>
               <option value="1">1º Bimestre</option>
@@ -374,7 +374,7 @@ export default function Professor({
             <select
               value={turmaSelecionadaId}
               onChange={(e) => setTurmaSelecionadaId(e.target.value)}
-              className="w-full p-2.5 bg-white border border-gray-300 rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
+              className="w-full p-2.5 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
             >
               <option value="">Selecione uma turma...</option>
               {turmas.map((t) => (
@@ -390,17 +390,17 @@ export default function Professor({
       {/* EXIBIÇÃO APÓS ESCOLHER A TURMA E O BIMESTRE */}
       {!simuladoSelecionadoId ? (
         !bimestreSelecionado ? (
-          <div className="text-center py-12 text-gray-400 text-xs font-bold uppercase border border-dashed border-gray-200 rounded-md bg-gray-50/50">
+          <div className="text-center py-10 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md bg-gray-50/50">
             Selecione o bimestre acima para continuar.
           </div>
         ) : !turmaAtiva ? (
-          <div className="text-center py-12 text-gray-400 text-xs font-bold uppercase border border-dashed border-gray-200 rounded-md bg-gray-50/50">
+          <div className="text-center py-10 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md bg-gray-50/50">
             Selecione uma turma acima para exibir os simulados.
           </div>
         ) : (
-          <div className="border border-gray-200 rounded-md p-4 sm:p-5 bg-gray-50 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+          <div className="border border-[#dbc8b6] rounded-md p-3.5 sm:p-4 bg-gray-50 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#dbc8b6]">
+              <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
                 <Users className="w-4 h-4 text-blue-500" />
                 <span>
                   Turma: {turmaAtiva.nome} - {bimestreSelecionado}º Bimestre
@@ -408,14 +408,14 @@ export default function Professor({
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {(() => {
                 const idsSimuladosDoBimestre =
                   turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
 
                 if (idsSimuladosDoBimestre.length === 0) {
                   return (
-                    <div className="col-span-full text-center py-10 text-orange-600 text-xs font-bold uppercase border border-dashed border-orange-200 bg-orange-50 rounded-md">
+                    <div className="col-span-full text-center py-8 text-orange-600 text-xs font-bold uppercase border border-dashed border-orange-200 bg-orange-50 rounded-md">
                       Nenhum simulado vinculado a esta turma no{" "}
                       {bimestreSelecionado}º Bimestre.
                     </div>
@@ -441,11 +441,11 @@ export default function Professor({
                   return (
                     <div
                       key={simId}
-                      className="border border-gray-200 rounded-md p-4 bg-white flex flex-col justify-between hover:border-blue-400 transition-colors space-y-3 shadow-xs"
+                      className="border border-[#dbc8b6] rounded-md p-3.5 bg-white flex flex-col justify-between hover:bg-amber-50/20 transition-all space-y-3 shadow-xs"
                     >
                       <div>
                         <div className="flex items-start justify-between mb-1">
-                          <h4 className="font-bold text-gray-800 uppercase tracking-wide text-sm truncate">
+                          <h4 className="font-bold text-gray-800 uppercase tracking-wide text-xs truncate">
                             {simObj?.nome || "Simulado Desconhecido"}
                           </h4>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -502,7 +502,7 @@ export default function Professor({
                         className={`w-full py-2.5 px-3 rounded-md text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer ${
                           meuDono
                             ? "bg-blue-500 hover:bg-blue-600 text-white shadow-xs"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-[#dbc8b6]"
                         }`}
                       >
                         {meuDono ? (
@@ -525,8 +525,8 @@ export default function Professor({
         )
       ) : (
         /* LANÇAMENTO DE NOTAS DOS ALUNOS (QUANDO UM SIMULADO É SELECIONADO) */
-        <div className="space-y-5">
-          <div className="border-b border-gray-200 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="space-y-4">
+          <div className="border-b border-[#dbc8b6] pb-2.5 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-0.5">
                 Turma:{" "}
@@ -539,7 +539,7 @@ export default function Professor({
                   </span>
                 )}
               </span>
-              <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide truncate">
+              <h3 className="text-base font-bold text-gray-800 uppercase tracking-wide truncate">
                 Simulado:{" "}
                 <span className="text-blue-600">{simuladoAtivo?.nome}</span>
               </h3>
@@ -549,17 +549,17 @@ export default function Professor({
           {!alunoAtivo ? (
             <div>
               {!turmaAtiva?.alunos || turmaAtiva.alunos.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50 rounded-md border border-gray-200 border-dashed">
+                <div className="text-center py-8 bg-gray-50 rounded-md border border-[#dbc8b6] border-dashed">
                   <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Nenhum aluno cadastrado nesta turma.
                   </p>
                 </div>
               ) : (
-                <div className="w-full overflow-x-auto border border-gray-200 rounded-md shadow-xs bg-white">
+                <div className="w-full overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs bg-white">
                   <table className="w-full min-w-[650px] text-left border-collapse text-xs table-fixed">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200 font-bold text-gray-500 uppercase tracking-widest text-[10px]">
-                        <th className="p-3 border-r border-gray-200 w-[26%] sm:w-[22%] align-middle">
+                      <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
+                        <th className="p-2.5 border-r border-[#dbc8b6] w-[26%] sm:w-[22%] align-middle">
                           Aluno
                         </th>
 
@@ -568,7 +568,7 @@ export default function Professor({
                           return (
                             <th
                               key={disc.nome}
-                              className="p-2 border-r border-gray-200 text-center whitespace-normal break-words align-middle"
+                              className="p-2 border-r border-[#dbc8b6] text-center whitespace-normal break-words align-middle"
                             >
                               <span
                                 className="block text-gray-700 font-bold leading-tight truncate max-w-[90px] mx-auto"
@@ -583,7 +583,7 @@ export default function Professor({
                           );
                         })}
 
-                        <th className="p-2 border-r border-gray-200 text-center bg-blue-50/40 whitespace-normal break-words align-middle">
+                        <th className="p-2 border-r border-[#dbc8b6] text-center bg-blue-50/40 whitespace-normal break-words align-middle">
                           <span className="block text-blue-700 font-bold leading-tight">
                             Total
                           </span>
@@ -592,12 +592,12 @@ export default function Professor({
                           </span>
                         </th>
 
-                        <th className="p-3 text-center w-[100px] sm:w-[110px] align-middle">
+                        <th className="p-2.5 text-center w-[100px] sm:w-[110px] align-middle">
                           Ações
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-[#dbc8b6]">
                       {turmaAtiva.alunos.map((aluno, idx) => {
                         const registo = encontrarRegistoAluno(aluno);
 
@@ -614,9 +614,9 @@ export default function Professor({
                         return (
                           <tr
                             key={idx}
-                            className="hover:bg-blue-50/30 transition-colors"
+                            className="hover:bg-amber-50/20 transition-colors"
                           >
-                            <td className="p-3 font-bold text-gray-800 border-r border-gray-200 uppercase whitespace-normal break-words align-middle text-xs">
+                            <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase whitespace-normal break-words align-middle text-xs">
                               <div className="flex items-start gap-1.5">
                                 <span className="text-[10px] text-gray-400 font-mono flex-shrink-0 mt-0.5">
                                   {String(idx + 1).padStart(2, "0")}
@@ -631,7 +631,7 @@ export default function Professor({
                               return (
                                 <td
                                   key={disc.nome}
-                                  className="p-2 border-r border-gray-200 text-center uppercase align-middle"
+                                  className="p-2 border-r border-[#dbc8b6] text-center uppercase align-middle"
                                 >
                                   {concluido && infoDisc ? (
                                     <div className="flex flex-col items-center justify-center gap-0.5">
@@ -654,7 +654,7 @@ export default function Professor({
                               );
                             })}
 
-                            <td className="p-2 border-r border-gray-200 text-center bg-blue-50/20 uppercase align-middle">
+                            <td className="p-2 border-r border-[#dbc8b6] text-center bg-blue-50/20 uppercase align-middle">
                               {concluido ? (
                                 <div className="flex flex-col items-center justify-center gap-0.5">
                                   <span className="font-bold text-gray-800 text-xs">
@@ -672,7 +672,7 @@ export default function Professor({
                               )}
                             </td>
 
-                            <td className="p-2.5 text-center align-middle">
+                            <td className="p-2 text-center align-middle">
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   type="button"
@@ -680,9 +680,9 @@ export default function Professor({
                                   className={`p-2 rounded-md transition-all cursor-pointer ${
                                     temPermissao
                                       ? concluido
-                                        ? "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 shadow-xs"
+                                        ? "bg-white text-gray-700 hover:bg-gray-100 border border-[#dbc8b6] shadow-xs"
                                         : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-300 shadow-xs"
-                                      : "bg-gray-100 text-gray-400 border border-gray-300 hover:bg-gray-200"
+                                      : "bg-gray-100 text-gray-400 border border-[#dbc8b6] hover:bg-gray-200"
                                   }`}
                                   title={
                                     temPermissao
@@ -712,7 +712,7 @@ export default function Professor({
                                         aluno,
                                       )
                                     }
-                                    className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-gray-300 shadow-xs"
+                                    className="p-2 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer border border-[#dbc8b6] shadow-xs"
                                     title="Excluir Resposta"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -731,9 +731,9 @@ export default function Professor({
           ) : (
             <form
               onSubmit={submeterRespostasAluno}
-              className="space-y-4 p-4 sm:p-5 lg:p-6 bg-gray-50 border border-gray-200 rounded-md"
+              className="space-y-4 p-3.5 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-[#dbc8b6]">
                 <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2 min-w-0">
                   <Award className="w-4 h-4 text-gray-500 flex-shrink-0" />
                   <span className="truncate">
@@ -745,14 +745,14 @@ export default function Professor({
                   <button
                     type="button"
                     onClick={handleLimparRespostas}
-                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer active:scale-95 flex items-center gap-1 flex-1 sm:flex-initial justify-center shadow-xs"
+                    className="px-3.5 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer active:scale-95 flex items-center gap-1 flex-1 sm:flex-initial justify-center shadow-xs border border-orange-200"
                   >
                     <Eraser className="w-3.5 h-3.5" /> Limpar
                   </button>
                   <button
                     type="button"
                     onClick={() => setAlunoAtivo(null)}
-                    className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer active:scale-95 flex-1 sm:flex-initial justify-center shadow-xs"
+                    className="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-[#dbc8b6] text-xs font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer active:scale-95 flex-1 sm:flex-initial justify-center shadow-xs"
                   >
                     Voltar
                   </button>
@@ -760,7 +760,7 @@ export default function Professor({
               </div>
 
               {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES (ESTILO GABARITO IMPRESSO) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
                   const alternativas = ["A", "B", "C", "D", "E"];
@@ -768,10 +768,10 @@ export default function Professor({
                   return (
                     <div
                       key={d.nome}
-                      className="bg-white border border-gray-200 rounded-md p-3.5 shadow-xs flex flex-col"
+                      className="bg-white border border-[#dbc8b6] rounded-md p-3 shadow-xs flex flex-col"
                     >
                       {/* Cabeçalho da Disciplina */}
-                      <div className="text-center font-bold text-gray-800 text-xs uppercase bg-gray-100 py-1.5 px-2 rounded border border-gray-200 mb-3 tracking-wider">
+                      <div className="text-center font-bold text-gray-800 text-xs uppercase bg-gray-100 py-1.5 px-2 rounded border border-[#dbc8b6] mb-2.5 tracking-wider">
                         {d.nome}{" "}
                         <span className="text-[10px] text-gray-500 font-normal">
                           ({gabaritoDisc.length}Q)
@@ -779,17 +779,17 @@ export default function Professor({
                       </div>
 
                       {/* Lista Vertical de Questões */}
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {gabaritoDisc.map((_, qIdx) => {
                           const valAtual =
                             respostasProfessor[d.nome]?.[qIdx] || "";
-                          const isAlternada = qIdx % 2 === 1; // Efeito zebrado igual ao gabarito impresso
+                          const isAlternada = qIdx % 2 === 1;
 
                           return (
                             <div
                               key={qIdx}
-                              className={`flex items-center justify-between px-2.5 py-1.5 rounded border border-gray-200 ${
-                                isAlternada ? "bg-gray-50" : "bg-white"
+                              className={`flex items-center justify-between px-2 py-1.5 rounded border border-[#dbc8b6] ${
+                                isAlternada ? "bg-amber-50/20" : "bg-white"
                               }`}
                             >
                               <span className="text-[11px] font-bold text-gray-700 font-mono tracking-wider w-8">
@@ -805,10 +805,10 @@ export default function Professor({
                                       onClick={() =>
                                         handleRespostaClick(d.nome, qIdx, alt)
                                       }
-                                      className={`w-7 h-7 rounded-full text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
+                                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs font-bold transition-all flex items-center justify-center active:scale-90 shadow-xs cursor-pointer ${
                                         selecionada
-                                          ? "bg-blue-600 text-white border-transparent scale-110 shadow-blue-500/30"
-                                          : "bg-white text-gray-600 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                                          ? "bg-blue-600 text-white border-transparent scale-105 shadow-blue-500/30"
+                                          : "bg-white text-gray-600 border border-[#dbc8b6] hover:border-blue-400 hover:bg-blue-50"
                                       }`}
                                     >
                                       {alt}

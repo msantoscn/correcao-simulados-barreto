@@ -255,18 +255,17 @@ export default function Relatorios({
       return linhaData;
     });
 
-    // CÁLCULO DINÂMICO SEGURO PARA CABER NA PÁGINA (A4 Landscape = 297mm largura total)
-    const larguraUtil = 287; // Deixando 5mm de margem em cada lado (10mm total)
-    const totalColunasNotas = disciplinasDoSimulado.length + 1; // Disciplinas + coluna Geral
+    const larguraUtil = 287;
+    const totalColunasNotas = disciplinasDoSimulado.length + 1;
 
-    // Aloca um espaço adaptativo para o nome do aluno e para as colunas de notas
-    let larguraAluno = 55;
+    // Alocando espaço ideal para o nome do aluno caber inteiro e confortável, e o restante dividido igualmente para as notas
+    let larguraAluno = 68;
     let larguraColunaNota = (larguraUtil - larguraAluno) / totalColunasNotas;
 
-    if (larguraColunaNota < 14) {
-      larguraColunaNota = 14; // Tamanho mínimo seguro para caber tudo sem cortar
+    if (larguraColunaNota < 22) {
+      larguraColunaNota = 22;
       larguraAluno = Math.max(
-        45,
+        55,
         larguraUtil - larguraColunaNota * totalColunasNotas,
       );
     }
@@ -295,8 +294,8 @@ export default function Relatorios({
       theme: "grid",
       margin: { left: 5, right: 5 },
       styles: {
-        fontSize: 5.5, // Fonte levemente menor para acomodar muitas colunas sem transbordar
-        cellPadding: { top: 1, bottom: 1, left: 0.3, right: 0.3 },
+        fontSize: 6.5,
+        cellPadding: { top: 1.2, bottom: 1.2, left: 0.5, right: 0.5 },
         halign: "center",
         valign: "middle",
         lineColor: [226, 232, 240],
@@ -306,7 +305,7 @@ export default function Relatorios({
         fillColor: [241, 245, 249],
         textColor: [30, 41, 59],
         fontStyle: "bold",
-        cellPadding: { top: 1.5, bottom: 1.5, left: 0.3, right: 0.3 },
+        cellPadding: { top: 2, bottom: 2, left: 0.5, right: 0.5 },
       },
       columnStyles: columnStylesConfig,
       alternateRowStyles: {
@@ -318,15 +317,16 @@ export default function Relatorios({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-12 max-w-7xl mx-auto w-full font-sans antialiased">
-      <div className="bg-white p-4 sm:p-6 rounded-md shadow-sm border border-gray-200">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-200">
+    <div className="space-y-3 sm:space-y-4 pb-12 max-w-7xl mx-auto w-full font-sans antialiased">
+      {/* Bloco de Filtros */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-md shadow-sm border border-[#dbc8b6]">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-[#dbc8b6]">
           <div>
-            <h2 className="text-lg font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-blue-500" /> RELATÓRIO DE{" "}
+            <h2 className="text-base font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-blue-500" /> RELATÓRIO DE{" "}
               <span className="text-red-500 font-bold">DESEMPENHO</span>
             </h2>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-1">
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">
               Filtre por bimestre, turma e simulado.
             </p>
           </div>
@@ -334,16 +334,16 @@ export default function Relatorios({
           {turmaSelecionadaId && simuladoAtual && (
             <button
               onClick={gerarPDF}
-              className="w-full sm:w-auto px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs uppercase rounded-md flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer active:scale-95"
+              className="w-full sm:w-auto px-3.5 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs uppercase rounded-md flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
             >
               <Download className="w-4 h-4" /> Exportar PDF
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-3.5">
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 tracking-widest flex items-center gap-1">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-blue-500" /> 1. Bimestre
             </label>
             <select
@@ -353,7 +353,7 @@ export default function Relatorios({
                 setTurmaSelecionadaId("");
                 setSimuladoSelecionadoId("");
               }}
-              className="w-full p-2.5 border border-gray-300 rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer"
+              className="w-full p-2.5 border border-[#dbc8b6] rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer"
             >
               <option value="">Selecione...</option>
               <option value="1">1º Bimestre</option>
@@ -364,7 +364,7 @@ export default function Relatorios({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 tracking-widest flex items-center gap-1">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-blue-500" /> 2. Turma
             </label>
             <select
@@ -374,7 +374,7 @@ export default function Relatorios({
                 setTurmaSelecionadaId(e.target.value);
                 setSimuladoSelecionadoId("");
               }}
-              className="w-full p-2.5 border border-gray-300 rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full p-2.5 border border-[#dbc8b6] rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Selecione...</option>
               {turmas.map((turma) => (
@@ -386,7 +386,7 @@ export default function Relatorios({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1.5 tracking-widest flex items-center gap-1">
+            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
               <BookOpen className="w-3.5 h-3.5 text-blue-500" /> 3. Simulado
             </label>
             <select
@@ -395,7 +395,7 @@ export default function Relatorios({
               }
               value={simuladoSelecionadoId}
               onChange={(e) => setSimuladoSelecionadoId(e.target.value)}
-              className="w-full p-2.5 border border-gray-300 rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full p-2.5 border border-[#dbc8b6] rounded-md text-xs bg-white font-bold text-gray-800 uppercase outline-none focus:border-blue-500 transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">
                 {simuladosDisponiveis.length === 0
@@ -415,9 +415,10 @@ export default function Relatorios({
         </div>
       </div>
 
+      {/* Bloco de Resultados / Tabela */}
       {turmaSelecionadaId && simuladoAtual ? (
-        <div className="bg-white p-4 sm:p-6 rounded-md shadow-sm border border-gray-200">
-          <div className="flex items-center gap-2 mb-4 text-gray-800 pb-3 border-b border-gray-200">
+        <div className="bg-white p-3.5 sm:p-4 rounded-md shadow-sm border border-[#dbc8b6]">
+          <div className="flex items-center gap-2 mb-3 text-gray-800 pb-2.5 border-b border-[#dbc8b6]">
             <User className="w-4 h-4 text-blue-500" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">
               Desempenho:{" "}
@@ -430,15 +431,15 @@ export default function Relatorios({
           </div>
 
           {!turmaAtual?.alunos || turmaAtual.alunos.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 text-xs uppercase font-bold border border-dashed border-gray-200 rounded-md">
+            <div className="p-6 text-center text-gray-400 text-xs uppercase font-bold border border-dashed border-[#dbc8b6] rounded-md bg-gray-50">
               Não existem alunos inscritos nesta turma.
             </div>
           ) : (
-            <div className="w-full overflow-x-auto rounded-md border border-gray-200">
+            <div className="w-full overflow-x-auto rounded-md border border-[#dbc8b6]">
               <table className="w-full text-left border-collapse bg-white">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="p-2.5 align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest min-w-[220px]">
+                  <tr className="bg-gray-50 border-b border-[#dbc8b6]">
+                    <th className="p-2.5 align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest min-w-[260px]">
                       Aluno
                     </th>
                     {disciplinasDoSimulado.map((disc, idx) => {
@@ -446,10 +447,10 @@ export default function Relatorios({
                       return (
                         <th
                           key={idx}
-                          className="p-1.5 text-center align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 min-w-[85px]"
+                          className="p-1.5 text-center align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-[#dbc8b6] min-w-[100px]"
                         >
                           <span
-                            className="block text-gray-800 whitespace-normal leading-tight font-bold"
+                            className="block text-gray-800 whitespace-nowrap font-bold"
                             title={disc.nome}
                           >
                             {disc.nome}
@@ -460,8 +461,8 @@ export default function Relatorios({
                         </th>
                       );
                     })}
-                    <th className="p-1.5 text-center align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-gray-200 bg-blue-50/40 min-w-[85px]">
-                      <span className="block text-blue-700 whitespace-normal leading-tight font-bold">
+                    <th className="p-1.5 text-center align-middle text-[10px] font-bold text-gray-500 uppercase tracking-widest border-l border-[#dbc8b6] bg-blue-50/40 min-w-[100px]">
+                      <span className="block text-blue-700 whitespace-nowrap font-bold">
                         Geral
                       </span>
                       <span className="text-[9px] text-gray-400 font-normal mt-0.5 block">
@@ -470,7 +471,7 @@ export default function Relatorios({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="text-xs text-gray-700 divide-y divide-gray-200">
+                <tbody className="text-xs text-gray-700 divide-y divide-[#dbc8b6]">
                   {turmaAtual.alunos.map((nomeAluno, index) => {
                     const respostasDoAluno = respostasDaTurma.filter(
                       (r) =>
@@ -483,9 +484,9 @@ export default function Relatorios({
                     return (
                       <tr
                         key={index}
-                        className="hover:bg-blue-50/30 transition-colors"
+                        className="hover:bg-amber-50/20 transition-colors"
                       >
-                        <td className="p-2.5 align-middle font-bold text-gray-800 uppercase min-w-[220px]">
+                        <td className="p-2 align-middle font-bold text-gray-800 uppercase min-w-[260px] whitespace-nowrap">
                           <span className="text-[10px] text-gray-400 font-mono mr-2">
                             {String(index + 1).padStart(2, "0")}
                           </span>
@@ -529,7 +530,7 @@ export default function Relatorios({
                             return (
                               <td
                                 key={dIdx}
-                                className="p-1.5 text-center align-middle text-gray-300 font-bold border-l border-gray-200 min-w-[85px]"
+                                className="p-1.5 text-center align-middle text-gray-300 font-bold border-l border-[#dbc8b6] min-w-[100px]"
                               >
                                 -
                               </td>
@@ -548,7 +549,7 @@ export default function Relatorios({
                           return (
                             <td
                               key={dIdx}
-                              className="p-1.5 text-center align-middle border-l border-gray-200 min-w-[85px]"
+                              className="p-1.5 text-center align-middle border-l border-[#dbc8b6] min-w-[100px]"
                             >
                               <div className="font-bold text-gray-800 text-[10px]">
                                 {acertosTotalDisc}/{totalDisc}{" "}
@@ -563,7 +564,7 @@ export default function Relatorios({
                           );
                         })}
 
-                        <td className="p-1.5 text-center align-middle border-l border-gray-200 bg-blue-50/20 min-w-[85px]">
+                        <td className="p-1.5 text-center align-middle border-l border-[#dbc8b6] bg-blue-50/20 min-w-[100px]">
                           {respostasDoAluno.length === 0 ? (
                             <span className="text-[10px] uppercase font-bold text-gray-400">
                               Pendente
@@ -601,8 +602,8 @@ export default function Relatorios({
           )}
         </div>
       ) : (
-        <div className="bg-white p-12 rounded-md border border-dashed border-gray-200 text-center shadow-sm">
-          <FileSpreadsheet className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+        <div className="bg-white p-8 rounded-md border border-dashed border-[#dbc8b6] text-center shadow-sm">
+          <FileSpreadsheet className="w-8 h-8 text-gray-300 mx-auto mb-2" />
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
             Selecione o bimestre, turma e simulado para ver os resultados.
           </p>
