@@ -6,29 +6,32 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      const usuarioSalvo = localStorage.getItem("simulatech_user");
+      const usuarioSalvo = sessionStorage.getItem("simulatech_user");
       return usuarioSalvo ? JSON.parse(usuarioSalvo) : null;
     } catch (error) {
-      console.error("Erro ao ler utilizador do localStorage:", error);
+      console.error("Erro ao ler utilizador do sessionStorage:", error);
       return null;
     }
   });
 
   const login = (dadosUsuario) => {
     setUser(dadosUsuario);
-    localStorage.setItem("simulatech_user", JSON.stringify(dadosUsuario));
+    sessionStorage.setItem("simulatech_user", JSON.stringify(dadosUsuario));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("simulatech_user");
+    sessionStorage.removeItem("simulatech_user");
   };
 
   const isProfessor = user?.cargo === "PROFESSOR";
   const isGestao =
     user?.cargo === "COORDENACAO" ||
     user?.cargo === "DIRECAO" ||
-    user?.cargo === "ADMIN";
+    user?.cargo === "ADMIN" ||
+    user?.cargo === "GESTAO" ||
+    user?.cargo === "COORDENADOR" ||
+    user?.cargo === "DIRETOR";
 
   return (
     <AuthContext.Provider
