@@ -182,26 +182,29 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-3 sm:p-4 font-sans antialiased selection:bg-blue-500 selection:text-white">
-      {/* Bloco principal otimizado e mais estreito (max-w-sm) */}
-      <div className="w-full max-w-sm bg-white rounded-md border border-[#dbc8b6] shadow-sm overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-start sm:justify-center p-3 sm:p-4 overflow-y-auto font-sans antialiased selection:bg-blue-500 selection:text-white">
+      {/* Bloco principal fluido, estreito e adaptável a qualquer altura de tela móvel */}
+      <div className="w-full max-w-sm bg-white rounded-md border border-[#dbc8b6] shadow-sm overflow-hidden my-auto">
         {/* Cabeçalho */}
-        <div className="pt-5 pb-4 px-5 text-center border-b border-[#dbc8b6] bg-gray-50">
-          <div className="inline-flex p-2.5 bg-blue-500 text-white rounded-md mb-2.5 shadow-xs">
+        <div className="pt-4 pb-3.5 px-4 sm:px-5 text-center border-b border-[#dbc8b6] bg-gray-50">
+          <div className="inline-flex p-2 bg-blue-500 text-white rounded-md mb-2 shadow-xs">
             <ClipboardCheck className="w-6 h-6" />
           </div>
-          <h1 className="text-lg font-bold uppercase text-gray-800 tracking-wide">
+          <h1 className="text-base sm:text-lg font-bold uppercase text-gray-800 tracking-wide">
             SIMULA<span className="text-red-500 font-bold">TECH</span>
           </h1>
-          <div className="mt-2">
-            <p className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+          <div className="mt-1.5">
+            <p className="text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase tracking-wider">
               Escola Municipal José Barreto de Araújo
             </p>
           </div>
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleLoginSubmit} className="p-4 sm:p-5 space-y-3">
+        <form
+          onSubmit={handleLoginSubmit}
+          className="p-3.5 sm:p-5 space-y-2.5 sm:space-y-3"
+        >
           {erro && (
             <div className="bg-red-50 text-red-500 text-xs font-medium p-2.5 rounded-md border border-red-200 text-center">
               {erro}
@@ -320,7 +323,7 @@ export default function Login() {
             {isPrimeiroAcesso ? "Cadastrar e Entrar" : "Entrar"}
           </button>
 
-          <div className="text-center pt-1.5">
+          <div className="text-center pt-1">
             {!isPrimeiroAcesso ? (
               <button
                 type="button"
@@ -344,7 +347,7 @@ export default function Login() {
         </form>
       </div>
 
-      <footer className="mt-4 text-center">
+      <footer className="mt-3 text-center shrink-0">
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
           Desenvolvido por:{" "}
           <span className="text-blue-500 font-bold">Maciel dos Santos</span>
