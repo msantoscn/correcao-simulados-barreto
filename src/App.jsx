@@ -8,12 +8,14 @@ import {
   LogOut,
   Loader2,
   UserCog,
+  BarChart3,
 } from "lucide-react";
 import Admin from "./components/Admin.jsx";
 import Turmas from "./components/Turmas.jsx";
 import Professor from "./components/Professor.jsx";
 import Relatorios from "./components/Relatorios.jsx";
 import Usuarios from "./components/Usuarios.jsx";
+import Estatisticas from "./components/Estatisticas.jsx";
 import Login from "./components/Login.jsx";
 import { useFirebase } from "./useFirebase.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
@@ -160,6 +162,14 @@ function MainContent() {
                   </NavButton>
 
                   <NavButton
+                    active={abaExibida === "estatisticas"}
+                    onClick={() => setAbaAtiva("estatisticas")}
+                    icon={BarChart3}
+                  >
+                    Estatísticas
+                  </NavButton>
+
+                  <NavButton
                     active={abaExibida === "usuarios"}
                     onClick={() => setAbaAtiva("usuarios")}
                     icon={UserCog}
@@ -216,6 +226,14 @@ function MainContent() {
             simuladosDisponiveis={simulados}
             onSalvarTurmas={salvarTurma}
             onDeletarTurma={deletarTurma}
+          />
+        )}
+
+        {abaExibida === "estatisticas" && isGestao && (
+          <Estatisticas
+            turmas={turmas}
+            simulados={simulados}
+            respostasAlunos={respostasAlunos}
           />
         )}
 

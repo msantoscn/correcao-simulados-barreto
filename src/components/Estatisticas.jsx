@@ -1,471 +1,628 @@
-import { useState, useMemo } from "react";
-import { FileSpreadsheet, Download, User, AlertCircle } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { useState } from "react";
+import {
+  BarChart3,
+  Award,
+  Users,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Percent,
+} from "lucide-react";
 
-export default function Relatorios({
+export default function Estatisticas({
   turmas = [],
   simulados = [],
   respostasAlunos = [],
 }) {
-  const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
-  const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
+  const [bimestreSelecionado, setBimestreSelecionado] = useState("3");
+  const [subAba, setSubAba] = useState("geral"); // "geral" | "turma"
 
-  // Turma e Simulado atuais memoizados para evitar cálculos redundantes
-  const turmaAtual = useMemo(
-    () => turmas.find((t) => String(t.id) === String(turmaSelecionadaId)),
-    [turmas, turmaSelecionadaId],
+  const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
+  const [simuladoFiltroTurma, setSimuladoFiltroTurma] = useState("geral"); // "geral" ou ID do simulado
+
+  // Filtra os simulados do bimestre escolhido
+  const simuladosDoBimestre = simulados.filter(
+    (s) => String(s.bimestre) === String(bimestreSelecionado) || !s.bimestre,
+  );
+  const simuladoIdsDoBimestre = simuladosDoBimestre.map((s) => String(s.id));
+
+  // Respostas do bimestre selecionado
+  const respostasFiltradas = respostasAlunos.filter((r) => {
+    const simId = String(r.simuladoId || r.idSimulado || "");
+    return simuladoIdsDoBimestre.includes(simId);
+  });
+
+  const turmaAtiva = turmas.find(
+    (t) => String(t.id) === String(turmaSelecionadaId),
   );
 
-  const simuladoAtual = useMemo(() => {
-    return (
-      simulados.find((s) => String(s.id) === String(simuladoSelecionadoId)) ||
-      simulados[0]
+  // Simulados vinculados à turma ativa no bimestre atual
+  const idsSimuladosVinculadosTurma =
+    turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
+  const simuladosVinculadosObj = simuladosDoBimestre.filter((s) =>
+    idsSimuladosVinculadosTurma.includes(s.id),
+  );
+
+  // ==========================================
+  // 1. DADOS DA ABA GERAL
+  // ==========================================
+  let melhorAlunoGeral = null;
+  respostasFiltradas.forEach((r) => {
+    const percentual = Number(r.percentualGeral || 0);
+    if (!melhorAlunoGeral || percentual > melhorAlunoGeral.percentual) {
+      melhorAlunoGeral = {
+        nome: r.nomeAluno || r.aluno,
+        turma: r.turma,
+        percentual,
+        nota: r.notaFinal || "0.0",
+      };
+    }
+  });
+
+  const estatisticasPorTurmaGeral = turmas.map((t) => {
+    const respTurma = respostasFiltradas.filter(
+      (r) =>
+        String(r.turmaId) === String(t.id) ||
+        String(r.turma).trim().toUpperCase() ===
+          String(t.nome).trim().toUpperCase(),
     );
-  }, [simulados, simuladoSelecionadoId]);
 
-  // Normalização das disciplinas do simulado
-  const disciplinasDoSimulado = useMemo(() => {
-    if (!simuladoAtual?.disciplinas) return [];
-    if (Array.isArray(simuladoAtual.disciplinas)) {
-      return simuladoAtual.disciplinas;
+    if (respTurma.length === 0) {
+      return {
+        nome: t.nome,
+        mediaAcertos: 0,
+        mediaErros: 100,
+        totalRespostas: 0,
+      };
     }
-    if (typeof simuladoAtual.disciplinas === "object") {
-      return Object.entries(simuladoAtual.disciplinas).map(([nome, dados]) => ({
-        nome,
-        ...dados,
-      }));
-    }
-    return [];
-  }, [simuladoAtual]);
 
-  // Filtragem das respostas da turma
-  const respostasDaTurma = useMemo(() => {
-    if (!turmaSelecionadaId || !turmaAtual) return [];
-
-    return respostasAlunos.filter((resp) => {
-      const matchTurma =
-        String(resp.turmaId) === String(turmaSelecionadaId) ||
-        String(resp.turma || "")
-          .trim()
-          .toUpperCase() ===
-          String(turmaAtual.nome || "")
-            .trim()
-            .toUpperCase();
-
-      const matchSimulado = simuladoSelecionadoId
-        ? String(resp.simuladoId) === String(simuladoSelecionadoId) ||
-          String(resp.simuladoNome || resp.simulado || "")
-            .trim()
-            .toUpperCase() ===
-            String(simuladoAtual?.nome || simuladoAtual?.titulo || "")
-              .trim()
-              .toUpperCase()
-        : true;
-
-      return matchTurma && matchSimulado;
-    });
-  }, [
-    respostasAlunos,
-    turmaSelecionadaId,
-    turmaAtual,
-    simuladoSelecionadoId,
-    simuladoAtual,
-  ]);
-
-  const totalQuestoesSimulado = useMemo(() => {
-    return disciplinasDoSimulado.reduce(
-      (acc, d) =>
-        acc +
-        (d.gabarito?.length || d.questoes?.length || d.totalQuestoes || 0),
+    const somaPercentual = respTurma.reduce(
+      (acc, r) => acc + Number(r.percentualGeral || 0),
       0,
     );
-  }, [disciplinasDoSimulado]);
+    const mediaAcertos = Math.round(somaPercentual / respTurma.length);
+    const mediaErros = 100 - mediaAcertos;
 
-  // Função auxiliar para obter a quantidade de questões de uma disciplina
-  const getQtdQuestao = (disc) =>
-    disc.gabarito?.length ||
-    disc.questoes?.length ||
-    disc.totalQuestoes ||
-    disc.qtd ||
-    0;
+    return {
+      nome: t.nome,
+      mediaAcertos,
+      mediaErros,
+      totalRespostas: respTurma.length,
+    };
+  });
 
-  // Função para gerar e descarregar o PDF
-  const gerarPDF = () => {
-    if (!turmaAtual) return;
+  let turmaDestaqueGeral = null;
+  estatisticasPorTurmaGeral.forEach((et) => {
+    if (
+      et.totalRespostas > 0 &&
+      (!turmaDestaqueGeral || et.mediaAcertos > turmaDestaqueGeral.mediaAcertos)
+    ) {
+      turmaDestaqueGeral = et;
+    }
+  });
 
-    const doc = new jsPDF("landscape");
-    const nomeSimulado =
-      simuladoAtual?.nome || simuladoAtual?.titulo || "Geral";
+  // Cálculo da Média Geral de Aproveitamento da Escola no Bimestre
+  const somaGeralEscola = respostasFiltradas.reduce(
+    (acc, r) => acc + Number(r.percentualGeral || 0),
+    0,
+  );
+  const mediaGeralEscola =
+    respostasFiltradas.length > 0
+      ? Math.round(somaGeralEscola / respostasFiltradas.length)
+      : 0;
 
-    // Cabeçalho do PDF
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 41, 59);
-    doc.text("RESUMO DE DESEMPENHO DA TURMA", 14, 15);
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 116, 139);
-    doc.text(
-      `Turma: ${turmaAtual.nome}   |   Simulado: ${nomeSimulado}`,
-      14,
-      21,
-    );
-
-    // Colunas
-    const colunas = [
-      { header: "ALUNO", dataKey: "aluno" },
-      ...disciplinasDoSimulado.map((disc) => {
-        const qtd = getQtdQuestao(disc);
-        return {
-          header: `${String(disc.nome).toUpperCase()}\n(${qtd} Q)`,
-          dataKey: disc.nome,
-        };
-      }),
-      {
-        header: `GERAL (TOTAL)\n(${totalQuestoesSimulado} Q)`,
-        dataKey: "geral",
-      },
-    ];
-
-    // Linhas
-    const linhas = turmaAtual.alunos.map((nomeAluno, index) => {
-      const linhaData = {};
-      const numAluno = String(index + 1).padStart(2, "0");
-      linhaData.aluno = `${numAluno}  ${String(nomeAluno).toUpperCase()}`;
-
-      const respostaAluno = respostasDaTurma.find(
+  // ==========================================
+  // 2. DADOS DA ABA POR TURMA
+  // ==========================================
+  let respostasDaTurma = turmaAtiva
+    ? respostasFiltradas.filter(
         (r) =>
-          String(r.nomeAluno || r.aluno || "")
-            .trim()
-            .toUpperCase() === String(nomeAluno).trim().toUpperCase(),
-      );
+          String(r.turmaId) === String(turmaAtiva.id) ||
+          String(r.turma).trim().toUpperCase() ===
+            String(turmaAtiva.nome).trim().toUpperCase(),
+      )
+    : [];
 
-      disciplinasDoSimulado.forEach((disc) => {
-        let resultadoDisc = null;
-        if (respostaAluno) {
-          const container =
-            respostaAluno.detalhes ||
-            respostaAluno.disciplinas ||
-            respostaAluno;
-          if (container && typeof container === "object") {
-            const chave = Object.keys(container).find(
-              (k) =>
-                k.trim().toUpperCase() ===
-                String(disc.nome).trim().toUpperCase(),
-            );
-            if (chave) resultadoDisc = container[chave];
+  if (simuladoFiltroTurma !== "geral") {
+    respostasDaTurma = respostasDaTurma.filter(
+      (r) =>
+        String(r.simuladoId || r.idSimulado) === String(simuladoFiltroTurma),
+    );
+  }
+
+  // Estatísticas de Disciplinas proporcionais
+  const disciplinasStats = {};
+  respostasDaTurma.forEach((r) => {
+    if (r.detalhes) {
+      Object.entries(r.detalhes).forEach(([discNome, info]) => {
+        if (info) {
+          if (!disciplinasStats[discNome]) {
+            disciplinasStats[discNome] = {
+              acertosTotais: 0,
+              questoesTotais: 0,
+            };
           }
-        }
-
-        if (!respostaAluno || !resultadoDisc) {
-          linhaData[disc.nome] = "-";
-        } else {
-          const qtd = getQtdQuestao(disc);
-          const acertos = resultadoDisc.acertos ?? 0;
-          const total = resultadoDisc.total ?? qtd;
-          const percentual =
-            resultadoDisc.percentagem ??
-            resultadoDisc.percentual ??
-            (total > 0 ? Math.round((acertos / total) * 100) : 0);
-          const nota = Number(resultadoDisc.nota ?? 0).toFixed(1);
-
-          linhaData[disc.nome] =
-            `${acertos}/${total} (${percentual}%)\nNOTA: ${nota}`;
+          disciplinasStats[discNome].acertosTotais += Number(info.acertos || 0);
+          disciplinasStats[discNome].questoesTotais += Number(info.total || 0);
         }
       });
+    }
+  });
 
-      if (!respostaAluno || respostaAluno.totalAcertos === undefined) {
-        linhaData.geral = "PENDENTE";
-      } else {
-        linhaData.geral = `${respostaAluno.totalAcertos}/${respostaAluno.totalQuestoes}\n(${respostaAluno.percentualGeral}%)`;
-      }
+  const disciplinasGrafico = Object.entries(disciplinasStats).map(
+    ([discNome, stats]) => {
+      const acertos =
+        stats.questoesTotais > 0
+          ? Math.round((stats.acertosTotais / stats.questoesTotais) * 100)
+          : 0;
+      return {
+        nome: discNome,
+        acertos,
+        erros: 100 - acertos,
+      };
+    },
+  );
 
-      return linhaData;
+  const somaTurma = respostasDaTurma.reduce(
+    (acc, r) => acc + Number(r.percentualGeral || 0),
+    0,
+  );
+  const mediaAcertosTurma =
+    respostasDaTurma.length > 0
+      ? Math.round(somaTurma / respostasDaTurma.length)
+      : 0;
+  const mediaErrosTurma = 100 - mediaAcertosTurma;
+
+  // Função para calcular evolução em relação a bimestres anteriores
+  const calcularEvolucaoAluno = (nomeAluno, bimestreAtual, percentualAtual) => {
+    const bimestreAntNum = Number(bimestreAtual) - 1;
+    if (bimestreAntNum < 1)
+      return { tipo: "neutro", texto: "Sem base anterior" };
+
+    const simuladosBimAnt = simulados.filter(
+      (s) => String(s.bimestre) === String(bimestreAntNum),
+    );
+    const idsBimAnt = simuladosBimAnt.map((s) => String(s.id));
+
+    const respostasAntigas = respostasAlunos.filter((r) => {
+      const simId = String(r.simuladoId || r.idSimulado || "");
+      const mesmoAluno =
+        String(r.nomeAluno || r.aluno)
+          .trim()
+          .toUpperCase() === String(nomeAluno).trim().toUpperCase();
+      return idsBimAnt.includes(simId) && mesmoAluno;
     });
 
-    autoTable(doc, {
-      startY: 25,
-      columns: colunas,
-      body: linhas,
-      theme: "grid",
-      styles: {
-        fontSize: 8,
-        cellPadding: { top: 2, bottom: 2, left: 3, right: 3 },
-        halign: "center",
-        valign: "middle",
-        lineColor: [226, 232, 240],
-        lineWidth: 0.1,
-      },
-      headStyles: {
-        fillColor: [241, 245, 249],
-        textColor: [30, 41, 59],
-        fontStyle: "bold",
-        cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
-      },
-      columnStyles: {
-        aluno: { halign: "left", fontStyle: "bold", textColor: [51, 65, 85] },
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
-      },
-    });
+    if (respostasAntigas.length === 0)
+      return { tipo: "neutro", texto: "Sem dados anteriores" };
 
-    doc.save(`Relatório de Notas ${turmaAtual.nome}.pdf`);
+    const somaAnt = respostasAntigas.reduce(
+      (acc, r) => acc + Number(r.percentualGeral || 0),
+      0,
+    );
+    const mediaAnt = somaAnt / respostasAntigas.length;
+
+    const diferenca = percentualAtual - mediaAnt;
+    if (diferenca > 2)
+      return {
+        tipo: "melhora",
+        texto: `+${Math.round(diferenca)}% vs ${bimestreAntNum}º Bim`,
+      };
+    if (diferenca < -2)
+      return {
+        tipo: "piora",
+        texto: `${Math.round(diferenca)}% vs ${bimestreAntNum}º Bim`,
+      };
+    return { tipo: "neutro", texto: `Estável vs ${bimestreAntNum}º Bim` };
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
-      {/* Cabeçalho e Filtros */}
-      <div className="bg-white p-6 rounded-xl shadow-xs border border-gray-100">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-gray-100">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2.5">
-              <FileSpreadsheet className="w-6 h-6 text-blue-600" /> Relatório de
-              Desempenho
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              Visualize o rendimento detalhado por turma e exporte os dados
-              consolidados.
-            </p>
+    <div className="bg-white rounded-md shadow-sm p-3 sm:p-5 border border-[#dbc8b6] w-full max-w-7xl mx-auto font-sans antialiased space-y-4">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between pb-3 border-b border-[#dbc8b6] gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="p-1.5 bg-blue-500 text-white rounded-md flex-shrink-0">
+            <BarChart3 className="w-5 h-5" />
           </div>
+          <h2 className="text-sm sm:text-base font-bold tracking-wide uppercase text-gray-800 truncate">
+            ESTATÍSTICAS E{" "}
+            <span className="text-red-500 font-bold">DESEMPENHO</span>
+          </h2>
+        </div>
+      </div>
 
-          {turmaSelecionadaId && (
-            <button
-              onClick={gerarPDF}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow cursor-pointer active:scale-95"
-            >
-              <Download className="w-4 h-4" /> Descarregar PDF
-            </button>
-          )}
+      {/* FILTRO DE BIMESTRE E AS 2 ABAS */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]">
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-blue-500" /> Bimestre:
+          </label>
+          <select
+            value={bimestreSelecionado}
+            onChange={(e) => setBimestreSelecionado(e.target.value)}
+            className="p-1.5 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
+          >
+            <option value="1">1º Bimestre</option>
+            <option value="2">2º Bimestre</option>
+            <option value="3">3º Bimestre</option>
+            <option value="4">4º Bimestre</option>
+          </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
-              1. Selecionar Turma
-            </label>
-            {turmas.length === 0 ? (
-              <div className="flex items-center gap-2 text-sm text-amber-700 font-medium bg-amber-50 p-3.5 rounded-lg border border-amber-200">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Nenhuma turma registada.</span>
+        <div className="grid grid-cols-2 gap-1 bg-white p-1 rounded-md border border-[#dbc8b6] shadow-xs w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setSubAba("geral")}
+            style={{
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
+            className={`px-4 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              subAba === "geral"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Geral
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubAba("turma")}
+            style={{
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
+            className={`px-4 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              subAba === "turma"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            Por Turma
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================
+          ABA 1: GERAL
+          ========================================================= */}
+      {subAba === "geral" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                  Destaque Individual Geral
+                </span>
+                <Award className="w-5 h-5 text-blue-500" />
               </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {turmas.map((turma) => (
-                  <button
-                    key={turma.id}
-                    onClick={() => setTurmaSelecionadaId(String(turma.id))}
-                    className={`px-4 py-2 text-xs font-bold uppercase rounded-lg transition-all cursor-pointer border ${
-                      String(turmaSelecionadaId) === String(turma.id)
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-                    }`}
-                  >
-                    {turma.nome}
-                  </button>
-                ))}
+              {melhorAlunoGeral ? (
+                <div>
+                  <h4 className="font-bold text-gray-900 text-sm uppercase truncate mb-0.5">
+                    {melhorAlunoGeral.nome}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 uppercase font-semibold">
+                    Turma:{" "}
+                    <span className="text-gray-800">
+                      {melhorAlunoGeral.turma}
+                    </span>
+                  </p>
+                  <div className="mt-2 pt-2 border-t border-blue-100 flex items-center justify-between text-xs font-bold">
+                    <span className="text-blue-600">
+                      Aproveitamento: {melhorAlunoGeral.percentual}%
+                    </span>
+                    <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px]">
+                      Nota: {melhorAlunoGeral.nota}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic py-3">
+                  Sem dados registados.
+                </p>
+              )}
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                  Turma com Melhor Média
+                </span>
+                <TrendingUp className="w-5 h-5 text-emerald-500" />
               </div>
-            )}
+              {turmaDestaqueGeral ? (
+                <div>
+                  <h4 className="font-bold text-gray-900 text-sm uppercase truncate mb-0.5">
+                    {turmaDestaqueGeral.nome}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 uppercase font-semibold">
+                    Total de Provas:{" "}
+                    <span className="text-gray-800">
+                      {turmaDestaqueGeral.totalRespostas}
+                    </span>
+                  </p>
+                  <div className="mt-2 pt-2 border-t border-emerald-100 flex items-center justify-between text-xs font-bold">
+                    <span className="text-emerald-700">Média de Acertos</span>
+                    <span className="bg-emerald-600 text-white px-2 py-0.5 rounded text-xs">
+                      {turmaDestaqueGeral.mediaAcertos}%
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic py-3">
+                  Sem dados registados.
+                </p>
+              )}
+            </div>
+
+            {/* Novo Indicador Importante: Aproveitamento Geral Médio da Escola */}
+            <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
+                  Aproveitamento Geral Médio
+                </span>
+                <Percent className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h4 className="font-black text-gray-900 text-xl tracking-tight mb-0.5">
+                  {mediaGeralEscola}%{" "}
+                  <span className="text-xs font-bold text-gray-500 uppercase">
+                    Acertos
+                  </span>
+                </h4>
+                <p className="text-[10px] text-gray-500 uppercase font-semibold mt-1">
+                  Base:{" "}
+                  <span className="text-gray-800">
+                    {respostasFiltradas.length} provas avaliadas
+                  </span>
+                </p>
+              </div>
+              <div className="mt-2 pt-2 border-t border-indigo-100 text-[10px] font-bold text-indigo-900 uppercase">
+                Consolidado Escolar
+              </div>
+            </div>
           </div>
 
-          {turmaSelecionadaId && simulados.length > 0 && (
+          <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-gray-50 space-y-3">
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-500" /> Média por turma
+              (%)
+            </h3>
+            <div className="space-y-3 bg-white p-3 rounded-md border border-[#dbc8b6]">
+              {estatisticasPorTurmaGeral.map((et) => (
+                <div key={et.nome} className="space-y-1">
+                  <div className="flex justify-between text-xs font-bold uppercase text-gray-800">
+                    <span>{et.nome}</span>
+                  </div>
+                  <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden flex border border-[#dbc8b6] relative">
+                    <div
+                      style={{ width: `${et.mediaAcertos}%` }}
+                      className="bg-emerald-500 h-full transition-all duration-500 relative"
+                    >
+                      <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-black text-black">
+                        {et.mediaAcertos}%
+                      </span>
+                    </div>
+                    <div
+                      style={{ width: `${et.mediaErros}%` }}
+                      className="bg-red-400 h-full transition-all duration-500 relative"
+                    >
+                      <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-black text-black">
+                        {et.mediaErros}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          ABA 2: POR TURMA
+          ========================================================= */}
+      {subAba === "turma" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]">
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wider">
-                2. Selecionar Simulado
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">
+                Turma:
               </label>
               <select
-                value={simuladoSelecionadoId || simuladoAtual?.id || ""}
-                onChange={(e) => setSimuladoSelecionadoId(e.target.value)}
-                className="w-full p-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 font-bold text-gray-700 uppercase outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs cursor-pointer"
+                value={turmaSelecionadaId}
+                onChange={(e) => {
+                  setTurmaSelecionadaId(e.target.value);
+                  setSimuladoFiltroTurma("geral");
+                }}
+                className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
               >
-                {simulados.map((sim) => (
-                  <option key={sim.id} value={sim.id}>
-                    {sim.nome || sim.titulo || "Simulado"}
+                <option value="">Escolha a turma...</option>
+                {turmas.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nome}
                   </option>
                 ))}
               </select>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Tabela de Visualização na Tela */}
-      {turmaSelecionadaId ? (
-        <div className="bg-white p-6 rounded-xl shadow-xs border border-gray-100 overflow-hidden">
-          <div className="flex items-center gap-2.5 mb-4 text-gray-800">
-            <User className="w-5 h-5 text-blue-600" />
-            <h3 className="text-sm font-bold uppercase tracking-wide">
-              Resumo de Desempenho da Turma:{" "}
-              <span className="text-blue-600">{turmaAtual?.nome}</span>
-            </h3>
+            <div>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">
+                Simulados:
+              </label>
+              <select
+                value={simuladoFiltroTurma}
+                onChange={(e) => setSimuladoFiltroTurma(e.target.value)}
+                disabled={!turmaAtiva}
+                className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer disabled:bg-gray-100"
+              >
+                <option value="geral">Geral</option>
+                {simuladosVinculadosObj.map((sim) => (
+                  <option key={sim.id} value={sim.id}>
+                    {sim.nome || sim.titulo}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {!turmaAtual?.alunos || turmaAtual.alunos.length === 0 ? (
-            <div className="p-12 text-center text-gray-400 text-xs uppercase font-bold border border-dashed border-gray-200 rounded-lg">
-              Não existem alunos inscritos nesta turma.
+          {!turmaAtiva ? (
+            <div className="text-center py-8 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md bg-gray-50">
+              Selecione uma turma acima para analisar o desempenho detalhado.
             </div>
           ) : (
-            <div className="w-full overflow-x-auto rounded-lg border border-gray-200">
-              <table className="w-full text-left border-collapse bg-white whitespace-nowrap">
-                <thead>
-                  <tr className="bg-gray-50/75 border-b border-gray-200">
-                    <th className="p-3.5 align-middle w-1/4 text-[11px] font-bold text-gray-700 uppercase tracking-wider">
-                      Aluno
-                    </th>
-                    {disciplinasDoSimulado.map((disc, idx) => {
-                      const qtdQ = getQtdQuestao(disc);
+            <div className="space-y-4">
+              {/* Média Proporcional (Nome da Turma removido do título) */}
+              <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-gray-50 space-y-2">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest">
+                  Média proporcional
+                </h3>
+                <div className="bg-white p-3 rounded-md border border-[#dbc8b6] space-y-2">
+                  <div className="w-full h-5 bg-gray-100 rounded-full overflow-hidden flex border border-[#dbc8b6] relative">
+                    <div
+                      style={{ width: `${mediaAcertosTurma}%` }}
+                      className="bg-emerald-500 h-full transition-all relative"
+                    >
+                      <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] font-black text-black">
+                        {mediaAcertosTurma}%
+                      </span>
+                    </div>
+                    <div
+                      style={{ width: `${mediaErrosTurma}%` }}
+                      className="bg-red-400 h-full transition-all relative"
+                    >
+                      <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] font-black text-black">
+                        {mediaErrosTurma}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1. MÉDIA DE DESEMPENHO DOS ALUNOS */}
+              <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-white space-y-3">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-500" /> Média de
+                  desempenho dos alunos
+                </h3>
+
+                {respostasDaTurma.length === 0 ? (
+                  <div className="text-center py-6 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md">
+                    Nenhum lançamento encontrado para os filtros selecionados.
+                  </div>
+                ) : (
+                  <div className="space-y-3 pt-1">
+                    {respostasDaTurma.map((resp, i) => {
+                      const perc = Number(resp.percentualGeral || 0);
+                      const erro = 100 - perc;
+                      const evolucao = calcularEvolucaoAluno(
+                        resp.nomeAluno || resp.aluno,
+                        bimestreSelecionado,
+                        perc,
+                      );
+
                       return (
-                        <th
-                          key={idx}
-                          className="p-3 text-center align-middle text-[11px] font-bold text-gray-700 uppercase tracking-wider border-l border-gray-200"
-                        >
-                          <span
-                            className="block truncate max-w-[140px]"
-                            title={disc.nome}
-                          >
-                            {disc.nome}
-                          </span>
-                          <span className="text-[10px] text-gray-400 font-normal mt-0.5 block">
-                            ({qtdQ} Q)
-                          </span>
-                        </th>
+                        <div key={i} className="space-y-1">
+                          <div className="flex justify-between items-center text-xs font-bold uppercase text-gray-800">
+                            <span
+                              className="truncate"
+                              title={resp.nomeAluno || resp.aluno}
+                            >
+                              {resp.nomeAluno || resp.aluno}
+                            </span>
+                            <div className="flex items-center gap-2 text-[10px]">
+                              <span className="text-emerald-700 font-bold">
+                                Nota: {resp.notaFinal || "0.0"}
+                              </span>
+                              {evolucao.tipo === "melhora" && (
+                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                  {evolucao.texto}
+                                </span>
+                              )}
+                              {evolucao.tipo === "piora" && (
+                                <span className="text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                                  {evolucao.texto}
+                                </span>
+                              )}
+                              {evolucao.tipo === "neutro" && (
+                                <span className="text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                                  {evolucao.texto}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden flex border border-[#dbc8b6] relative">
+                            <div
+                              style={{ width: `${perc}%` }}
+                              className="bg-emerald-500 h-full relative"
+                            >
+                              <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-black text-black">
+                                {perc}%
+                              </span>
+                            </div>
+                            <div
+                              style={{ width: `${erro}%` }}
+                              className="bg-red-400 h-full relative"
+                            >
+                              <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-black text-black">
+                                {erro}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
-                    <th className="p-3 text-center align-middle text-[11px] font-bold text-gray-700 uppercase tracking-wider border-l border-gray-200 min-w-[110px]">
-                      <span className="block">Geral (Total)</span>
-                      <span className="text-[10px] text-gray-400 font-normal mt-0.5 block">
-                        ({totalQuestoesSimulado} Q)
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs text-gray-700 divide-y divide-gray-200">
-                  {turmaAtual.alunos.map((nomeAluno, index) => {
-                    const respostaAluno = respostasDaTurma.find(
-                      (r) =>
-                        String(r.nomeAluno || r.aluno || "")
-                          .trim()
-                          .toUpperCase() ===
-                        String(nomeAluno).trim().toUpperCase(),
-                    );
+                  </div>
+                )}
+              </div>
 
-                    return (
-                      <tr
-                        key={index}
-                        className="hover:bg-blue-50/30 transition-colors"
-                      >
-                        <td className="p-3.5 align-middle font-medium">
-                          <span className="text-[10px] text-gray-400 font-bold mr-2.5">
-                            {String(index + 1).padStart(2, "0")}
+              {/* 2. MÉDIA POR DISCIPLINA */}
+              <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-white space-y-3">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest">
+                  Média por disciplina
+                </h3>
+                {disciplinasGrafico.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic text-center py-4">
+                    Sem dados de disciplinas disponíveis.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {disciplinasGrafico.map((disc) => (
+                      <div key={disc.nome} className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold uppercase text-gray-800">
+                          <span className="truncate" title={disc.nome}>
+                            {disc.nome}
                           </span>
-                          <span className="font-bold text-gray-800 uppercase">
-                            {nomeAluno}
-                          </span>
-                        </td>
-
-                        {disciplinasDoSimulado.map((disc, dIdx) => {
-                          const qtdQ = getQtdQuestao(disc);
-                          let resultadoDisc = null;
-
-                          if (respostaAluno) {
-                            const containerDisciplinas =
-                              respostaAluno.detalhes ||
-                              respostaAluno.disciplinas ||
-                              respostaAluno;
-
-                            if (
-                              containerDisciplinas &&
-                              typeof containerDisciplinas === "object"
-                            ) {
-                              const chaveEncontrada = Object.keys(
-                                containerDisciplinas,
-                              ).find(
-                                (k) =>
-                                  k.trim().toUpperCase() ===
-                                  String(disc.nome).trim().toUpperCase(),
-                              );
-                              if (chaveEncontrada) {
-                                resultadoDisc =
-                                  containerDisciplinas[chaveEncontrada];
-                              }
-                            }
-                          }
-
-                          if (!respostaAluno || !resultadoDisc) {
-                            return (
-                              <td
-                                key={dIdx}
-                                className="p-3 text-center align-middle text-gray-300 font-medium border-l border-gray-200"
-                              >
-                                -
-                              </td>
-                            );
-                          }
-
-                          const acertos = resultadoDisc.acertos ?? 0;
-                          const total = resultadoDisc.total ?? qtdQ;
-                          const percentual =
-                            resultadoDisc.percentagem ??
-                            resultadoDisc.percentual ??
-                            (total > 0
-                              ? Math.round((acertos / total) * 100)
-                              : 0);
-                          const nota = Number(resultadoDisc.nota ?? 0).toFixed(
-                            1,
-                          );
-
-                          return (
-                            <td
-                              key={dIdx}
-                              className="p-3 text-center align-middle border-l border-gray-200"
-                            >
-                              <div className="font-bold text-gray-800 text-[11px]">
-                                {acertos}/{total}{" "}
-                                <span className="text-blue-600 ml-0.5 font-semibold">
-                                  ({percentual}%)
-                                </span>
-                              </div>
-                              <div className="mt-1 inline-block px-1.5 py-0.5 text-emerald-600 border border-emerald-200 bg-emerald-50/50 rounded text-[10px] font-bold tracking-wide">
-                                NOTA: {nota}
-                              </div>
-                            </td>
-                          );
-                        })}
-
-                        <td className="p-3 text-center align-middle border-l border-gray-200 bg-gray-50/50">
-                          {!respostaAluno ||
-                          respostaAluno.totalAcertos === undefined ? (
-                            <span className="text-[10px] uppercase font-bold text-gray-400">
-                              Pendente
+                        </div>
+                        <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden flex border border-[#dbc8b6] relative">
+                          <div
+                            style={{ width: `${disc.acertos}%` }}
+                            className="bg-emerald-500 h-full transition-all relative"
+                            title={`Acertos: ${disc.acertos}%`}
+                          >
+                            <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] font-black text-black">
+                              {disc.acertos}%
                             </span>
-                          ) : (
-                            <div>
-                              <div className="font-bold text-gray-800 text-[11px]">
-                                {respostaAluno.totalAcertos}/
-                                {respostaAluno.totalQuestoes}
-                              </div>
-                              <div className="text-[11px] text-blue-600 font-semibold mt-0.5">
-                                ({respostaAluno.percentualGeral}%)
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </div>
+                          <div
+                            style={{ width: `${disc.erros}%` }}
+                            className="bg-red-400 h-full transition-all relative"
+                            title={`Erros: ${disc.erros}%`}
+                          >
+                            <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] font-black text-black">
+                              {disc.erros}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-      ) : (
-        <div className="bg-white p-16 rounded-xl border border-dashed border-gray-200 text-center shadow-xs">
-          <FileSpreadsheet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-            Selecione uma turma para visualizar os resultados.
-          </p>
         </div>
       )}
     </div>
