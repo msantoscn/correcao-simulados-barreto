@@ -5,8 +5,6 @@ import {
   Users,
   Calendar,
   TrendingUp,
-  TrendingDown,
-  Minus,
   Percent,
 } from "lucide-react";
 
