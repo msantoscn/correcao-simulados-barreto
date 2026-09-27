@@ -172,11 +172,10 @@ export default function Estatisticas({
       : 0;
   const mediaErrosTurma = 100 - mediaAcertosTurma;
 
-  // Função para calcular evolução em relação a bimestres anteriores
+  // Função para calcular evolução (retorna null se não houver dados anteriores para ocultar o aviso)
   const calcularEvolucaoAluno = (nomeAluno, bimestreAtual, percentualAtual) => {
     const bimestreAntNum = Number(bimestreAtual) - 1;
-    if (bimestreAntNum < 1)
-      return { tipo: "neutro", texto: "Sem base anterior" };
+    if (bimestreAntNum < 1) return null;
 
     const simuladosBimAnt = simulados.filter(
       (s) => String(s.bimestre) === String(bimestreAntNum),
@@ -192,8 +191,7 @@ export default function Estatisticas({
       return idsBimAnt.includes(simId) && mesmoAluno;
     });
 
-    if (respostasAntigas.length === 0)
-      return { tipo: "neutro", texto: "Sem dados anteriores" };
+    if (respostasAntigas.length === 0) return null;
 
     const somaAnt = respostasAntigas.reduce(
       (acc, r) => acc + Number(r.percentualGeral || 0),
@@ -354,7 +352,6 @@ export default function Estatisticas({
               )}
             </div>
 
-            {/* Novo Indicador Importante: Aproveitamento Geral Médio da Escola */}
             <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
@@ -471,7 +468,7 @@ export default function Estatisticas({
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Média Proporcional (Nome da Turma removido do título) */}
+              {/* Média Proporcional */}
               <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-gray-50 space-y-2">
                 <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest">
                   Média proporcional
@@ -530,23 +527,24 @@ export default function Estatisticas({
                               {resp.nomeAluno || resp.aluno}
                             </span>
                             <div className="flex items-center gap-2 text-[10px]">
-                              <span className="text-emerald-700 font-bold">
-                                Nota: {resp.notaFinal || "0.0"}
-                              </span>
-                              {evolucao.tipo === "melhora" && (
-                                <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                  {evolucao.texto}
-                                </span>
-                              )}
-                              {evolucao.tipo === "piora" && (
-                                <span className="text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
-                                  {evolucao.texto}
-                                </span>
-                              )}
-                              {evolucao.tipo === "neutro" && (
-                                <span className="text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                                  {evolucao.texto}
-                                </span>
+                              {evolucao && (
+                                <>
+                                  {evolucao.tipo === "melhora" && (
+                                    <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                      {evolucao.texto}
+                                    </span>
+                                  )}
+                                  {evolucao.tipo === "piora" && (
+                                    <span className="text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                                      {evolucao.texto}
+                                    </span>
+                                  )}
+                                  {evolucao.tipo === "neutro" && (
+                                    <span className="text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                                      {evolucao.texto}
+                                    </span>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
