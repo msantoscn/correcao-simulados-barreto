@@ -33,6 +33,9 @@ export default function Turmas({
   const [mostrarAddAlunos, setMostrarAddAlunos] = useState(false);
   const [buscaAluno, setBuscaAluno] = useState("");
 
+  // Estado para Filtro de Simulados Disponíveis
+  const [buscaSimuladoDisponivel, setBuscaSimuladoDisponivel] = useState("");
+
   // Estado para Edição de Aluno
   const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
   const [nomeAlunoEditado, setNomeAlunoEditado] = useState("");
@@ -332,6 +335,14 @@ export default function Turmas({
     (sim) => String(sim.bimestre) === String(bimestre) || !sim.bimestre,
   );
 
+  // Filtragem dos disponíveis com base na barra de busca adicionada
+  const simuladosDisponiveisFiltrados = simuladosDesteBimestre
+    .filter((sim) => !idsVinculadosNoBimestre.includes(sim.id))
+    .filter((sim) => {
+      const nomeSim = String(sim.nome || sim.titulo || "").toUpperCase();
+      return nomeSim.includes(buscaSimuladoDisponivel.trim().toUpperCase());
+    });
+
   const formatarNomeTurmaBicolor = (nome) => {
     if (!nome) return "";
     const partes = nome.split("-");
@@ -484,6 +495,7 @@ export default function Turmas({
                     onClick={() => {
                       setTurmaSelecionadaId(turma.id);
                       setModoVisualizacao("simulados");
+                      setBuscaSimuladoDisponivel(""); // Limpa o filtro ao trocar de turma/aba
                       cancelarEdicaoAluno();
                       if (window.innerWidth < 1024) {
                         window.scrollTo({
@@ -593,7 +605,10 @@ export default function Turmas({
                     {["1", "2", "3", "4"].map((b) => (
                       <button
                         key={b}
-                        onClick={() => setBimestre(b)}
+                        onClick={() => {
+                          setBimestre(b);
+                          setBuscaSimuladoDisponivel("");
+                        }}
                         className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
                           bimestre === b
                             ? "bg-blue-500 text-white shadow-sm"
@@ -652,48 +667,57 @@ export default function Turmas({
 
                   {/* Disponíveis para Adicionar */}
                   <div className="bg-gray-50 p-3 rounded-md border border-[#dbc8b6] shadow-sm flex flex-col">
-                    <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-2.5 border-b border-[#dbc8b6] pb-1.5">
+                    <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-2 border-b border-[#dbc8b6] pb-1.5">
                       Disponíveis para Vincular ({bimestre}º Bimestre)
                     </span>
-                    <div className="space-y-2 flex-1 overflow-auto max-h-[220px]">
-                      {simuladosDesteBimestre.filter(
-                        (sim) => !idsVinculadosNoBimestre.includes(sim.id),
-                      ).length === 0 ? (
-                        <p className="text-xs text-gray-400 italic text-center py-5">
-                          Sem simulados disponíveis para este bimestre.
+
+                    {/* BARRA DE FILTRO ADICIONADA */}
+                    <div className="mb-2.5 relative">
+                      <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Filtrar disponíveis..."
+                        value={buscaSimuladoDisponivel}
+                        onChange={(e) =>
+                          setBuscaSimuladoDisponivel(e.target.value)
+                        }
+                        className="w-full pl-8 pr-2.5 py-1 bg-white border border-[#dbc8b6] rounded text-[11px] font-medium outline-none focus:border-blue-500 uppercase placeholder:normal-case placeholder:font-light placeholder:text-gray-400 shadow-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-2 flex-1 overflow-auto max-h-[180px]">
+                      {simuladosDisponiveisFiltrados.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic text-center py-4">
+                          Nenhum simulado encontrado.
                         </p>
                       ) : (
-                        simuladosDesteBimestre
-                          .filter(
-                            (sim) => !idsVinculadosNoBimestre.includes(sim.id),
-                          )
-                          .map((sim) => (
-                            <div
-                              key={sim.id}
-                              className="flex items-center justify-between p-2.5 bg-white rounded-md border border-[#dbc8b6] text-xs shadow-sm"
-                            >
-                              <div>
-                                <span className="font-bold text-gray-800 uppercase block">
-                                  {sim.nome || sim.titulo}
-                                </span>
-                                <span className="text-[10px] text-gray-400">
-                                  {sim.dataCriacao || "N/D"}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => vincularSimulado(sim.id)}
-                                disabled={idsVinculadosNoBimestre.length >= 2}
-                                className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                                  idsVinculadosNoBimestre.length >= 2
-                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-[#dbc8b6]"
-                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
-                                }`}
-                              >
-                                <Plus className="w-3.5 h-3.5" /> Vincular
-                              </button>
+                        simuladosDisponiveisFiltrados.map((sim) => (
+                          <div
+                            key={sim.id}
+                            className="flex items-center justify-between p-2.5 bg-white rounded-md border border-[#dbc8b6] text-xs shadow-sm"
+                          >
+                            <div>
+                              <span className="font-bold text-gray-800 uppercase block">
+                                {sim.nome || sim.titulo}
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                {sim.dataCriacao || "N/D"}
+                              </span>
                             </div>
-                          ))
+                            <button
+                              type="button"
+                              onClick={() => vincularSimulado(sim.id)}
+                              disabled={idsVinculadosNoBimestre.length >= 2}
+                              className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
+                                idsVinculadosNoBimestre.length >= 2
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-[#dbc8b6]"
+                                  : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                              }`}
+                            >
+                              <Plus className="w-3.5 h-3.5" /> Vincular
+                            </button>
+                          </div>
+                        ))
                       )}
                     </div>
                   </div>
