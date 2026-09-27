@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  BarChart3,
-  Award,
-  Users,
-  Calendar,
-  TrendingUp,
-  Percent,
-} from "lucide-react";
+import { BarChart3, Award, Users, Calendar, TrendingUp } from "lucide-react";
 
 export default function Estatisticas({
   turmas = [],
@@ -18,6 +11,9 @@ export default function Estatisticas({
 
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoFiltroTurma, setSimuladoFiltroTurma] = useState("geral"); // "geral" ou ID do simulado
+
+  // Estado para o seletor da turma no card "Destaque da turma" na aba Geral
+  const [turmaDestaqueId, setTurmaDestaqueId] = useState("");
 
   // Filtra os simulados do bimestre escolhido
   const simuladosDoBimestre = simulados.filter(
@@ -100,15 +96,33 @@ export default function Estatisticas({
     }
   });
 
-  // Cálculo da Média Geral de Aproveitamento da Escola no Bimestre
-  const somaGeralEscola = respostasFiltradas.reduce(
-    (acc, r) => acc + Number(r.percentualGeral || 0),
-    0,
+  // Cálculo do melhor aluno para a turma selecionada no card "Destaque da turma"
+  const turmaDestaqueObj = turmas.find(
+    (t) => String(t.id) === String(turmaDestaqueId),
   );
-  const mediaGeralEscola =
-    respostasFiltradas.length > 0
-      ? Math.round(somaGeralEscola / respostasFiltradas.length)
-      : 0;
+  let melhorAlunoDaTurmaDestaque = null;
+  if (turmaDestaqueObj) {
+    const respTurmaDestaque = respostasFiltradas.filter(
+      (r) =>
+        String(r.turmaId) === String(turmaDestaqueObj.id) ||
+        String(r.turma).trim().toUpperCase() ===
+          String(turmaDestaqueObj.nome).trim().toUpperCase(),
+    );
+
+    respTurmaDestaque.forEach((r) => {
+      const perc = Number(r.percentualGeral || 0);
+      if (
+        !melhorAlunoDaTurmaDestaque ||
+        perc > melhorAlunoDaTurmaDestaque.percentual
+      ) {
+        melhorAlunoDaTurmaDestaque = {
+          nome: r.nomeAluno || r.aluno,
+          percentual: perc,
+          nota: r.notaFinal || "0.0",
+        };
+      }
+    });
+  }
 
   // ==========================================
   // 2. DADOS DA ABA POR TURMA
@@ -172,7 +186,7 @@ export default function Estatisticas({
       : 0;
   const mediaErrosTurma = 100 - mediaAcertosTurma;
 
-  // Função para calcular evolução (retorna null se não houver dados anteriores para ocultar o aviso)
+  // Função para calcular evolução (retorna null se não houver dados anteriores)
   const calcularEvolucaoAluno = (nomeAluno, bimestreAtual, percentualAtual) => {
     const bimestreAntNum = Number(bimestreAtual) - 1;
     if (bimestreAntNum < 1) return null;
@@ -352,29 +366,52 @@ export default function Estatisticas({
               )}
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
-                  Aproveitamento Geral Médio
+            {/* Destaque da Turma (Com seletor interno de turma) */}
+            <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                  Destaque da turma
                 </span>
-                <Percent className="w-5 h-5 text-indigo-600" />
+                <Users className="w-4 h-4 text-amber-600" />
               </div>
-              <div>
-                <h4 className="font-black text-gray-900 text-xl tracking-tight mb-0.5">
-                  {mediaGeralEscola}%{" "}
-                  <span className="text-xs font-bold text-gray-500 uppercase">
-                    Acertos
-                  </span>
-                </h4>
-                <p className="text-[10px] text-gray-500 uppercase font-semibold mt-1">
-                  Base:{" "}
-                  <span className="text-gray-800">
-                    {respostasFiltradas.length} provas avaliadas
-                  </span>
-                </p>
-              </div>
-              <div className="mt-2 pt-2 border-t border-indigo-100 text-[10px] font-bold text-indigo-900 uppercase">
-                Consolidado Escolar
+
+              <div className="space-y-1.5">
+                <select
+                  value={turmaDestaqueId}
+                  onChange={(e) => setTurmaDestaqueId(e.target.value)}
+                  className="w-full p-1 bg-white border border-amber-300 rounded text-[11px] font-bold text-gray-800 uppercase focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer"
+                >
+                  <option value="">Selecione a turma...</option>
+                  {turmas.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome}
+                    </option>
+                  ))}
+                </select>
+
+                {!turmaDestaqueObj ? (
+                  <p className="text-[11px] text-gray-400 italic text-center py-1">
+                    Escolha uma turma acima.
+                  </p>
+                ) : melhorAlunoDaTurmaDestaque ? (
+                  <div className="pt-1">
+                    <h4 className="font-bold text-gray-900 text-xs uppercase truncate">
+                      {melhorAlunoDaTurmaDestaque.nome}
+                    </h4>
+                    <div className="mt-1 flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-amber-800">
+                        Aproveitamento: {melhorAlunoDaTurmaDestaque.percentual}%
+                      </span>
+                      <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px]">
+                        Nota: {melhorAlunoDaTurmaDestaque.nota}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-400 italic text-center py-1">
+                    Sem lançamentos nesta turma.
+                  </p>
+                )}
               </div>
             </div>
           </div>
