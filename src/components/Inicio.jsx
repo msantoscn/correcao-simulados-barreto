@@ -1,11 +1,8 @@
 import { useState } from "react";
 import {
   LayoutDashboard,
-  CheckCircle2,
   BookOpen,
   Calendar,
-  AlertCircle,
-  Clock,
   AlertTriangle,
 } from "lucide-react";
 
@@ -62,11 +59,15 @@ export default function Inicio({
     const qtdLancados = alunosAvaliadosUnicos.size;
     const qtdPendentes = Math.max(0, totalAlunosTurma - qtdLancados);
 
-    let status = "pendente"; // "concluido", "parcial", "pendente"
+    let status = "Pendente";
+    let badgeStyle = "bg-red-100 text-red-800 border-red-200";
+
     if (totalAlunosTurma > 0 && qtdLancados >= totalAlunosTurma) {
-      status = "concluido";
+      status = "Concluído";
+      badgeStyle = "bg-emerald-100 text-emerald-800 border-emerald-200";
     } else if (qtdLancados > 0) {
-      status = "parcial";
+      status = "Andamento";
+      badgeStyle = "bg-amber-100 text-amber-800 border-amber-200";
     }
 
     return {
@@ -75,6 +76,7 @@ export default function Inicio({
       qtdLancados,
       qtdPendentes,
       status,
+      badgeStyle,
     };
   });
 
@@ -138,7 +140,7 @@ export default function Inicio({
         </div>
       ) : (
         /* LISTAGEM DETALHADA POR TURMA */
-        <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-white space-y-3">
+        <div className="border border-[#dbc8b6] rounded-md p-2 sm:p-4 bg-white space-y-3">
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-blue-500" /> Acompanhamento de
             Lançamentos por Turma
@@ -149,22 +151,20 @@ export default function Inicio({
               Nenhuma turma cadastrada no sistema.
             </div>
           ) : (
-            <div className="w-full overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs">
-              <table className="w-full min-w-[400px] text-left border-collapse text-xs">
+            <div className="w-full overflow-x-hidden border border-[#dbc8b6] rounded-md shadow-xs">
+              <table className="w-full text-left border-collapse text-[11px] sm:text-xs">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
-                    <th className="p-2.5 border-r border-[#dbc8b6] w-2/5 sm:w-auto">
+                  <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[9px] sm:text-[10px]">
+                    <th className="p-2 border-r border-[#dbc8b6] w-[110px] sm:w-auto">
                       Turma
                     </th>
-                    <th className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-nowrap">
-                      Lançados
+                    <th className="p-2 border-r border-[#dbc8b6] text-center w-16">
+                      Lanç.
                     </th>
-                    <th className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-nowrap">
-                      Pendentes
+                    <th className="p-2 border-r border-[#dbc8b6] text-center w-16">
+                      Pend.
                     </th>
-                    <th className="p-2.5 text-center whitespace-nowrap">
-                      Status
-                    </th>
+                    <th className="p-2 text-center w-24">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#dbc8b6]">
@@ -173,31 +173,21 @@ export default function Inicio({
                       key={t.id}
                       className="hover:bg-amber-50/20 transition-colors"
                     >
-                      <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase max-w-[130px] sm:max-w-xs break-words leading-tight">
+                      <td className="p-2 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase max-w-[110px] sm:max-w-xs break-words leading-tight">
                         {t.nome}
                       </td>
-                      <td className="p-2.5 border-r border-[#dbc8b6] text-center font-bold text-emerald-700">
+                      <td className="p-2 border-r border-[#dbc8b6] text-center font-bold text-emerald-700">
                         {t.qtdLancados}
                       </td>
-                      <td className="p-2.5 border-r border-[#dbc8b6] text-center font-bold text-red-600">
+                      <td className="p-2 border-r border-[#dbc8b6] text-center font-bold text-red-600">
                         {t.qtdPendentes}
                       </td>
-                      <td className="p-2.5 text-center font-bold uppercase whitespace-nowrap">
-                        {t.status === "concluido" && (
-                          <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] inline-flex items-center gap-1 border border-emerald-200">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Concluído
-                          </span>
-                        )}
-                        {t.status === "parcial" && (
-                          <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded text-[10px] inline-flex items-center gap-1 border border-amber-200">
-                            <Clock className="w-3.5 h-3.5" /> Em Andamento
-                          </span>
-                        )}
-                        {t.status === "pendente" && (
-                          <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-[10px] inline-flex items-center gap-1 border border-red-200">
-                            <AlertCircle className="w-3.5 h-3.5" /> Pendente
-                          </span>
-                        )}
+                      <td className="p-2 text-center font-bold uppercase">
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] inline-block border ${t.badgeStyle}`}
+                        >
+                          {t.status}
+                        </span>
                       </td>
                     </tr>
                   ))}
