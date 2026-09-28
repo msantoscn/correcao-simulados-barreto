@@ -6,7 +6,6 @@ import {
   UserCheck,
   FileSpreadsheet,
   LogOut,
-  Loader2,
   UserCog,
   BarChart3,
   Menu,

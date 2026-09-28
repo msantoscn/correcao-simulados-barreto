@@ -95,7 +95,7 @@ export default function Inicio({
 
       {/* FILTRO DE BIMESTRE OTIMIZADO PARA TOUCH (iOS / Android) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1 flex-shrink-0">
             <Calendar className="w-3.5 h-3.5 text-blue-500" /> Selecione o
             bimestre:
@@ -120,7 +120,7 @@ export default function Inicio({
 
       {/* CONTEÚDO EXIBIDO APÓS A SELEÇÃO DO BIMESTRE */}
       {!bimestreSelecionado ? (
-        <div className="text-center py-12 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md bg-gray-50">
+        <div className="text-center py-12 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md bg-gray-50 px-4">
           Selecione o bimestre acima para visualizar o acompanhamento de
           lançamentos.
         </div>
@@ -150,21 +150,25 @@ export default function Inicio({
               Nenhuma turma cadastrada no sistema.
             </div>
           ) : (
-            <div className="overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs">
-              <table className="w-full text-left border-collapse text-xs">
+            <div className="w-full overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs">
+              <table className="w-full min-w-[500px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
-                    <th className="p-2.5 border-r border-[#dbc8b6]">Turma</th>
-                    <th className="p-2.5 border-r border-[#dbc8b6] text-center">
+                    <th className="p-2.5 border-r border-[#dbc8b6] w-2/5 sm:w-auto">
+                      Turma
+                    </th>
+                    <th className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-nowrap">
                       Total Alunos
                     </th>
-                    <th className="p-2.5 border-r border-[#dbc8b6] text-center">
+                    <th className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-nowrap">
                       Lançados
                     </th>
-                    <th className="p-2.5 border-r border-[#dbc8b6] text-center">
+                    <th className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-nowrap">
                       Pendentes
                     </th>
-                    <th className="p-2.5 text-center">Status do Processo</th>
+                    <th className="p-2.5 text-center whitespace-nowrap">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#dbc8b6]">
@@ -173,7 +177,7 @@ export default function Inicio({
                       key={t.id}
                       className="hover:bg-amber-50/20 transition-colors"
                     >
-                      <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase">
+                      <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase min-w-[140px]">
                         {t.nome}
                       </td>
                       <td className="p-2.5 border-r border-[#dbc8b6] text-center font-bold text-gray-700">
@@ -185,7 +189,7 @@ export default function Inicio({
                       <td className="p-2.5 border-r border-[#dbc8b6] text-center font-bold text-red-600">
                         {t.qtdPendentes}
                       </td>
-                      <td className="p-2.5 text-center font-bold uppercase">
+                      <td className="p-2.5 text-center font-bold uppercase whitespace-nowrap">
                         {t.status === "concluido" && (
                           <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] inline-flex items-center gap-1 border border-emerald-200">
                             <CheckCircle2 className="w-3.5 h-3.5" /> Concluído
