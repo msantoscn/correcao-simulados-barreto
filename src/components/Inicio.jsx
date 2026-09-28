@@ -173,7 +173,7 @@ export default function Inicio({
                       key={t.id}
                       className="hover:bg-amber-50/20 transition-colors"
                     >
-                      <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase max-w-[140px] sm:max-w-xs break-words leading-tight">
+                      <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase max-w-[130px] sm:max-w-xs break-words leading-tight">
                         {t.nome}
                       </td>
                       <td className="p-2.5 border-r border-[#dbc8b6] text-center font-bold text-emerald-700">
