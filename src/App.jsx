@@ -10,7 +10,9 @@ import {
   UserCog,
   BarChart3,
   Menu,
+  LayoutDashboard,
 } from "lucide-react";
+import Inicio from "./components/Inicio.jsx";
 import Admin from "./components/Admin.jsx";
 import Turmas from "./components/Turmas.jsx";
 import Professor from "./components/Professor.jsx";
@@ -22,13 +24,16 @@ import { useFirebase } from "./useFirebase.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 
 function MainContent() {
-  const { user, logout, isProfessor, isGestao, loadingAuth } = useAuth();
+  const { user, logout, isProfessor, isGestao } = useAuth();
 
   const [abaAtiva, setAbaAtiva] = useState(() =>
-    isProfessor ? "professor" : "admin",
+    isProfessor ? "professor" : "inicio",
   );
+
   const abaExibida =
-    isProfessor && abaAtiva !== "estatisticas" ? "professor" : abaAtiva;
+    isProfessor && abaAtiva !== "estatisticas" && abaAtiva !== "inicio"
+      ? "professor"
+      : abaAtiva;
 
   // Estado para controlar o menu em lista (gaveta)
   const [menuAberto, setMenuAberto] = useState(false);
@@ -63,24 +68,12 @@ function MainContent() {
     deletarUsuario,
   } = useFirebase();
 
-  // 1. A carregar verificação de login
-  if (loadingAuth) {
-    return (
-      <div className="min-h-screen w-full bg-slate-50 flex flex-col items-center justify-center gap-3 p-4">
-        <Loader2 className="w-8 h-8 text-[#4b82f6] animate-spin" />
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest animate-pulse text-center">
-          A verificar autenticação...
-        </p>
-      </div>
-    );
-  }
-
-  // 2. Se não estiver autenticado, exibe a Tela de Login
+  // 1. Se não estiver autenticado, exibe a Tela de Login imediatamente
   if (!user) {
     return <Login />;
   }
 
-  // 3. A carregar dados do Firebase
+  // 2. A carregar dados do Firebase
   if (loading) {
     return (
       <div className="min-h-screen w-full bg-slate-50 flex flex-col items-center justify-center gap-4 p-4">
@@ -145,6 +138,17 @@ function MainContent() {
                     Navegação
                   </span>
                 </div>
+
+                <MenuItem
+                  active={abaExibida === "inicio"}
+                  onClick={() => {
+                    setAbaAtiva("inicio");
+                    setMenuAberto(false);
+                  }}
+                  icon={LayoutDashboard}
+                >
+                  Início
+                </MenuItem>
 
                 {isGestao && (
                   <>
@@ -244,6 +248,14 @@ function MainContent() {
 
       {/* Conteúdo Principal */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 mt-4 sm:mt-8 w-full overflow-x-hidden">
+        {abaExibida === "inicio" && (
+          <Inicio
+            turmas={turmas}
+            simulados={simulados}
+            respostasAlunos={respostasAlunos}
+          />
+        )}
+
         {abaExibida === "admin" && isGestao && (
           <Admin
             simulados={simulados}
