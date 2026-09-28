@@ -89,7 +89,8 @@ export default function Inicio({
             <LayoutDashboard className="w-5 h-5" />
           </div>
           <h2 className="text-sm sm:text-base font-bold tracking-wide uppercase text-gray-800 truncate">
-            TELA DE <span className="text-red-500 font-bold">INÍCIO</span>
+            STATUS DE{" "}
+            <span className="text-red-500 font-bold">LANÇAMENTOS</span>
           </h2>
         </div>
       </div>
@@ -142,8 +143,7 @@ export default function Inicio({
         /* LISTAGEM DETALHADA POR TURMA */
         <div className="border border-[#dbc8b6] rounded-md p-2 sm:p-4 bg-white space-y-3">
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-blue-500" /> Acompanhamento de
-            Lançamentos por Turma
+            <BookOpen className="w-4 h-4 text-blue-500" /> Lançamentos
           </h3>
 
           {turmasStatus.length === 0 ? (
@@ -155,7 +155,7 @@ export default function Inicio({
               <table className="w-full text-left border-collapse text-[11px] sm:text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[9px] sm:text-[10px]">
-                    <th className="p-2 border-r border-[#dbc8b6] w-[110px] sm:w-auto">
+                    <th className="p-2 border-r border-[#dbc8b6] w-[110px] sm:w-16">
                       Turma
                     </th>
                     <th className="p-2 border-r border-[#dbc8b6] text-center w-16">
