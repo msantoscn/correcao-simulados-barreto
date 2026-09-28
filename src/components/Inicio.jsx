@@ -72,7 +72,6 @@ export default function Inicio({
     return {
       id: turma.id,
       nome: turma.nome,
-      totalAlunos: totalAlunosTurma,
       qtdLancados,
       qtdPendentes,
       status,
@@ -151,14 +150,11 @@ export default function Inicio({
             </div>
           ) : (
             <div className="w-full overflow-x-auto border border-[#dbc8b6] rounded-md shadow-xs">
-              <table className="w-full min-w-[500px] text-left border-collapse text-xs">
+              <table className="w-full min-w-[400px] text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
                     <th className="p-2.5 border-r border-[#dbc8b6] w-2/5 sm:w-auto">
                       Turma
-                    </th>
-                    <th className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-nowrap">
-                      Total Alunos
                     </th>
                     <th className="p-2.5 border-r border-[#dbc8b6] text-center whitespace-nowrap">
                       Lançados
@@ -177,11 +173,8 @@ export default function Inicio({
                       key={t.id}
                       className="hover:bg-amber-50/20 transition-colors"
                     >
-                      <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase min-w-[140px]">
+                      <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase max-w-[140px] sm:max-w-xs break-words leading-tight">
                         {t.nome}
-                      </td>
-                      <td className="p-2.5 border-r border-[#dbc8b6] text-center font-bold text-gray-700">
-                        {t.totalAlunos}
                       </td>
                       <td className="p-2.5 border-r border-[#dbc8b6] text-center font-bold text-emerald-700">
                         {t.qtdLancados}
