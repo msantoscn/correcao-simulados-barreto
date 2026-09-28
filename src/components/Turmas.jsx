@@ -808,7 +808,7 @@ export default function Turmas({
                                     {temAdaptadoVinculado && (
                                       <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-0.5">
                                         <CheckCircle2 className="w-3 h-3 text-orange-600" />{" "}
-                                        Adaptado Acoplado
+                                        Adaptado
                                       </span>
                                     )}
                                   </div>
@@ -888,7 +888,7 @@ export default function Turmas({
                                   {temAdaptado && (
                                     <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-0.5">
                                       <CheckCircle2 className="w-3 h-3 text-orange-600" />{" "}
-                                      Adaptado Criado
+                                      Adaptado
                                     </span>
                                   )}
                                 </div>
