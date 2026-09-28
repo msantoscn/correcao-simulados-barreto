@@ -45,6 +45,14 @@ export default function Professor({
     (s) => String(s.id) === String(simuladoSelecionadoId),
   );
 
+  // Helper para verificar se o aluno atual é adaptado
+  const alunoObjAtivo = turmaAtiva?.alunos?.find((a) => {
+    const nome = typeof a === "string" ? a : a.nome;
+    return nome === alunoAtivo;
+  });
+  const isAlunoAdaptado =
+    typeof alunoObjAtivo === "object" && !!alunoObjAtivo.adaptado;
+
   const totalQuestoesSimulado =
     simuladoAtivo?.disciplinas?.reduce(
       (acc, d) => acc + (d.gabarito?.length || 0),
@@ -456,16 +464,30 @@ export default function Professor({
                 const idsSimuladosDoBimestre =
                   turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
 
-                if (idsSimuladosDoBimestre.length === 0) {
+                // FILTRA OS SIMULADOS REMOVENDO OS ADAPTADOS
+                const idsFiltradosPadrao = idsSimuladosDoBimestre.filter(
+                  (simId) => {
+                    const simObj = simulados.find((s) => s.id === simId);
+                    if (!simObj) return false;
+                    const nomeSim = String(
+                      simObj.nome || simObj.titulo || "",
+                    ).toUpperCase();
+                    const isAdaptadoFlag =
+                      typeof simObj.adaptado === "boolean" && simObj.adaptado;
+                    return !isAdaptadoFlag && !nomeSim.includes("ADAPTADO");
+                  },
+                );
+
+                if (idsFiltradosPadrao.length === 0) {
                   return (
                     <div className="col-span-full text-center py-6 text-orange-600 text-xs font-bold uppercase border border-dashed border-orange-200 bg-orange-50 rounded-md">
-                      Nenhum simulado vinculado a esta turma no{" "}
+                      Nenhum simulado padrão vinculado a esta turma no{" "}
                       {bimestreSelecionado}º Bimestre.
                     </div>
                   );
                 }
 
-                return idsSimuladosDoBimestre.map((simId) => {
+                return idsFiltradosPadrao.map((simId) => {
                   const simObj = simulados.find((s) => s.id === simId);
                   const aplicadorSimulado =
                     turmaAtiva?.aplicadoresPorSimulado?.[simId];
@@ -599,7 +621,6 @@ export default function Professor({
                   <table className="w-full min-w-[750px] text-left border-collapse text-xs table-auto">
                     <thead>
                       <tr className="bg-gray-50 border-b border-[#dbc8b6] font-bold text-gray-500 uppercase tracking-widest text-[10px]">
-                        {/* Coluna do Aluno expandida para dar total conforto a nomes longos */}
                         <th className="p-2.5 border-r border-[#dbc8b6] w-[55%] sm:w-[35%] align-middle">
                           Aluno
                         </th>
@@ -636,8 +657,17 @@ export default function Professor({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#dbc8b6]">
-                      {turmaAtiva.alunos.map((aluno, idx) => {
-                        const registo = encontrarRegistoAluno(aluno);
+                      {turmaAtiva.alunos.map((alunoItem, idx) => {
+                        const nomeAlunoStr =
+                          typeof alunoItem === "string"
+                            ? alunoItem
+                            : alunoItem.nome;
+                        const isAdaptado =
+                          typeof alunoItem === "object"
+                            ? !!alunoItem.adaptado
+                            : false;
+
+                        const registo = encontrarRegistoAluno(nomeAlunoStr);
 
                         const dadosCalculados =
                           registo && registo.gabaritoBruto
@@ -655,13 +685,20 @@ export default function Professor({
                             className="hover:bg-amber-50/20 transition-colors"
                           >
                             <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase whitespace-normal break-words align-middle text-xs">
-                              <div className="flex items-start gap-1.5">
-                                <span className="text-[10px] text-gray-400 font-mono flex-shrink-0 mt-0.5">
-                                  {String(idx + 1).padStart(2, "0")}
-                                </span>
-                                <span className="break-words leading-snug">
-                                  {aluno}
-                                </span>
+                              <div className="flex items-start justify-between gap-1.5">
+                                <div className="flex items-start gap-1.5">
+                                  <span className="text-[10px] text-gray-400 font-mono flex-shrink-0 mt-0.5">
+                                    {String(idx + 1).padStart(2, "0")}
+                                  </span>
+                                  <span className="break-words leading-snug">
+                                    {nomeAlunoStr}
+                                  </span>
+                                </div>
+                                {isAdaptado && (
+                                  <span className="bg-gray-100 text-gray-600 border border-[#dbc8b6] px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 flex-shrink-0">
+                                    Adaptado
+                                  </span>
+                                )}
                               </div>
                             </td>
 
@@ -716,7 +753,9 @@ export default function Professor({
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   type="button"
-                                  onClick={() => handleSelecionarAluno(aluno)}
+                                  onClick={() =>
+                                    handleSelecionarAluno(nomeAlunoStr)
+                                  }
                                   style={{
                                     WebkitTapHighlightColor: "transparent",
                                     touchAction: "manipulation",
@@ -753,7 +792,7 @@ export default function Professor({
                                     onClick={() =>
                                       handleExcluirRespostaAluno(
                                         registo.id,
-                                        aluno,
+                                        nomeAlunoStr,
                                       )
                                     }
                                     style={{
@@ -782,12 +821,17 @@ export default function Professor({
               className="space-y-3 p-3 sm:p-4 bg-gray-50 border border-[#dbc8b6] rounded-md relative"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-[#dbc8b6]">
-                {/* Nome do aluno limpo à esquerda */}
-                <h3 className="text-xs sm:text-sm font-black text-blue-600 uppercase tracking-wide whitespace-normal break-words leading-snug">
-                  {alunoAtivo}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs sm:text-sm font-black text-blue-600 uppercase tracking-wide whitespace-normal break-words leading-snug">
+                    {alunoAtivo}
+                  </h3>
+                  {isAlunoAdaptado && (
+                    <span className="bg-gray-100 text-gray-600 border border-[#dbc8b6] px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1">
+                      Adaptado (A/B)
+                    </span>
+                  )}
+                </div>
 
-                {/* Botões em ícones unificados à direita */}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {temPermissaoEdicao(turmaAtiva, simuladoSelecionadoId) && (
                     <button
@@ -830,7 +874,6 @@ export default function Professor({
                 </div>
               </div>
 
-              {/* MODAL SIMPLIFICADO PARA TROCAR DE ALUNO */}
               {mostrarModalReatribuir && (
                 <div className="bg-amber-50 border border-amber-300 p-3 rounded-md space-y-2 mb-3 shadow-inner">
                   <div className="flex items-center justify-between">
@@ -860,16 +903,24 @@ export default function Professor({
                     >
                       <option value="">Selecione o aluno...</option>
                       {turmaAtiva?.alunos
-                        ?.filter(
-                          (a) =>
-                            String(a).trim().toUpperCase() !==
-                            String(alunoAtivo).trim().toUpperCase(),
-                        )
-                        .map((alunoTurma) => (
-                          <option key={alunoTurma} value={alunoTurma}>
-                            {alunoTurma}
-                          </option>
-                        ))}
+                        ?.filter((a) => {
+                          const nome = typeof a === "string" ? a : a.nome;
+                          return (
+                            nome.trim().toUpperCase() !==
+                            String(alunoAtivo).trim().toUpperCase()
+                          );
+                        })
+                        .map((alunoTurma) => {
+                          const nomeTurmaStr =
+                            typeof alunoTurma === "string"
+                              ? alunoTurma
+                              : alunoTurma.nome;
+                          return (
+                            <option key={nomeTurmaStr} value={nomeTurmaStr}>
+                              {nomeTurmaStr}
+                            </option>
+                          );
+                        })}
                     </select>
 
                     <button
@@ -887,26 +938,27 @@ export default function Professor({
                 </div>
               )}
 
-              {/* DISPOSIÇÃO VERTICAL DAS QUESTÕES COM 4 ALTERNATIVAS */}
+              {/* DISPOSIÇÃO DINÂMICA: 4 ALTERNATIVAS OU APENAS A/B SE ADAPTADO */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
-                  const alternativas = ["A", "B", "C", "D"];
+                  const alternativas = isAlunoAdaptado
+                    ? ["A", "B"]
+                    : ["A", "B", "C", "D"];
 
                   return (
                     <div
                       key={d.nome}
                       className="bg-white border border-[#dbc8b6] rounded-md p-3 shadow-xs flex flex-col"
                     >
-                      {/* Cabeçalho da Disciplina */}
-                      <div className="text-center font-bold text-gray-800 text-xs uppercase bg-gray-100 py-1.5 px-2 rounded border border-[#dbc8b6] mb-2 tracking-wider">
-                        {d.nome}{" "}
+                      <div className="text-center font-bold text-gray-800 text-xs uppercase bg-gray-100 py-1.5 px-2 rounded border border-[#dbc8b6] mb-2 tracking-wider flex items-center justify-between">
+                        <span>{d.nome}</span>
                         <span className="text-[10px] text-gray-500 font-normal">
-                          ({gabaritoDisc.length}Q)
+                          ({gabaritoDisc.length}Q){" "}
+                          {isAlunoAdaptado && "• [Adaptado A/B]"}
                         </span>
                       </div>
 
-                      {/* Lista Vertical de Questões */}
                       <div className="space-y-1.5">
                         {gabaritoDisc.map((_, qIdx) => {
                           const valAtual =
@@ -956,7 +1008,6 @@ export default function Professor({
                 })}
               </div>
 
-              {/* Botão de salvar dinâmico */}
               <div className="flex justify-end pt-2">
                 <button
                   type="submit"

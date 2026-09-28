@@ -13,6 +13,7 @@ import {
   Edit3,
   Save,
   Check,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function Turmas({
@@ -29,6 +30,7 @@ export default function Turmas({
 
   // Estados para Alunos
   const [novoAlunoUnico, setNovoAlunoUnico] = useState("");
+  const [novoAlunoAdaptado, setNovoAlunoAdaptado] = useState(false);
   const [textoListaAlunos, setTextoListaAlunos] = useState("");
   const [mostrarAddAlunos, setMostrarAddAlunos] = useState(false);
   const [buscaAluno, setBuscaAluno] = useState("");
@@ -39,6 +41,7 @@ export default function Turmas({
   // Estado para Edição de Aluno
   const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
   const [nomeAlunoEditado, setNomeAlunoEditado] = useState("");
+  const [alunoEditadoAdaptado, setAlunoEditadoAdaptado] = useState(false);
 
   // Controle de Bimestre
   const [bimestre, setBimestre] = useState("3");
@@ -128,17 +131,36 @@ export default function Turmas({
     e.preventDefault();
     if (!novoAlunoUnico.trim() || !turmaSelecionadaId) return;
 
+    const nomeFormatado = novoAlunoUnico.trim().toUpperCase();
     let alunoJaExiste = false;
+
     const listaAtualizada = turmas.map((t) => {
       if (String(t.id) === String(turmaSelecionadaId)) {
         const alunosAtuais = t.alunos || [];
-        if (alunosAtuais.includes(novoAlunoUnico.trim().toUpperCase())) {
+
+        const existe = alunosAtuais.some((a) =>
+          typeof a === "string"
+            ? a === nomeFormatado
+            : a.nome === nomeFormatado,
+        );
+
+        if (existe) {
           alunoJaExiste = true;
           return t;
         }
+
+        const novoObjetoAluno = {
+          nome: nomeFormatado,
+          adaptado: novoAlunoAdaptado,
+        };
+
         return {
           ...t,
-          alunos: [...alunosAtuais, novoAlunoUnico.trim().toUpperCase()].sort(),
+          alunos: [...alunosAtuais, novoObjetoAluno].sort((a, b) => {
+            const nomeA = typeof a === "string" ? a : a.nome;
+            const nomeB = typeof b === "string" ? b : b.nome;
+            return nomeA.localeCompare(nomeB);
+          }),
         };
       }
       return t;
@@ -151,6 +173,7 @@ export default function Turmas({
 
     await atualizarEPersistir(listaAtualizada);
     setNovoAlunoUnico("");
+    setNovoAlunoAdaptado(false);
     setMostrarAddAlunos(false);
   };
 
@@ -167,8 +190,25 @@ export default function Turmas({
 
     const listaAtualizada = turmas.map((t) => {
       if (String(t.id) === String(turmaSelecionadaId)) {
-        const conjuntoAlunos = new Set([...(t.alunos || []), ...novosNomes]);
-        return { ...t, alunos: Array.from(conjuntoAlunos).sort() };
+        const alunosAtuais = t.alunos || [];
+        const nomesExistentes = new Set(
+          alunosAtuais.map((a) => (typeof a === "string" ? a : a.nome)),
+        );
+
+        const novosAlunosParaAdicionar = novosNomes
+          .filter((nome) => !nomesExistentes.has(nome))
+          .map((nome) => ({ nome, adaptado: false }));
+
+        const conjuntoAlunos = [
+          ...alunosAtuais,
+          ...novosAlunosParaAdicionar,
+        ].sort((a, b) => {
+          const nomeA = typeof a === "string" ? a : a.nome;
+          const nomeB = typeof b === "string" ? b : b.nome;
+          return nomeA.localeCompare(nomeB);
+        });
+
+        return { ...t, alunos: conjuntoAlunos };
       }
       return t;
     });
@@ -178,13 +218,19 @@ export default function Turmas({
     setMostrarAddAlunos(false);
   };
 
-  const removerAluno = async (turmaId, nomeAluno) => {
-    if (!confirm(`Remover ${nomeAluno} da turma?`)) return;
+  const removerAluno = async (turmaId, alunoAlvo) => {
+    const nomeAlvoStr =
+      typeof alunoAlvo === "string" ? alunoAlvo : alunoAlvo.nome;
+    if (!confirm(`Remover ${nomeAlvoStr} da turma?`)) return;
+
     const listaAtualizada = turmas.map((t) => {
       if (String(t.id) === String(turmaId)) {
         return {
           ...t,
-          alunos: (t.alunos || []).filter((a) => a !== nomeAluno),
+          alunos: (t.alunos || []).filter((a) => {
+            const nomeA = typeof a === "string" ? a : a.nome;
+            return nomeA !== nomeAlvoStr;
+          }),
         };
       }
       return t;
@@ -192,27 +238,33 @@ export default function Turmas({
     await atualizarEPersistir(listaAtualizada);
   };
 
-  const iniciarEdicaoAluno = (nome) => {
-    setAlunoEmEdicao(nome);
-    setNomeAlunoEditado(nome);
+  const iniciarEdicaoAluno = (aluno) => {
+    const nomeStr = typeof aluno === "string" ? aluno : aluno.nome;
+    const isAdaptado = typeof aluno === "object" ? !!aluno.adaptado : false;
+
+    setAlunoEmEdicao(nomeStr);
+    setNomeAlunoEditado(nomeStr);
+    setAlunoEditadoAdaptado(isAdaptado);
   };
 
   const cancelarEdicaoAluno = () => {
     setAlunoEmEdicao(null);
     setNomeAlunoEditado("");
+    setAlunoEditadoAdaptado(false);
   };
 
   const salvarEdicaoAluno = async (turmaId, nomeAntigo) => {
     const nomeNovoFormatado = nomeAlunoEditado.trim().toUpperCase();
     if (!nomeNovoFormatado) return;
 
-    if (nomeNovoFormatado === nomeAntigo) {
-      cancelarEdicaoAluno();
-      return;
-    }
-
     const turmaAlvo = turmas.find((t) => String(t.id) === String(turmaId));
-    if (turmaAlvo?.alunos?.includes(nomeNovoFormatado)) {
+
+    const existeOutro = turmaAlvo?.alunos?.some((a) => {
+      const nomeA = typeof a === "string" ? a : a.nome;
+      return nomeA === nomeNovoFormatado && nomeA !== nomeAntigo;
+    });
+
+    if (existeOutro) {
       alert("Já existe um aluno com este nome nesta turma.");
       return;
     }
@@ -220,8 +272,18 @@ export default function Turmas({
     const listaAtualizada = turmas.map((t) => {
       if (String(t.id) === String(turmaId)) {
         const novosAlunos = (t.alunos || [])
-          .map((a) => (a === nomeAntigo ? nomeNovoFormatado : a))
-          .sort();
+          .map((a) => {
+            const nomeA = typeof a === "string" ? a : a.nome;
+            if (nomeA === nomeAntigo) {
+              return {
+                nome: nomeNovoFormatado,
+                adaptado: alunoEditadoAdaptado,
+              };
+            }
+            return typeof a === "string" ? { nome: a, adaptado: false } : a;
+          })
+          .sort((a, b) => a.nome.localeCompare(b.nome));
+
         return { ...t, alunos: novosAlunos };
       }
       return t;
@@ -250,18 +312,47 @@ export default function Turmas({
     };
     const simuladosDoBimestre = vinculosAtuais[bimestre] || [];
 
-    if (simuladosDoBimestre.length >= 2) {
-      alert(
-        `Esta turma já tem o limite de 2 simulados vinculados no ${bimestre}º Bimestre.`,
-      );
-      return;
-    }
-
     if (simuladosDoBimestre.includes(simuladoId)) {
       return;
     }
 
-    const novosVinculosDoBimestre = [...simuladosDoBimestre, simuladoId];
+    const idsParaAdicionar = [simuladoId];
+    const simuladoSelecionadoObj = simuladosDisponiveis.find(
+      (s) => String(s.id) === String(simuladoId),
+    );
+
+    if (simuladoSelecionadoObj) {
+      const nomePadraoBase = (simuladoSelecionadoObj.nome || "")
+        .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+        .trim()
+        .toUpperCase();
+
+      const simuladoAdaptadoCorrespondente = simuladosDisponiveis.find((s) => {
+        const isAdapt =
+          !!s.adaptado || (s.nome || "").toUpperCase().includes("ADAPTADO");
+        const sNomeBase = (s.nome || "")
+          .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+          .trim()
+          .toUpperCase();
+        return (
+          isAdapt &&
+          (s.simuladoPadraoId === simuladoSelecionadoObj.id ||
+            sNomeBase === nomePadraoBase)
+        );
+      });
+
+      if (
+        simuladoAdaptadoCorrespondente &&
+        !simuladosDoBimestre.includes(simuladoAdaptadoCorrespondente.id)
+      ) {
+        idsParaAdicionar.push(simuladoAdaptadoCorrespondente.id);
+      }
+    }
+
+    const novosVinculosDoBimestre = [
+      ...simuladosDoBimestre,
+      ...idsParaAdicionar,
+    ];
 
     const listaAtualizada = turmas.map((t) => {
       if (String(t.id) === String(turmaSelecionadaId)) {
@@ -295,8 +386,36 @@ export default function Turmas({
       4: [],
     };
     const simuladosDoBimestre = vinculosAtuais[bimestre] || [];
+
+    const simuladoAlvoObj = simuladosDisponiveis.find(
+      (s) => String(s.id) === String(simuladoId),
+    );
+    const idsParaRemover = [simuladoId];
+
+    if (simuladoAlvoObj) {
+      const nomeBaseAlvo = (simuladoAlvoObj.nome || "")
+        .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+        .trim()
+        .toUpperCase();
+      simuladosDisponiveis.forEach((s) => {
+        const isAdapt =
+          !!s.adaptado || (s.nome || "").toUpperCase().includes("ADAPTADO");
+        const sNomeBase = (s.nome || "")
+          .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+          .trim()
+          .toUpperCase();
+        if (
+          isAdapt &&
+          (s.simuladoPadraoId === simuladoAlvoObj.id ||
+            sNomeBase === nomeBaseAlvo)
+        ) {
+          idsParaRemover.push(s.id);
+        }
+      });
+    }
+
     const novosVinculosDoBimestre = simuladosDoBimestre.filter(
-      (id) => String(id) !== String(simuladoId),
+      (id) => !idsParaRemover.includes(id),
     );
 
     const listaAtualizada = turmas.map((t) => {
@@ -319,23 +438,35 @@ export default function Turmas({
     (t) => String(t.id) === String(turmaSelecionadaId),
   );
 
-  const turmasFiltradas = turmas.filter((t) =>
+  const turmasOrdenadas = [...turmas].sort((a, b) => {
+    const nomeA = (a.nome || "").toUpperCase();
+    const nomeB = (b.nome || "").toUpperCase();
+    const numA = parseInt(nomeA.match(/\d+/)?.[0] || "999", 10);
+    const numB = parseInt(nomeB.match(/\d+/)?.[0] || "999", 10);
+    if (numA !== numB) return numA - numB;
+    return nomeA.localeCompare(nomeB);
+  });
+
+  const turmasFiltradas = turmasOrdenadas.filter((t) =>
     t.nome.toUpperCase().includes(buscaTurma.trim().toUpperCase()),
   );
 
   const alunosFiltrados =
-    turmaAtiva?.alunos?.filter((aluno) =>
-      aluno.includes(buscaAluno.trim().toUpperCase()),
-    ) || [];
+    turmaAtiva?.alunos?.filter((aluno) => {
+      const nomeStr = typeof aluno === "string" ? aluno : aluno.nome;
+      return nomeStr.includes(buscaAluno.trim().toUpperCase());
+    }) || [];
 
   const idsVinculadosNoBimestre =
     turmaAtiva?.simuladosVinculados?.[bimestre] || [];
 
   const simuladosDesteBimestre = simuladosDisponiveis.filter(
-    (sim) => String(sim.bimestre) === String(bimestre) || !sim.bimestre,
+    (sim) =>
+      (String(sim.bimestre) === String(bimestre) || !sim.bimestre) &&
+      !sim.adaptado &&
+      !(sim.nome || "").toUpperCase().includes("ADAPTADO"),
   );
 
-  // Filtragem dos disponíveis com base na barra de busca adicionada
   const simuladosDisponiveisFiltrados = simuladosDesteBimestre
     .filter((sim) => !idsVinculadosNoBimestre.includes(sim.id))
     .filter((sim) => {
@@ -363,9 +494,7 @@ export default function Turmas({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 font-sans antialiased">
-      {/* =========================================================
-          COLUNA ESQUERDA: LISTA DE TURMAS
-          ========================================================= */}
+      {/* COLUNA ESQUERDA: LISTA DE TURMAS */}
       <div className="lg:col-span-4 bg-white rounded-md shadow-sm p-3 sm:p-4 border border-[#dbc8b6] h-fit">
         <div className="flex items-center gap-2.5 pb-3 border-b border-[#dbc8b6] mb-3.5">
           <div className="p-1.5 bg-blue-500 text-white rounded-md">
@@ -376,7 +505,6 @@ export default function Turmas({
           </h2>
         </div>
 
-        {/* FORMULÁRIO DE CRIAÇÃO / EDIÇÃO DE TURMA */}
         <form onSubmit={lidarComSubmissaoTurma} className="mb-3.5">
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">
@@ -495,7 +623,7 @@ export default function Turmas({
                     onClick={() => {
                       setTurmaSelecionadaId(turma.id);
                       setModoVisualizacao("simulados");
-                      setBuscaSimuladoDisponivel(""); // Limpa o filtro ao trocar de turma/aba
+                      setBuscaSimuladoDisponivel("");
                       cancelarEdicaoAluno();
                       if (window.innerWidth < 1024) {
                         window.scrollTo({
@@ -507,8 +635,8 @@ export default function Turmas({
                     className={`p-1.5 rounded-md transition-all cursor-pointer shadow-xs ${
                       String(turmaSelecionadaId) === String(turma.id) &&
                       modoVisualizacao === "simulados"
-                        ? "bg-emerald-600 text-white shadow-sm"
-                        : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-300"
+                        ? "bg-orange-500 text-white shadow-sm"
+                        : "bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200"
                     }`}
                     title="Vincular Simulados"
                   >
@@ -539,9 +667,7 @@ export default function Turmas({
         )}
       </div>
 
-      {/* =========================================================
-          COLUNA DIREITA: GESTÃO EXCLUSIVA (ALUNOS OU SIMULADOS)
-          ========================================================= */}
+      {/* COLUNA DIREITA: GESTÃO EXCLUSIVA */}
       <div className="lg:col-span-8 bg-white rounded-md shadow-sm border border-[#dbc8b6] overflow-hidden flex flex-col h-fit lg:min-h-[460px]">
         {!turmaAtiva ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-gray-50/50 min-h-[260px]">
@@ -554,7 +680,6 @@ export default function Turmas({
           </div>
         ) : (
           <div className="flex flex-col h-full">
-            {/* Cabeçalho da Turma */}
             <div className="p-3 sm:p-4 border-b border-[#dbc8b6] bg-gray-50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -563,7 +688,6 @@ export default function Turmas({
                   </h3>
                 </div>
 
-                {/* Botão de Adicionar Alunos (visível apenas na aba de alunos) */}
                 {modoVisualizacao === "alunos" && (
                   <button
                     type="button"
@@ -588,16 +712,14 @@ export default function Turmas({
               </div>
             </div>
 
-            {/* CONTEÚDO CONDICIONAL: SE MODO FOR SIMULADOS */}
             {modoVisualizacao === "simulados" ? (
               <div className="p-3 sm:p-4 bg-white flex-1 flex flex-col">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]">
                   <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
-                    <LinkIcon className="w-4 h-4 text-emerald-600" /> Gestão de
+                    <LinkIcon className="w-4 h-4 text-orange-500" /> Gestão de
                     Simulados por Bimestre
                   </h4>
 
-                  {/* Seletor de Bimestre */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] font-bold text-gray-500 uppercase">
                       Bimestre:
@@ -621,13 +743,12 @@ export default function Turmas({
                   </div>
                 </div>
 
-                {/* Grid de Vinculados vs Disponíveis */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Já Vinculados */}
-                  <div className="bg-gray-50 p-3 rounded-md border border-emerald-300 shadow-sm flex flex-col">
-                    <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block mb-2.5 border-b border-emerald-200 pb-1.5">
+                  {/* VINCULADOS NO BIMESTRE */}
+                  <div className="bg-gray-50 p-3 rounded-md border border-orange-300 shadow-sm flex flex-col">
+                    <span className="text-[11px] font-bold text-orange-800 uppercase tracking-wider block mb-2.5 border-b border-orange-200 pb-1.5">
                       Vinculados no {bimestre}º Bimestre (
-                      {idsVinculadosNoBimestre.length}/2)
+                      {idsVinculadosNoBimestre.length})
                     </span>
                     <div className="space-y-2 flex-1 overflow-auto max-h-[220px]">
                       {idsVinculadosNoBimestre.length === 0 ? (
@@ -639,39 +760,82 @@ export default function Turmas({
                           .filter((sim) =>
                             idsVinculadosNoBimestre.includes(sim.id),
                           )
-                          .map((sim) => (
-                            <div
-                              key={sim.id}
-                              className="flex items-center justify-between p-2.5 bg-white rounded-md border border-emerald-300 text-xs shadow-sm"
-                            >
-                              <div>
-                                <span className="font-bold text-gray-800 uppercase block">
-                                  {sim.nome || sim.titulo}
-                                </span>
-                                <span className="text-[10px] text-gray-400">
-                                  {sim.dataCriacao || "N/D"}
-                                </span>
-                              </div>
-                              <button
-                                onClick={() => desvincularSimulado(sim.id)}
-                                className="text-red-500 hover:bg-red-50 p-1.5 rounded-md transition-colors cursor-pointer border border-[#dbc8b6]"
-                                title="Remover vínculo"
+                          .map((sim) => {
+                            const isAdapt =
+                              !!sim.adaptado ||
+                              (sim.nome || "")
+                                .toUpperCase()
+                                .includes("ADAPTADO");
+
+                            let temAdaptadoVinculado = false;
+                            if (!isAdapt) {
+                              const nomePadraoBase = (sim.nome || "")
+                                .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+                                .trim()
+                                .toUpperCase();
+                              temAdaptadoVinculado = simuladosDisponiveis.some(
+                                (s) => {
+                                  const sAdapt =
+                                    !!s.adaptado ||
+                                    (s.nome || "")
+                                      .toUpperCase()
+                                      .includes("ADAPTADO");
+                                  const sNomeBase = (s.nome || "")
+                                    .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+                                    .trim()
+                                    .toUpperCase();
+                                  return (
+                                    sAdapt &&
+                                    (s.simuladoPadraoId === sim.id ||
+                                      sNomeBase === nomePadraoBase)
+                                  );
+                                },
+                              );
+                            }
+
+                            if (isAdapt) return null;
+
+                            return (
+                              <div
+                                key={sim.id}
+                                className="flex items-center justify-between p-2.5 bg-white rounded-md border border-orange-300 text-xs shadow-sm"
                               >
-                                <Unlink className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))
+                                <div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-gray-800 uppercase block">
+                                      {sim.nome || sim.titulo}
+                                    </span>
+                                    {temAdaptadoVinculado && (
+                                      <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-0.5">
+                                        <CheckCircle2 className="w-3 h-3 text-orange-600" />{" "}
+                                        Adaptado Acoplado
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-gray-400">
+                                    {sim.dataCriacao || "N/D"}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => desvincularSimulado(sim.id)}
+                                  className="text-red-500 hover:bg-red-50 p-1.5 rounded-md transition-colors cursor-pointer border border-[#dbc8b6]"
+                                  title="Remover vínculo"
+                                >
+                                  <Unlink className="w-4 h-4" />
+                                </button>
+                              </div>
+                            );
+                          })
                       )}
                     </div>
                   </div>
 
-                  {/* Disponíveis para Adicionar */}
+                  {/* DISPONÍVEIS PARA VINCULAR */}
                   <div className="bg-gray-50 p-3 rounded-md border border-[#dbc8b6] shadow-sm flex flex-col">
                     <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-2 border-b border-[#dbc8b6] pb-1.5">
                       Disponíveis para Vincular ({bimestre}º Bimestre)
                     </span>
 
-                    {/* BARRA DE FILTRO ADICIONADA */}
                     <div className="mb-2.5 relative">
                       <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
@@ -691,40 +855,63 @@ export default function Turmas({
                           Nenhum simulado encontrado.
                         </p>
                       ) : (
-                        simuladosDisponiveisFiltrados.map((sim) => (
-                          <div
-                            key={sim.id}
-                            className="flex items-center justify-between p-2.5 bg-white rounded-md border border-[#dbc8b6] text-xs shadow-sm"
-                          >
-                            <div>
-                              <span className="font-bold text-gray-800 uppercase block">
-                                {sim.nome || sim.titulo}
-                              </span>
-                              <span className="text-[10px] text-gray-400">
-                                {sim.dataCriacao || "N/D"}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => vincularSimulado(sim.id)}
-                              disabled={idsVinculadosNoBimestre.length >= 2}
-                              className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer ${
-                                idsVinculadosNoBimestre.length >= 2
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-[#dbc8b6]"
-                                  : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
-                              }`}
+                        simuladosDisponiveisFiltrados.map((sim) => {
+                          const nomePadraoBase = (sim.nome || "")
+                            .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+                            .trim()
+                            .toUpperCase();
+                          const temAdaptado = simuladosDisponiveis.some((s) => {
+                            const sAdapt =
+                              !!s.adaptado ||
+                              (s.nome || "").toUpperCase().includes("ADAPTADO");
+                            const sNomeBase = (s.nome || "")
+                              .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+                              .trim()
+                              .toUpperCase();
+                            return (
+                              sAdapt &&
+                              (s.simuladoPadraoId === sim.id ||
+                                sNomeBase === nomePadraoBase)
+                            );
+                          });
+
+                          return (
+                            <div
+                              key={sim.id}
+                              className="flex items-center justify-between p-2.5 bg-white rounded-md border border-[#dbc8b6] text-xs shadow-sm"
                             >
-                              <Plus className="w-3.5 h-3.5" /> Vincular
-                            </button>
-                          </div>
-                        ))
+                              <div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-gray-800 uppercase block">
+                                    {sim.nome || sim.titulo}
+                                  </span>
+                                  {temAdaptado && (
+                                    <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-0.5">
+                                      <CheckCircle2 className="w-3 h-3 text-orange-600" />{" "}
+                                      Adaptado Criado
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-gray-400">
+                                  {sim.dataCriacao || "N/D"}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => vincularSimulado(sim.id)}
+                                className="px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Vincular
+                              </button>
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              /* CONTEÚDO CONDICIONAL: SE MODO FOR ALUNOS */
               <>
                 {mostrarAddAlunos && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3.5 bg-gray-50 border-b border-[#dbc8b6]">
@@ -745,6 +932,21 @@ export default function Turmas({
                           className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md focus:ring-1 focus:ring-blue-500 text-xs font-medium outline-none uppercase placeholder:text-gray-400 placeholder:font-light shadow-xs"
                           required
                         />
+
+                        <label className="flex items-center gap-2 p-2 bg-orange-50 border border-orange-200 rounded-md cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={novoAlunoAdaptado}
+                            onChange={(e) =>
+                              setNovoAlunoAdaptado(e.target.checked)
+                            }
+                            className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 cursor-pointer"
+                          />
+                          <span className="text-[10px] font-bold text-orange-900 uppercase">
+                            Adaptado
+                          </span>
+                        </label>
+
                         <button
                           type="submit"
                           className="w-full py-1.5 bg-blue-500 text-white text-xs font-bold uppercase tracking-wider rounded-md hover:bg-blue-600 cursor-pointer transition-colors shadow-xs"
@@ -759,7 +961,7 @@ export default function Turmas({
                       </h4>
                       <form onSubmit={colarListaAlunos} className="space-y-2.5">
                         <textarea
-                          rows="2"
+                          rows="3"
                           placeholder="Cole a lista (um por linha)"
                           value={textoListaAlunos}
                           onChange={(e) => setTextoListaAlunos(e.target.value)}
@@ -776,7 +978,6 @@ export default function Turmas({
                   </div>
                 )}
 
-                {/* LISTA DE ALUNOS DA TURMA */}
                 <div className="flex-1 flex flex-col p-3 sm:p-4 bg-white">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -805,76 +1006,115 @@ export default function Turmas({
                         </div>
                       </div>
                       <div className="divide-y divide-[#dbc8b6] flex-1">
-                        {alunosFiltrados.map((aluno, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between items-center px-3.5 py-1.5 hover:bg-amber-50/20 group gap-2 transition-colors"
-                          >
-                            {alunoEmEdicao === aluno ? (
-                              <div className="flex items-center gap-2 w-full py-0.5">
-                                <input
-                                  type="text"
-                                  value={nomeAlunoEditado}
-                                  onChange={(e) =>
-                                    setNomeAlunoEditado(
-                                      e.target.value.toUpperCase(),
-                                    )
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter")
-                                      salvarEdicaoAluno(turmaAtiva.id, aluno);
-                                    if (e.key === "Escape")
-                                      cancelarEdicaoAluno();
-                                  }}
-                                  className="flex-1 px-2.5 py-1 bg-white border border-blue-500 rounded-md text-xs font-medium outline-none uppercase shadow-xs"
-                                  autoFocus
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    salvarEdicaoAluno(turmaAtiva.id, aluno)
-                                  }
-                                  className="p-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition-colors shadow-xs"
-                                  title="Salvar Nome"
-                                >
-                                  <Check className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={cancelarEdicaoAluno}
-                                  className="p-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer transition-colors"
-                                  title="Cancelar"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <span className="text-xs font-bold text-gray-800 uppercase">
-                                  {aluno}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={() => iniciarEdicaoAluno(aluno)}
-                                    className="p-1 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors border border-[#dbc8b6] bg-white shadow-xs"
-                                    title="Editar nome do aluno"
-                                  >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      removerAluno(turmaAtiva.id, aluno)
+                        {alunosFiltrados.map((aluno, idx) => {
+                          const nomeStr =
+                            typeof aluno === "string" ? aluno : aluno.nome;
+                          const isAdaptado =
+                            typeof aluno === "object"
+                              ? !!aluno.adaptado
+                              : false;
+
+                          return (
+                            <div
+                              key={idx}
+                              className="flex justify-between items-center px-3.5 py-1.5 hover:bg-amber-50/20 group gap-2 transition-colors"
+                            >
+                              {alunoEmEdicao === nomeStr ? (
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full py-1">
+                                  <input
+                                    type="text"
+                                    value={nomeAlunoEditado}
+                                    onChange={(e) =>
+                                      setNomeAlunoEditado(
+                                        e.target.value.toUpperCase(),
+                                      )
                                     }
-                                    className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors border border-[#dbc8b6] bg-white shadow-xs"
-                                    title="Remover aluno"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter")
+                                        salvarEdicaoAluno(
+                                          turmaAtiva.id,
+                                          nomeStr,
+                                        );
+                                      if (e.key === "Escape")
+                                        cancelarEdicaoAluno();
+                                    }}
+                                    className="flex-1 px-2.5 py-1 bg-white border border-blue-500 rounded-md text-xs font-medium outline-none uppercase shadow-xs"
+                                    autoFocus
+                                  />
+                                  <label className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 border border-orange-200 rounded cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={alunoEditadoAdaptado}
+                                      onChange={(e) =>
+                                        setAlunoEditadoAdaptado(
+                                          e.target.checked,
+                                        )
+                                      }
+                                      className="w-3.5 h-3.5 text-orange-600 rounded cursor-pointer"
+                                    />
+                                    <span className="text-[10px] font-bold text-orange-900 uppercase">
+                                      ADAPTADO
+                                    </span>
+                                  </label>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        salvarEdicaoAluno(
+                                          turmaAtiva.id,
+                                          nomeStr,
+                                        )
+                                      }
+                                      className="p-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer transition-colors shadow-xs"
+                                      title="Salvar Alteração"
+                                    >
+                                      <Check className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={cancelarEdicaoAluno}
+                                      className="p-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer transition-colors"
+                                      title="Cancelar"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                              </>
-                            )}
-                          </div>
-                        ))}
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-gray-800 uppercase">
+                                      {nomeStr}
+                                    </span>
+                                    {isAdaptado && (
+                                      <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1">
+                                        Adaptado
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => iniciarEdicaoAluno(aluno)}
+                                      className="p-1 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors border border-[#dbc8b6] bg-white shadow-xs"
+                                      title="Editar aluno"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        removerAluno(turmaAtiva.id, aluno)
+                                      }
+                                      className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer transition-colors border border-[#dbc8b6] bg-white shadow-xs"
+                                      title="Remover aluno"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
