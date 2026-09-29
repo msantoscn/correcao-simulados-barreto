@@ -19,6 +19,18 @@ export default function Relatorios({
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
 
+  // Helpers de segurança para tratar alunos (String ou Objeto { nome, adaptado })
+  const getNomeAluno = (aluno) => {
+    if (!aluno) return "";
+    if (typeof aluno === "string") return aluno;
+    return aluno.nome || "";
+  };
+
+  const isAlunoAdaptado = (aluno) => {
+    if (!aluno || typeof aluno !== "object") return false;
+    return !!aluno.adaptado;
+  };
+
   const turmaAtual = useMemo(
     () => turmas.find((t) => String(t.id) === String(turmaSelecionadaId)),
     [turmas, turmaSelecionadaId],
@@ -26,11 +38,14 @@ export default function Relatorios({
 
   const idsSimuladosVinculados = useMemo(() => {
     if (!turmaAtual || !bimestreSelecionado) return [];
-    return turmaAtual.simuladosVinculados?.[bimestreSelecionado] || [];
+    const lista = turmaAtual.simuladosVinculados?.[bimestreSelecionado] || [];
+    return lista.map((id) => String(id));
   }, [turmaAtual, bimestreSelecionado]);
 
   const simuladosDisponiveis = useMemo(() => {
-    return simulados.filter((s) => idsSimuladosVinculados.includes(s.id));
+    return simulados.filter((s) =>
+      idsSimuladosVinculados.includes(String(s.id)),
+    );
   }, [simulados, idsSimuladosVinculados]);
 
   const simuladoAtual = useMemo(() => {
@@ -42,7 +57,6 @@ export default function Relatorios({
     );
   }, [simulados, simuladoSelecionadoId]);
 
-  // Blindagem total contra dados malformados ou ausentes nas disciplinas
   const disciplinasDoSimulado = useMemo(() => {
     try {
       if (!simuladoAtual) return [];
@@ -61,18 +75,22 @@ export default function Relatorios({
               : [];
 
           discList.forEach((d) => {
-            if (!d || !d.nome) return;
-            const nomeDisc = String(d.nome).trim().toUpperCase();
+            if (!d) return;
+            const nomeDisc = String(d.nome || d)
+              .trim()
+              .toUpperCase();
+            if (!nomeDisc) return;
+
             const qtd =
               d.gabarito?.length ||
               d.questoes?.length ||
               d.totalQuestoes ||
               d.qtd ||
               0;
+
             if (!mapaDisciplinas.has(nomeDisc)) {
               mapaDisciplinas.set(nomeDisc, {
-                ...d,
-                nome: d.nome,
+                nome: d.nome || nomeDisc,
                 totalQuestoes: qtd,
               });
             } else {
@@ -85,7 +103,9 @@ export default function Relatorios({
       }
 
       if (Array.isArray(simuladoAtual.disciplinas)) {
-        return simuladoAtual.disciplinas;
+        return simuladoAtual.disciplinas.map((d) =>
+          typeof d === "string" ? { nome: d } : d,
+        );
       }
       if (
         simuladoAtual.disciplinas &&
@@ -207,16 +227,18 @@ export default function Relatorios({
       },
     ];
 
-    const linhas = turmaAtual.alunos.map((nomeAluno, index) => {
+    const linhas = (turmaAtual.alunos || []).map((alunoItem, index) => {
+      const nomeAlunoStr = getNomeAluno(alunoItem);
+      const adaptado = isAlunoAdaptado(alunoItem);
       const linhaData = {};
       const numAluno = String(index + 1).padStart(2, "0");
-      linhaData.aluno = `${numAluno}  ${String(nomeAluno).toUpperCase()}`;
+      linhaData.aluno = `${numAluno}  ${String(nomeAlunoStr).toUpperCase()}${adaptado ? " (ADAPTADO)" : ""}`;
 
       const respostasDoAluno = respostasDaTurma.filter(
         (r) =>
           String(r.nomeAluno || r.aluno || "")
             .trim()
-            .toUpperCase() === String(nomeAluno).trim().toUpperCase(),
+            .toUpperCase() === String(nomeAlunoStr).trim().toUpperCase(),
       );
 
       disciplinasDoSimulado.forEach((disc) => {
@@ -491,13 +513,16 @@ export default function Relatorios({
                   </tr>
                 </thead>
                 <tbody className="text-xs text-gray-700 divide-y divide-[#dbc8b6]">
-                  {turmaAtual.alunos.map((nomeAluno, index) => {
+                  {turmaAtual.alunos.map((alunoItem, index) => {
+                    const nomeAlunoStr = getNomeAluno(alunoItem);
+                    const adaptado = isAlunoAdaptado(alunoItem);
+
                     const respostasDoAluno = respostasDaTurma.filter(
                       (r) =>
                         String(r.nomeAluno || r.aluno || "")
                           .trim()
                           .toUpperCase() ===
-                        String(nomeAluno).trim().toUpperCase(),
+                        String(nomeAlunoStr).trim().toUpperCase(),
                     );
 
                     return (
@@ -509,7 +534,12 @@ export default function Relatorios({
                           <span className="text-[10px] text-gray-400 font-mono mr-2">
                             {String(index + 1).padStart(2, "0")}
                           </span>
-                          {nomeAluno}
+                          <span>{nomeAlunoStr}</span>
+                          {adaptado && (
+                            <span className="ml-2 bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">
+                              Adaptado
+                            </span>
+                          )}
                         </td>
 
                         {disciplinasDoSimulado.map((disc, dIdx) => {
