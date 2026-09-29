@@ -19,16 +19,11 @@ export default function Relatorios({
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
 
-  // Helpers de segurança para tratar alunos (String ou Objeto { nome, adaptado })
+  // Helper de segurança para extrair o nome do aluno (String ou Objeto { nome, adaptado })
   const getNomeAluno = (aluno) => {
     if (!aluno) return "";
     if (typeof aluno === "string") return aluno;
     return aluno.nome || "";
-  };
-
-  const isAlunoAdaptado = (aluno) => {
-    if (!aluno || typeof aluno !== "object") return false;
-    return !!aluno.adaptado;
   };
 
   const turmaAtual = useMemo(
@@ -57,68 +52,89 @@ export default function Relatorios({
     );
   }, [simulados, simuladoSelecionadoId]);
 
+  // Função auxiliar para extrair e formatar disciplinas de um simulado
+  const extrairDisciplinasDoSim = (sim) => {
+    if (!sim) return [];
+    if (Array.isArray(sim.disciplinas)) {
+      return sim.disciplinas.map((d) =>
+        typeof d === "string" ? { nome: d } : d,
+      );
+    }
+    if (sim.disciplinas && typeof sim.disciplinas === "object") {
+      return Object.entries(sim.disciplinas).map(([nome, dados]) => ({
+        nome,
+        ...(dados || {}),
+      }));
+    }
+    return [];
+  };
+
+  // Processa as disciplinas garantindo a ordem: Segunda-feira primeiro, depois Terça-feira (no Geral)
   const disciplinasDoSimulado = useMemo(() => {
     try {
       if (!simuladoAtual) return [];
 
       if (simuladoAtual === "GERAL") {
-        const mapaDisciplinas = new Map();
-        simuladosDisponiveis.forEach((sim) => {
-          if (!sim) return;
-          const discList = Array.isArray(sim.disciplinas)
-            ? sim.disciplinas
-            : sim.disciplinas && typeof sim.disciplinas === "object"
-              ? Object.entries(sim.disciplinas).map(([nome, dados]) => ({
-                  nome,
-                  ...(dados || {}),
-                }))
-              : [];
-
-          discList.forEach((d) => {
-            if (!d) return;
-            const nomeDisc = String(d.nome || d)
-              .trim()
-              .toUpperCase();
-            if (!nomeDisc) return;
-
-            const qtd =
-              d.gabarito?.length ||
-              d.questoes?.length ||
-              d.totalQuestoes ||
-              d.qtd ||
-              0;
-
-            if (!mapaDisciplinas.has(nomeDisc)) {
-              mapaDisciplinas.set(nomeDisc, {
-                nome: d.nome || nomeDisc,
-                totalQuestoes: qtd,
-              });
-            } else {
-              const existente = mapaDisciplinas.get(nomeDisc);
-              existente.totalQuestoes += qtd;
-            }
-          });
+        const simuladosSegunda = simuladosDisponiveis.filter((s) => {
+          const nome = String(s.nome || s.titulo || "").toUpperCase();
+          return (
+            nome.includes("SEGUNDA") ||
+            nome.includes("DIA 1") ||
+            nome.includes("SIM I") ||
+            (!nome.includes("TERÇA") &&
+              !nome.includes("DIA 2") &&
+              !nome.includes("SIM II"))
+          );
         });
+
+        const simuladosTerca = simuladosDisponiveis.filter((s) => {
+          const nome = String(s.nome || s.titulo || "").toUpperCase();
+          return (
+            nome.includes("TERÇA") ||
+            nome.includes("DIA 2") ||
+            nome.includes("SIM II")
+          );
+        });
+
+        const mapaDisciplinas = new Map();
+
+        const processarListaSimulados = (listaSims) => {
+          listaSims.forEach((sim) => {
+            const discList = extrairDisciplinasDoSim(sim);
+            discList.forEach((d) => {
+              if (!d) return;
+              const nomeDisc = String(d.nome || "")
+                .trim()
+                .toUpperCase();
+              if (!nomeDisc) return;
+
+              const qtd =
+                d.gabarito?.length ||
+                d.questoes?.length ||
+                d.totalQuestoes ||
+                d.qtd ||
+                0;
+
+              if (!mapaDisciplinas.has(nomeDisc)) {
+                mapaDisciplinas.set(nomeDisc, {
+                  nome: d.nome || nomeDisc,
+                  totalQuestoes: qtd,
+                });
+              } else {
+                const existente = mapaDisciplinas.get(nomeDisc);
+                existente.totalQuestoes += qtd;
+              }
+            });
+          });
+        };
+
+        processarListaSimulados(simuladosSegunda);
+        processarListaSimulados(simuladosTerca);
+
         return Array.from(mapaDisciplinas.values());
       }
 
-      if (Array.isArray(simuladoAtual.disciplinas)) {
-        return simuladoAtual.disciplinas.map((d) =>
-          typeof d === "string" ? { nome: d } : d,
-        );
-      }
-      if (
-        simuladoAtual.disciplinas &&
-        typeof simuladoAtual.disciplinas === "object"
-      ) {
-        return Object.entries(simuladoAtual.disciplinas).map(
-          ([nome, dados]) => ({
-            nome,
-            ...(dados || {}),
-          }),
-        );
-      }
-      return [];
+      return extrairDisciplinasDoSim(simuladoAtual);
     } catch (error) {
       console.error("Erro ao processar disciplinas do simulado:", error);
       return [];
@@ -229,10 +245,9 @@ export default function Relatorios({
 
     const linhas = (turmaAtual.alunos || []).map((alunoItem, index) => {
       const nomeAlunoStr = getNomeAluno(alunoItem);
-      const adaptado = isAlunoAdaptado(alunoItem);
       const linhaData = {};
       const numAluno = String(index + 1).padStart(2, "0");
-      linhaData.aluno = `${numAluno}  ${String(nomeAlunoStr).toUpperCase()}${adaptado ? " (ADAPTADO)" : ""}`;
+      linhaData.aluno = `${numAluno}  ${String(nomeAlunoStr).toUpperCase()}`;
 
       const respostasDoAluno = respostasDaTurma.filter(
         (r) =>
@@ -515,7 +530,6 @@ export default function Relatorios({
                 <tbody className="text-xs text-gray-700 divide-y divide-[#dbc8b6]">
                   {turmaAtual.alunos.map((alunoItem, index) => {
                     const nomeAlunoStr = getNomeAluno(alunoItem);
-                    const adaptado = isAlunoAdaptado(alunoItem);
 
                     const respostasDoAluno = respostasDaTurma.filter(
                       (r) =>
@@ -535,11 +549,6 @@ export default function Relatorios({
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           <span>{nomeAlunoStr}</span>
-                          {adaptado && (
-                            <span className="ml-2 bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">
-                              Adaptado
-                            </span>
-                          )}
                         </td>
 
                         {disciplinasDoSimulado.map((disc, dIdx) => {
