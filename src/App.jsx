@@ -30,7 +30,10 @@ function MainContent() {
     isProfessor ? "professor" : "inicio",
   );
 
-  const abaExibida = isProfessor ? "professor" : abaAtiva;
+  const abaExibida =
+    isProfessor && abaAtiva !== "estatisticas" && abaAtiva !== "inicio"
+      ? "professor"
+      : abaAtiva;
 
   // Estado para controlar o menu em lista (gaveta)
   const [menuAberto, setMenuAberto] = useState(false);
@@ -186,18 +189,17 @@ function MainContent() {
                   Professor
                 </MenuItem>
 
-                {isGestao && (
-                  <MenuItem
-                    active={abaExibida === "estatisticas"}
-                    onClick={() => {
-                      setAbaAtiva("estatisticas");
-                      setMenuAberto(false);
-                    }}
-                    icon={BarChart3}
-                  >
-                    Estatísticas
-                  </MenuItem>
-                )}
+                {/* Estatísticas liberadas tanto para Gestão quanto para Professor */}
+                <MenuItem
+                  active={abaExibida === "estatisticas"}
+                  onClick={() => {
+                    setAbaAtiva("estatisticas");
+                    setMenuAberto(false);
+                  }}
+                  icon={BarChart3}
+                >
+                  Estatísticas
+                </MenuItem>
 
                 {isGestao && (
                   <>
@@ -274,7 +276,7 @@ function MainContent() {
           />
         )}
 
-        {abaExibida === "estatisticas" && isGestao && (
+        {abaExibida === "estatisticas" && (
           <Estatisticas
             turmas={turmas}
             simulados={simulados}
