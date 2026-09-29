@@ -69,32 +69,31 @@ export default function Relatorios({
     return [];
   };
 
-  // Processa as disciplinas garantindo a ordem: Segunda-feira primeiro, depois Terça-feira (no Geral)
+  // Organização explícita: Segunda-feira primeiro, depois Terça-feira no modo GERAL
   const disciplinasDoSimulado = useMemo(() => {
     try {
       if (!simuladoAtual) return [];
 
       if (simuladoAtual === "GERAL") {
-        // Separa os simulados disponíveis entre Segunda-feira e Terça-feira
-        const simuladosSegunda = simuladosDisponiveis.filter((s) => {
-          const nome = String(s.nome || s.titulo || "").toUpperCase();
-          return (
-            nome.includes("SEGUNDA") ||
-            nome.includes("DIA 1") ||
-            nome.includes("SIM I") ||
-            (!nome.includes("TERÇA") &&
-              !nome.includes("DIA 2") &&
-              !nome.includes("SIM II"))
-          );
-        });
+        // Classifica rigorosamente por nome ou pela ordem da lista vinculada
+        const simuladosSegunda = [];
+        const simuladosTerca = [];
 
-        const simuladosTerca = simuladosDisponiveis.filter((s) => {
+        simuladosDisponiveis.forEach((s, idx) => {
           const nome = String(s.nome || s.titulo || "").toUpperCase();
-          return (
+          const ehTerca =
             nome.includes("TERÇA") ||
+            nome.includes("TERCA") ||
             nome.includes("DIA 2") ||
-            nome.includes("SIM II")
-          );
+            nome.includes("SIM II") ||
+            nome.includes("PARTE 2");
+
+          if (ehTerca) {
+            simuladosTerca.push(s);
+          } else {
+            // Se não for explicitamente terça, assume como segunda (ou primeiro dia)
+            simuladosSegunda.push(s);
+          }
         });
 
         const mapaDisciplinas = new Map();
@@ -129,7 +128,7 @@ export default function Relatorios({
           });
         };
 
-        // Adiciona PRIMEIRO as disciplinas de Segunda e DEPOIS as de Terça
+        // Garante a ordem exata solicitada: Segunda primeiro, Terça depois
         processarListaSimulados(simuladosSegunda);
         processarListaSimulados(simuladosTerca);
 
@@ -207,6 +206,7 @@ export default function Relatorios({
     disc?.qtd ||
     0;
 
+  // Função para gerar o PDF SEM AS NOTAS (apenas acertos e percentual)
   const gerarPDF = () => {
     if (!turmaAtual || !simuladoAtual) return;
 
@@ -286,12 +286,9 @@ export default function Relatorios({
             totalDisc > 0
               ? Math.round((acertosTotalDisc / totalDisc) * 100)
               : 0;
-          const nota =
-            totalDisc > 0
-              ? ((acertosTotalDisc / totalDisc) * 10).toFixed(1)
-              : "0.0";
+          // EXPORTAÇÃO SEM NOTA: exibe apenas acertos, total e percentual
           linhaData[disc.nome] =
-            `${acertosTotalDisc}/${totalDisc} (${percentual}%)\nNOTA: ${nota}`;
+            `${acertosTotalDisc}/${totalDisc} (${percentual}%)`;
         }
       });
 
@@ -305,7 +302,7 @@ export default function Relatorios({
         const somaQuestoes = totalQuestoesSimulado;
         const percentGeral =
           somaQuestoes > 0 ? Math.round((somaAcertos / somaQuestoes) * 100) : 0;
-        linhaData.geral = `${somaAcertos}/${somaQuestoes}\n(${percentGeral}%)`;
+        linhaData.geral = `${somaAcertos}/${somaQuestoes} (${percentGeral}%)`;
       }
 
       return linhaData;
@@ -472,7 +469,7 @@ export default function Relatorios({
         </div>
       </div>
 
-      {/* Bloco de Resultados / Tabela */}
+      {/* Bloco de Resultados / Tabela (Exibe com notas normalmente na tela) */}
       {turmaSelecionadaId && simuladoAtual ? (
         <div className="bg-white p-3.5 sm:p-4 rounded-md shadow-sm border border-[#dbc8b6]">
           <div className="flex items-center gap-2 mb-3 text-gray-800 pb-2.5 border-b border-[#dbc8b6]">
