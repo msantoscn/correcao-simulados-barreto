@@ -53,27 +53,20 @@ export default function Professor({
   const isAlunoAdaptado =
     typeof alunoObjAtivo === "object" && !!alunoObjAtivo.adaptado;
 
-  // Localiza o simulado adaptado correspondente vinculado a este simulado padrão (se houver)
+  // Localiza o simulado adaptado correspondente vinculado a este simulado padrão no Firebase
   const simuladoAdaptadoCorrespondente = simulados.find((s) => {
     if (!simuladoPadraoAtivo) return false;
-    const isAdapt =
+    const isAdaptFlag =
       !!s.adaptado || (s.nome || "").toUpperCase().includes("ADAPTADO");
-    const sNomeBase = (s.nome || "")
-      .replace(/\s*-\s*ADAPTADO\s*$/i, "")
-      .trim()
-      .toUpperCase();
-    const padraoNomeBase = (simuladoPadraoAtivo.nome || "")
-      .replace(/\s*-\s*ADAPTADO\s*$/i, "")
-      .trim()
-      .toUpperCase();
-    return (
-      isAdapt &&
-      (s.simuladoPadraoId === simuladoPadraoAtivo.id ||
-        sNomeBase === padraoNomeBase)
-    );
+    const sSimPadraoId = s.simuladoPadraoId
+      ? String(s.simuladoPadraoId).trim()
+      : "";
+    const padraoIdStr = String(simuladoPadraoAtivo.id).trim();
+
+    return isAdaptFlag && sSimPadraoId === padraoIdStr;
   });
 
-  // O simulado efetivo: só usa o adaptado se o aluno for adaptado E se realmente existir a versão adaptada cadastrada para este simulado
+  // O simulado efetivo: se o aluno for adaptado E existir versão adaptada cadastrada, usa o adaptado; senão, usa o padrão
   const simuladoAtivo =
     isAlunoAdaptado && simuladoAdaptadoCorrespondente
       ? simuladoAdaptadoCorrespondente
@@ -267,13 +260,18 @@ export default function Professor({
     );
   };
 
-  const calcularDesempenhoAluno = (gabaritoBrutoDoAluno) => {
+  const calcularDesempenhoParaSimulado = (
+    gabaritoBrutoDoAluno,
+    simuladoAlvo,
+  ) => {
     let totalAcertosGeral = 0;
     let totalQGeral = 0;
     let temAlgumaRespostaValida = false;
     const resultadoPorDisciplina = {};
 
-    simuladoAtivo.disciplinas.forEach((d) => {
+    if (!simuladoAlvo || !simuladoAlvo.disciplinas) return null;
+
+    simuladoAlvo.disciplinas.forEach((d) => {
       const respAlunoDisc = gabaritoBrutoDoAluno[d.nome] || {};
       const gabaritoOficial = d.gabarito || [];
       const qtdQ = gabaritoOficial.length;
@@ -286,9 +284,28 @@ export default function Professor({
       temAlgumaRespostaValida = true;
       let acertosDisc = 0;
 
-      gabaritoOficial.forEach((correta, idx) => {
+      gabaritoOficial.forEach((itemCorreto, idxQ) => {
         totalQGeral++;
-        if (respAlunoDisc[idx] && respAlunoDisc[idx] === correta) {
+        const respostaDada = String(respAlunoDisc[idxQ] || "")
+          .trim()
+          .toUpperCase();
+
+        let gabaritoCorreto = "";
+        if (typeof itemCorreto === "string") {
+          gabaritoCorreto = itemCorreto.trim().toUpperCase();
+        } else if (itemCorreto && typeof itemCorreto === "object") {
+          gabaritoCorreto = String(
+            itemCorreto.resposta ||
+              itemCorreto.alternativa ||
+              itemCorreto.correta ||
+              itemCorreto.letra ||
+              "",
+          )
+            .trim()
+            .toUpperCase();
+        }
+
+        if (respostaDada && respostaDada === gabaritoCorreto) {
           acertosDisc++;
           totalAcertosGeral++;
         }
@@ -333,7 +350,10 @@ export default function Professor({
       return;
     }
 
-    const calculo = calcularDesempenhoAluno(respostasProfessor);
+    const calculo = calcularDesempenhoParaSimulado(
+      respostasProfessor,
+      simuladoAtivo,
+    );
 
     if (!calculo) {
       return alert("Preencha pelo menos uma resposta.");
@@ -694,9 +714,17 @@ export default function Professor({
 
                         const registo = encontrarRegistoAluno(nomeAlunoStr);
 
+                        const simuladoAlvoLinha =
+                          isAdaptado && simuladoAdaptadoCorrespondente
+                            ? simuladoAdaptadoCorrespondente
+                            : simuladoPadraoAtivo;
+
                         const dadosCalculados =
                           registo && registo.gabaritoBruto
-                            ? calcularDesempenhoAluno(registo.gabaritoBruto)
+                            ? calcularDesempenhoParaSimulado(
+                                registo.gabaritoBruto,
+                                simuladoAlvoLinha,
+                              )
                             : null;
                         const concluido = dadosCalculados !== null;
                         const temPermissao = temPermissaoEdicao(
@@ -854,7 +882,7 @@ export default function Professor({
                     <span className="bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1">
                       {simuladoAdaptadoCorrespondente
                         ? "ADAPTADO"
-                        : "(SEM ADAPTAÇÃO)"}
+                        : "(sem adaptação)"}
                     </span>
                   )}
                 </div>
