@@ -118,7 +118,7 @@ export default function Estatisticas({
     (r) => !isAlunoAdaptado(r.nomeAluno || r.aluno, r.turma),
   );
 
-  // Mapeamento e consolidação de desempenho dos alunos (agrupando os dois simulados)
+  // Mapeamento e consolidação de desempenho dos alunos respeitando a visão selecionada (Geral, Segunda ou Terça)
   const mapaAlunos = {};
   respostasValidasParaMedia.forEach((r) => {
     const nome = String(r.nomeAluno || r.aluno || "").trim();
@@ -478,178 +478,187 @@ export default function Estatisticas({
       )}
 
       <div className="space-y-4">
-        {/* CARDS DE DESTAQUE COM O PERCENTUAL EM DESTAQUE E SEM NOTAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* 1. Destaque Individual Geral */}
-          <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
-                Destaque Individual
-              </span>
-              <Award className="w-5 h-5 text-blue-500" />
-            </div>
-            {melhorAlunoGeral ? (
-              <div className="py-1">
-                <h4 className="font-bold text-gray-900 text-xs uppercase truncate mb-0.5">
-                  {melhorAlunoGeral.nome}
-                </h4>
-                <p className="text-[10px] text-gray-500 uppercase font-semibold mb-1">
-                  Turma:{" "}
-                  <span className="text-gray-800">
-                    {melhorAlunoGeral.turma}
-                  </span>
-                </p>
-                <div className="mt-2 pt-2 border-t border-blue-100 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-gray-600 uppercase">
-                    Aproveitamento
-                  </span>
-                  <span className="text-xl font-black text-blue-600 tracking-tight">
-                    {melhorAlunoGeral.percentual}%
-                  </span>
-                </div>
+        {/* OS CARDS DE DESTAQUE SÓ APARECEM SE A VISÃO NÃO FOR "POR TURMA" */}
+        {visaoSelecionada !== "turma" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* 1. Destaque Individual Geral */}
+            <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                  Destaque Individual (
+                  {visaoSelecionada === "geral"
+                    ? "Geral"
+                    : visaoSelecionada === "segunda"
+                      ? "Segunda"
+                      : "Terça"}
+                  )
+                </span>
+                <Award className="w-5 h-5 text-blue-500" />
               </div>
-            ) : (
-              <p className="text-xs text-gray-400 italic py-3">
-                Sem dados registados.
-              </p>
-            )}
-          </div>
-
-          {/* 2. Turma com Melhor Média */}
-          <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                Turma Melhor Média
-              </span>
-              <TrendingUp className="w-5 h-5 text-emerald-500" />
-            </div>
-            {turmaDestaqueGeral ? (
-              <div className="py-1">
-                <h4 className="font-bold text-gray-900 text-xs uppercase truncate mb-0.5">
-                  {turmaDestaqueGeral.nome}
-                </h4>
-                <p className="text-[10px] text-gray-500 uppercase font-semibold mb-1">
-                  Provas:{" "}
-                  <span className="text-gray-800">
-                    {turmaDestaqueGeral.totalRespostas}
-                  </span>
-                </p>
-                <div className="mt-2 pt-2 border-t border-emerald-100 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-gray-600 uppercase">
-                    Média Acertos
-                  </span>
-                  <span className="text-xl font-black text-emerald-600 tracking-tight">
-                    {turmaDestaqueGeral.mediaAcertos}%
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 italic py-3">
-                Sem dados registados.
-              </p>
-            )}
-          </div>
-
-          {/* 3. Destaque por Ano/Série */}
-          <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
-                <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />{" "}
-                Destaque por Ano
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <select
-                value={anoSelecionadoFiltro}
-                onChange={(e) => setAnoSelecionadoFiltro(e.target.value)}
-                className="w-full p-1 bg-white border border-indigo-300 rounded text-[11px] font-bold text-gray-800 uppercase focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer"
-              >
-                <option value="">Selecione o ano...</option>
-                {anosDisponiveis.map((ano) => (
-                  <option key={ano} value={ano}>
-                    {ano}
-                  </option>
-                ))}
-              </select>
-
-              {!anoSelecionadoFiltro ? (
-                <p className="text-[11px] text-gray-400 italic text-center py-1">
-                  Escolha um ano acima.
-                </p>
-              ) : melhorAlunoPorAno ? (
-                <div>
-                  <h4 className="font-bold text-gray-900 text-xs uppercase truncate">
-                    {melhorAlunoPorAno.nome}
+              {melhorAlunoGeral ? (
+                <div className="py-1">
+                  <h4 className="font-bold text-gray-900 text-xs uppercase truncate mb-0.5">
+                    {melhorAlunoGeral.nome}
                   </h4>
-                  <p className="text-[9px] text-indigo-700 font-semibold uppercase">
-                    Turma: {melhorAlunoPorAno.turma}
+                  <p className="text-[10px] text-gray-500 uppercase font-semibold mb-1">
+                    Turma:{" "}
+                    <span className="text-gray-800">
+                      {melhorAlunoGeral.turma}
+                    </span>
                   </p>
-                  <div className="mt-1.5 pt-1.5 border-t border-indigo-100 flex items-center justify-between">
+                  <div className="mt-2 pt-2 border-t border-blue-100 flex items-center justify-between">
                     <span className="text-[10px] font-bold text-gray-600 uppercase">
                       Aproveitamento
                     </span>
-                    <span className="text-xl font-black text-indigo-600 tracking-tight">
-                      {melhorAlunoPorAno.percentual}%
+                    <span className="text-xl font-black text-blue-600 tracking-tight">
+                      {melhorAlunoGeral.percentual}%
                     </span>
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-gray-400 italic text-center py-1">
-                  Sem dados para este ano.
+                <p className="text-xs text-gray-400 italic py-3">
+                  Sem dados registados.
                 </p>
               )}
             </div>
-          </div>
 
-          {/* 4. Destaque por Turma Específica */}
-          <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-amber-600" /> Destaque Turma
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <select
-                value={turmaDestaqueId}
-                onChange={(e) => setTurmaDestaqueId(e.target.value)}
-                className="w-full p-1 bg-white border border-amber-300 rounded text-[11px] font-bold text-gray-800 uppercase focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer"
-              >
-                <option value="">Selecione a turma...</option>
-                {turmas.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.nome}
-                  </option>
-                ))}
-              </select>
-
-              {!turmaDestaqueId ? (
-                <p className="text-[11px] text-gray-400 italic text-center py-1">
-                  Escolha uma turma acima.
-                </p>
-              ) : melhorAlunoDaTurmaDestaque ? (
-                <div>
-                  <h4 className="font-bold text-gray-900 text-xs uppercase truncate">
-                    {melhorAlunoDaTurmaDestaque.nome}
+            {/* 2. Turma com Melhor Média */}
+            <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                  Turma Melhor Média
+                </span>
+                <TrendingUp className="w-5 h-5 text-emerald-500" />
+              </div>
+              {turmaDestaqueGeral ? (
+                <div className="py-1">
+                  <h4 className="font-bold text-gray-900 text-xs uppercase truncate mb-0.5">
+                    {turmaDestaqueGeral.nome}
                   </h4>
-                  <div className="mt-1.5 pt-1.5 border-t border-amber-100 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-gray-600 uppercase">
-                      Aproveitamento
+                  <p className="text-[10px] text-gray-500 uppercase font-semibold mb-1">
+                    Provas:{" "}
+                    <span className="text-gray-800">
+                      {turmaDestaqueGeral.totalRespostas}
                     </span>
-                    <span className="text-xl font-black text-amber-700 tracking-tight">
-                      {melhorAlunoDaTurmaDestaque.percentual}%
+                  </p>
+                  <div className="mt-2 pt-2 border-t border-emerald-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-gray-600 uppercase">
+                      Média Acertos
+                    </span>
+                    <span className="text-xl font-black text-emerald-600 tracking-tight">
+                      {turmaDestaqueGeral.mediaAcertos}%
                     </span>
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-gray-400 italic text-center py-1">
-                  Sem lançamentos.
+                <p className="text-xs text-gray-400 italic py-3">
+                  Sem dados registados.
                 </p>
               )}
             </div>
+
+            {/* 3. Destaque por Ano/Série */}
+            <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
+                  <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />{" "}
+                  Destaque por Ano
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <select
+                  value={anoSelecionadoFiltro}
+                  onChange={(e) => setAnoSelecionadoFiltro(e.target.value)}
+                  className="w-full p-1 bg-white border border-indigo-300 rounded text-[11px] font-bold text-gray-800 uppercase focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer"
+                >
+                  <option value="">Selecione o ano...</option>
+                  {anosDisponiveis.map((ano) => (
+                    <option key={ano} value={ano}>
+                      {ano}
+                    </option>
+                  ))}
+                </select>
+
+                {!anoSelecionadoFiltro ? (
+                  <p className="text-[11px] text-gray-400 italic text-center py-1">
+                    Escolha um ano acima.
+                  </p>
+                ) : melhorAlunoPorAno ? (
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-xs uppercase truncate">
+                      {melhorAlunoPorAno.nome}
+                    </h4>
+                    <p className="text-[9px] text-indigo-700 font-semibold uppercase">
+                      Turma: {melhorAlunoPorAno.turma}
+                    </p>
+                    <div className="mt-1.5 pt-1.5 border-t border-indigo-100 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-gray-600 uppercase">
+                        Aproveitamento
+                      </span>
+                      <span className="text-xl font-black text-indigo-600 tracking-tight">
+                        {melhorAlunoPorAno.percentual}%
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-400 italic text-center py-1">
+                    Sem dados para este ano.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 4. Destaque por Turma Específica */}
+            <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5 text-amber-600" /> Destaque
+                  Turma
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <select
+                  value={turmaDestaqueId}
+                  onChange={(e) => setTurmaDestaqueId(e.target.value)}
+                  className="w-full p-1 bg-white border border-amber-300 rounded text-[11px] font-bold text-gray-800 uppercase focus:outline-none focus:border-amber-500 shadow-xs cursor-pointer"
+                >
+                  <option value="">Selecione a turma...</option>
+                  {turmas.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome}
+                    </option>
+                  ))}
+                </select>
+
+                {!turmaDestaqueId ? (
+                  <p className="text-[11px] text-gray-400 italic text-center py-1">
+                    Escolha uma turma acima.
+                  </p>
+                ) : melhorAlunoDaTurmaDestaque ? (
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-xs uppercase truncate">
+                      {melhorAlunoDaTurmaDestaque.nome}
+                    </h4>
+                    <div className="mt-1.5 pt-1.5 border-t border-amber-100 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-gray-600 uppercase">
+                        Aproveitamento
+                      </span>
+                      <span className="text-xl font-black text-amber-700 tracking-tight">
+                        {melhorAlunoDaTurmaDestaque.percentual}%
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-400 italic text-center py-1">
+                    Sem lançamentos.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {visaoSelecionada !== "turma" && (
           <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-gray-50 space-y-3">
