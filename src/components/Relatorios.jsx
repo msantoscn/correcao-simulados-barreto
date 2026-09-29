@@ -19,7 +19,6 @@ export default function Relatorios({
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoSelecionadoId, setSimuladoSelecionadoId] = useState("");
 
-  // Helper de segurança para extrair o nome do aluno (String ou Objeto { nome, adaptado })
   const getNomeAluno = (aluno) => {
     if (!aluno) return "";
     if (typeof aluno === "string") return aluno;
@@ -52,7 +51,6 @@ export default function Relatorios({
     );
   }, [simulados, simuladoSelecionadoId]);
 
-  // Função auxiliar para extrair e formatar disciplinas de um simulado
   const extrairDisciplinasDoSim = (sim) => {
     if (!sim) return [];
     if (Array.isArray(sim.disciplinas)) {
@@ -69,68 +67,65 @@ export default function Relatorios({
     return [];
   };
 
-  // Organização explícita: Segunda-feira primeiro, depois Terça-feira no modo GERAL
+  // Organização rigorosa e garantida: Segunda-feira sempre antes de Terça-feira
   const disciplinasDoSimulado = useMemo(() => {
     try {
       if (!simuladoAtual) return [];
 
       if (simuladoAtual === "GERAL") {
-        // Classifica rigorosamente por nome ou pela ordem da lista vinculada
-        const simuladosSegunda = [];
-        const simuladosTerca = [];
+        // Ordena os simulados garantindo que Segunda venha antes de Terça
+        const simuladosOrdenados = [...simuladosDisponiveis].sort((a, b) => {
+          const nomeA = String(a.nome || a.titulo || "").toUpperCase();
+          const nomeB = String(b.nome || b.titulo || "").toUpperCase();
 
-        simuladosDisponiveis.forEach((s, idx) => {
-          const nome = String(s.nome || s.titulo || "").toUpperCase();
-          const ehTerca =
-            nome.includes("TERÇA") ||
-            nome.includes("TERCA") ||
-            nome.includes("DIA 2") ||
-            nome.includes("SIM II") ||
-            nome.includes("PARTE 2");
+          const ehTercaA =
+            nomeA.includes("TERÇA") ||
+            nomeA.includes("TERCA") ||
+            nomeA.includes("DIA 2") ||
+            nomeA.includes("SIM II") ||
+            nomeA.includes("PARTE 2");
 
-          if (ehTerca) {
-            simuladosTerca.push(s);
-          } else {
-            // Se não for explicitamente terça, assume como segunda (ou primeiro dia)
-            simuladosSegunda.push(s);
-          }
+          const ehTercaB =
+            nomeB.includes("TERÇA") ||
+            nomeB.includes("TERCA") ||
+            nomeB.includes("DIA 2") ||
+            nomeB.includes("SIM II") ||
+            nomeB.includes("PARTE 2");
+
+          if (!ehTercaA && ehTercaB) return -1; // A é segunda, B é terça -> A vem primeiro
+          if (ehTercaA && !ehTercaB) return 1; // A é terça, B é segunda -> B vem primeiro
+          return 0;
         });
 
         const mapaDisciplinas = new Map();
 
-        const processarListaSimulados = (listaSims) => {
-          listaSims.forEach((sim) => {
-            const discList = extrairDisciplinasDoSim(sim);
-            discList.forEach((d) => {
-              if (!d) return;
-              const nomeDisc = String(d.nome || "")
-                .trim()
-                .toUpperCase();
-              if (!nomeDisc) return;
+        simuladosOrdenados.forEach((sim) => {
+          const discList = extrairDisciplinasDoSim(sim);
+          discList.forEach((d) => {
+            if (!d) return;
+            const nomeDisc = String(d.nome || "")
+              .trim()
+              .toUpperCase();
+            if (!nomeDisc) return;
 
-              const qtd =
-                d.gabarito?.length ||
-                d.questoes?.length ||
-                d.totalQuestoes ||
-                d.qtd ||
-                0;
+            const qtd =
+              d.gabarito?.length ||
+              d.questoes?.length ||
+              d.totalQuestoes ||
+              d.qtd ||
+              0;
 
-              if (!mapaDisciplinas.has(nomeDisc)) {
-                mapaDisciplinas.set(nomeDisc, {
-                  nome: d.nome || nomeDisc,
-                  totalQuestoes: qtd,
-                });
-              } else {
-                const existente = mapaDisciplinas.get(nomeDisc);
-                existente.totalQuestoes += qtd;
-              }
-            });
+            if (!mapaDisciplinas.has(nomeDisc)) {
+              mapaDisciplinas.set(nomeDisc, {
+                nome: d.nome || nomeDisc,
+                totalQuestoes: qtd,
+              });
+            } else {
+              const existente = mapaDisciplinas.get(nomeDisc);
+              existente.totalQuestoes += qtd;
+            }
           });
-        };
-
-        // Garante a ordem exata solicitada: Segunda primeiro, Terça depois
-        processarListaSimulados(simuladosSegunda);
-        processarListaSimulados(simuladosTerca);
+        });
 
         return Array.from(mapaDisciplinas.values());
       }
@@ -206,7 +201,7 @@ export default function Relatorios({
     disc?.qtd ||
     0;
 
-  // Função para gerar o PDF SEM AS NOTAS (apenas acertos e percentual)
+  // Exportação em PDF SEM AS NOTAS (apenas acertos, total e percentual)
   const gerarPDF = () => {
     if (!turmaAtual || !simuladoAtual) return;
 
@@ -286,7 +281,6 @@ export default function Relatorios({
             totalDisc > 0
               ? Math.round((acertosTotalDisc / totalDisc) * 100)
               : 0;
-          // EXPORTAÇÃO SEM NOTA: exibe apenas acertos, total e percentual
           linhaData[disc.nome] =
             `${acertosTotalDisc}/${totalDisc} (${percentual}%)`;
         }
@@ -372,7 +366,6 @@ export default function Relatorios({
 
   return (
     <div className="space-y-3 sm:space-y-4 pb-12 max-w-7xl mx-auto w-full font-sans antialiased">
-      {/* Bloco de Filtros */}
       <div className="bg-white p-3.5 sm:p-4 rounded-md shadow-sm border border-[#dbc8b6]">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-[#dbc8b6]">
           <div>
@@ -397,7 +390,7 @@ export default function Relatorios({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-3.5">
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-blue-500" /> 1. Bimestre
             </label>
             <select
@@ -418,7 +411,7 @@ export default function Relatorios({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-blue-500" /> 2. Turma
             </label>
             <select
@@ -440,7 +433,7 @@ export default function Relatorios({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 tracking-widest flex items-center gap-1">
               <BookOpen className="w-3.5 h-3.5 text-blue-500" /> 3. Simulado
             </label>
             <select
@@ -469,7 +462,6 @@ export default function Relatorios({
         </div>
       </div>
 
-      {/* Bloco de Resultados / Tabela (Exibe com notas normalmente na tela) */}
       {turmaSelecionadaId && simuladoAtual ? (
         <div className="bg-white p-3.5 sm:p-4 rounded-md shadow-sm border border-[#dbc8b6]">
           <div className="flex items-center gap-2 mb-3 text-gray-800 pb-2.5 border-b border-[#dbc8b6]">
