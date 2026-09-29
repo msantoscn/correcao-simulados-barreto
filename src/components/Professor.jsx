@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   UserCheck,
@@ -36,6 +36,9 @@ export default function Professor({
   const [respostasProfessor, setRespostasProfessor] = useState({});
   const [mostrarModalReatribuir, setMostrarModalReatribuir] = useState(false);
   const [alunoSelecionadoDestino, setAlunoSelecionadoDestino] = useState("");
+
+  // Referência para guardar a posição do elemento do aluno na tabela ao retornar
+  const alunoRefs = useRef({});
 
   const turmaAtiva = turmas.find(
     (t) => String(t.id) === String(turmaSelecionadaId),
@@ -361,6 +364,7 @@ export default function Professor({
 
     try {
       const registoExistenteAlunoAtivo = encontrarRegistoAluno(alunoAtivo);
+      const alunoSalvo = alunoAtivo;
 
       const dadosRegisto = {
         ...(registoExistenteAlunoAtivo?.id
@@ -393,6 +397,14 @@ export default function Professor({
       setAlunoAtivo(null);
       setAlunoOriginal(null);
       setRespostasProfessor({});
+
+      // Rola suavemente de volta para a linha do aluno que acabou de ser salvo na tabela
+      setTimeout(() => {
+        const el = alunoRefs.current[alunoSalvo];
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
     } catch (error) {
       console.error("Erro ao salvar respostas:", error);
     }
@@ -735,6 +747,7 @@ export default function Professor({
                         return (
                           <tr
                             key={idx}
+                            ref={(el) => (alunoRefs.current[nomeAlunoStr] = el)}
                             className="hover:bg-amber-50/20 transition-colors"
                           >
                             <td className="p-2.5 font-bold text-gray-800 border-r border-[#dbc8b6] uppercase whitespace-normal break-words align-middle text-xs">
