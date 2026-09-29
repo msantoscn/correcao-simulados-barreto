@@ -163,30 +163,19 @@ export default function Estatisticas({
     }
   });
 
-  // Geração dos Anos/Séries formatados (tratando a EJA adequadamente)
+  // Geração dos Anos/Séries formatados
   const setAnos = new Set();
   turmas.forEach((t) => {
     const nomeTurma = String(t.nome || "")
       .trim()
       .toUpperCase();
 
-    // Regras específicas para EJA
-    if (
-      nomeTurma.includes("EJA") ||
-      nomeTurma.includes("5") ||
-      nomeTurma.includes("7")
-    ) {
-      if (
-        nomeTurma.includes("5") &&
-        (nomeTurma.includes("6") || nomeTurma.includes("EJA"))
-      ) {
+    if (nomeTurma.includes("EJA")) {
+      if (nomeTurma.includes("5") || nomeTurma.includes("6")) {
         setAnos.add("5ª/6ª EJA");
         return;
       }
-      if (
-        nomeTurma.includes("7") &&
-        (nomeTurma.includes("8") || nomeTurma.includes("EJA"))
-      ) {
+      if (nomeTurma.includes("7") || nomeTurma.includes("8")) {
         setAnos.add("7ª/8ª EJA");
         return;
       }
@@ -215,17 +204,19 @@ export default function Estatisticas({
   if (anoSelecionadoFiltro) {
     const alunosDoAno = desempenhoAlunosMap.filter((aluno) => {
       const turmaUpper = String(aluno.turma || "").toUpperCase();
-      if (anoSelecionadoFiltro.includes("EJA")) {
-        if (
-          anoSelecionadoFiltro.includes("5") &&
-          (turmaUpper.includes("5") || turmaUpper.includes("6"))
-        )
-          return true;
-        if (
-          anoSelecionadoFiltro.includes("7") &&
-          (turmaUpper.includes("7") || turmaUpper.includes("8"))
-        )
-          return true;
+      if (anoSelecionadoFiltro === "5ª/6ª EJA") {
+        return (
+          turmaUpper.includes("5") &&
+          turmaUpper.includes("6") &&
+          turmaUpper.includes("EJA")
+        );
+      }
+      if (anoSelecionadoFiltro === "7ª/8ª EJA") {
+        return (
+          turmaUpper.includes("7") &&
+          turmaUpper.includes("8") &&
+          turmaUpper.includes("EJA")
+        );
       }
       return turmaUpper.includes(anoSelecionadoFiltro.toUpperCase());
     });
