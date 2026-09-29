@@ -33,7 +33,6 @@ export default function Relatorios({
     return simulados.filter((s) => idsSimuladosVinculados.includes(s.id));
   }, [simulados, idsSimuladosVinculados]);
 
-  // Blindagem: Se nenhum simulado foi escolhido, retorna null para evitar tela branca
   const simuladoAtual = useMemo(() => {
     if (!simuladoSelecionadoId) return null;
     if (simuladoSelecionadoId === "GERAL") return "GERAL";
@@ -43,62 +42,74 @@ export default function Relatorios({
     );
   }, [simulados, simuladoSelecionadoId]);
 
+  // Blindagem total contra dados malformados ou ausentes nas disciplinas
   const disciplinasDoSimulado = useMemo(() => {
-    if (!simuladoAtual) return [];
+    try {
+      if (!simuladoAtual) return [];
 
-    if (simuladoAtual === "GERAL") {
-      const mapaDisciplinas = new Map();
-      simuladosDisponiveis.forEach((sim) => {
-        const discList = Array.isArray(sim.disciplinas)
-          ? sim.disciplinas
-          : Object.entries(sim.disciplinas || {}).map(([nome, dados]) => ({
-              nome,
-              ...dados,
-            }));
+      if (simuladoAtual === "GERAL") {
+        const mapaDisciplinas = new Map();
+        simuladosDisponiveis.forEach((sim) => {
+          if (!sim) return;
+          const discList = Array.isArray(sim.disciplinas)
+            ? sim.disciplinas
+            : sim.disciplinas && typeof sim.disciplinas === "object"
+              ? Object.entries(sim.disciplinas).map(([nome, dados]) => ({
+                  nome,
+                  ...(dados || {}),
+                }))
+              : [];
 
-        discList.forEach((d) => {
-          if (!d || !d.nome) return;
-          const nomeDisc = String(d.nome).trim().toUpperCase();
-          const qtd =
-            d.gabarito?.length ||
-            d.questoes?.length ||
-            d.totalQuestoes ||
-            d.qtd ||
-            0;
-          if (!mapaDisciplinas.has(nomeDisc)) {
-            mapaDisciplinas.set(nomeDisc, {
-              ...d,
-              nome: d.nome,
-              totalQuestoes: qtd,
-            });
-          } else {
-            const existente = mapaDisciplinas.get(nomeDisc);
-            existente.totalQuestoes += qtd;
-          }
+          discList.forEach((d) => {
+            if (!d || !d.nome) return;
+            const nomeDisc = String(d.nome).trim().toUpperCase();
+            const qtd =
+              d.gabarito?.length ||
+              d.questoes?.length ||
+              d.totalQuestoes ||
+              d.qtd ||
+              0;
+            if (!mapaDisciplinas.has(nomeDisc)) {
+              mapaDisciplinas.set(nomeDisc, {
+                ...d,
+                nome: d.nome,
+                totalQuestoes: qtd,
+              });
+            } else {
+              const existente = mapaDisciplinas.get(nomeDisc);
+              existente.totalQuestoes += qtd;
+            }
+          });
         });
-      });
-      return Array.from(mapaDisciplinas.values());
-    }
+        return Array.from(mapaDisciplinas.values());
+      }
 
-    if (Array.isArray(simuladoAtual.disciplinas)) {
-      return simuladoAtual.disciplinas;
+      if (Array.isArray(simuladoAtual.disciplinas)) {
+        return simuladoAtual.disciplinas;
+      }
+      if (
+        simuladoAtual.disciplinas &&
+        typeof simuladoAtual.disciplinas === "object"
+      ) {
+        return Object.entries(simuladoAtual.disciplinas).map(
+          ([nome, dados]) => ({
+            nome,
+            ...(dados || {}),
+          }),
+        );
+      }
+      return [];
+    } catch (error) {
+      console.error("Erro ao processar disciplinas do simulado:", error);
+      return [];
     }
-    if (
-      simuladoAtual.disciplinas &&
-      typeof simuladoAtual.disciplinas === "object"
-    ) {
-      return Object.entries(simuladoAtual.disciplinas).map(([nome, dados]) => ({
-        nome,
-        ...dados,
-      }));
-    }
-    return [];
   }, [simuladoAtual, simuladosDisponiveis]);
 
   const respostasDaTurma = useMemo(() => {
     if (!turmaSelecionadaId || !turmaAtual || !simuladoAtual) return [];
 
     return respostasAlunos.filter((resp) => {
+      if (!resp) return false;
       const matchTurma =
         String(resp.turmaId) === String(turmaSelecionadaId) ||
         String(resp.turma || "")
@@ -146,16 +157,16 @@ export default function Relatorios({
     return disciplinasDoSimulado.reduce(
       (acc, d) =>
         acc +
-        (d.totalQuestoes || d.gabarito?.length || d.questoes?.length || 0),
+        (d?.totalQuestoes || d?.gabarito?.length || d?.questoes?.length || 0),
       0,
     );
   }, [disciplinasDoSimulado]);
 
   const getQtdQuestao = (disc) =>
-    disc.totalQuestoes ||
-    disc.gabarito?.length ||
-    disc.questoes?.length ||
-    disc.qtd ||
+    disc?.totalQuestoes ||
+    disc?.gabarito?.length ||
+    disc?.questoes?.length ||
+    disc?.qtd ||
     0;
 
   const gerarPDF = () => {
@@ -186,8 +197,8 @@ export default function Relatorios({
       ...disciplinasDoSimulado.map((disc) => {
         const qtd = getQtdQuestao(disc);
         return {
-          header: `${String(disc.nome).toUpperCase()}\n(${qtd} Q)`,
-          dataKey: disc.nome,
+          header: `${String(disc?.nome || "Disc").toUpperCase()}\n(${qtd} Q)`,
+          dataKey: disc?.nome || "disc",
         };
       }),
       {
@@ -209,6 +220,7 @@ export default function Relatorios({
       );
 
       disciplinasDoSimulado.forEach((disc) => {
+        if (!disc || !disc.nome) return;
         let acertosTotalDisc = 0;
         let totalDisc = getQtdQuestao(disc);
         let encontrouAlguma = false;
@@ -285,10 +297,12 @@ export default function Relatorios({
     };
 
     disciplinasDoSimulado.forEach((disc) => {
-      columnStylesConfig[disc.nome] = {
-        cellWidth: larguraColunaNota,
-        halign: "center",
-      };
+      if (disc && disc.nome) {
+        columnStylesConfig[disc.nome] = {
+          cellWidth: larguraColunaNota,
+          halign: "center",
+        };
+      }
     });
 
     autoTable(doc, {
@@ -447,6 +461,7 @@ export default function Relatorios({
                       Aluno
                     </th>
                     {disciplinasDoSimulado.map((disc, idx) => {
+                      if (!disc || !disc.nome) return null;
                       const qtdQ = getQtdQuestao(disc);
                       return (
                         <th
@@ -498,6 +513,7 @@ export default function Relatorios({
                         </td>
 
                         {disciplinasDoSimulado.map((disc, dIdx) => {
+                          if (!disc || !disc.nome) return null;
                           const qtdQ = getQtdQuestao(disc);
                           let acertosTotalDisc = 0;
                           let totalDisc = qtdQ;
