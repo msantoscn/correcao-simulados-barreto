@@ -6,7 +6,6 @@ import {
   Calendar,
   TrendingUp,
   Filter,
-  GraduationCap,
 } from "lucide-react";
 
 export default function Estatisticas({
@@ -561,8 +560,7 @@ export default function Estatisticas({
             <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
-                  <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />{" "}
-                  Destaque por Ano
+                  Destaque por Ano/Série
                 </span>
               </div>
 
@@ -613,8 +611,7 @@ export default function Estatisticas({
             <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-amber-600" /> Destaque
-                  Turma
+                  Destaque da Turma
                 </span>
               </div>
 
