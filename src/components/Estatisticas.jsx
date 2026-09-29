@@ -6,6 +6,7 @@ import {
   Calendar,
   TrendingUp,
   Filter,
+  GraduationCap,
 } from "lucide-react";
 
 export default function Estatisticas({
@@ -14,18 +15,12 @@ export default function Estatisticas({
   respostasAlunos = [],
 }) {
   const [bimestreSelecionado, setBimestreSelecionado] = useState("3");
-
-  // Opções principais do dropdown: "geral" | "segunda" | "terca" | "turma"
   const [visaoSelecionada, setVisaoSelecionada] = useState("geral");
-
-  // Sub-filtros para quando a visão "Por Turma" estiver ativa
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
   const [simuladoFiltroTurma, setSimuladoFiltroTurma] = useState("geral");
-
-  // Estado para o seletor da turma no card "Destaque da turma" na aba Geral
+  const [anoSelecionadoFiltro, setAnoSelecionadoFiltro] = useState("");
   const [turmaDestaqueId, setTurmaDestaqueId] = useState("");
 
-  // Helper para verificar se um aluno específico é adaptado
   const isAlunoAdaptado = (nomeAluno, nomeTurma) => {
     if (!nomeAluno || !nomeTurma) return false;
     const turmaObj = turmas.find(
@@ -46,7 +41,6 @@ export default function Estatisticas({
     return typeof alunoEncontrado === "object" && !!alunoEncontrado.adaptado;
   };
 
-  // Filtra os simulados do bimestre escolhido (excluindo adaptados da lista base)
   const simuladosDoBimestre = simulados.filter((s) => {
     const matchBimestre =
       String(s.bimestre) === String(bimestreSelecionado) || !s.bimestre;
@@ -55,7 +49,6 @@ export default function Estatisticas({
     return matchBimestre && !isAdaptadoFlag && !nomeSim.includes("ADAPTADO");
   });
 
-  // Separa os simulados entre Segunda-feira (SIM I) e Terça-feira (SIM II) com base no nome
   const simuladosSegundaIds = simuladosDoBimestre
     .filter((s) => {
       const nome = String(s.nome || s.titulo || "").toUpperCase();
@@ -83,7 +76,6 @@ export default function Estatisticas({
 
   const simuladoIdsDoBimestre = simuladosDoBimestre.map((s) => String(s.id));
 
-  // Define os IDs de simulados válidos com base na visão escolhida
   let idsSimuladosVisao = simuladoIdsDoBimestre;
   if (visaoSelecionada === "segunda") {
     idsSimuladosVisao = simuladosSegundaIds;
@@ -91,7 +83,6 @@ export default function Estatisticas({
     idsSimuladosVisao = simuladosTercaIds;
   }
 
-  // Respostas base do bimestre e filtradas pelo dia (se Segunda ou Terça)
   let respostasFiltradas = respostasAlunos.filter((r) => {
     const simId = String(r.simuladoId || r.idSimulado || "");
     return idsSimuladosVisao.includes(simId);
@@ -101,7 +92,6 @@ export default function Estatisticas({
     (t) => String(t.id) === String(turmaSelecionadaId),
   );
 
-  // Se estiver na visão "Por Turma", aplica os filtros de turma e simulado específico da turma
   if (visaoSelecionada === "turma" && turmaAtiva) {
     respostasFiltradas = respostasFiltradas.filter(
       (r) =>
@@ -118,33 +108,125 @@ export default function Estatisticas({
     }
   }
 
-  // Simulados vinculados à turma ativa (para o seletor da aba "Por Turma")
   const idsSimuladosVinculadosTurma =
     turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
   const simuladosVinculadosObj = simuladosDoBimestre.filter((s) =>
     idsSimuladosVinculadosTurma.includes(s.id),
   );
 
-  // Respostas válidas para médias gerais (excluindo alunos adaptados)
   const respostasValidasParaMedia = respostasFiltradas.filter(
     (r) => !isAlunoAdaptado(r.nomeAluno || r.aluno, r.turma),
   );
 
-  // ==========================================
-  // CÁLCULOS ESTATÍSTICOS
-  // ==========================================
-  let melhorAlunoGeral = null;
+  // Mapeamento e consolidação de desempenho dos alunos (agrupando os dois simulados)
+  const mapaAlunos = {};
   respostasValidasParaMedia.forEach((r) => {
-    const percentual = Number(r.percentualGeral || 0);
-    if (!melhorAlunoGeral || percentual > melhorAlunoGeral.percentual) {
+    const nome = String(r.nomeAluno || r.aluno || "").trim();
+    const turma = String(r.turma || "").trim();
+    if (!nome) return;
+
+    const chave = `${turma}_${nome}`.toUpperCase();
+    if (!mapaAlunos[chave]) {
+      mapaAlunos[chave] = {
+        nome,
+        turma,
+        somaPercentual: 0,
+        totalProvas: 0,
+        ultimaNota: r.notaFinal || "0.0",
+      };
+    }
+    mapaAlunos[chave].somaPercentual += Number(r.percentualGeral || 0);
+    mapaAlunos[chave].totalProvas += 1;
+    if (r.notaFinal) mapaAlunos[chave].ultimaNota = r.notaFinal;
+  });
+
+  const desempenhoAlunosMap = Object.values(mapaAlunos).map((item) => ({
+    ...item,
+    percentualMedio:
+      item.totalProvas > 0
+        ? Math.round(item.somaPercentual / item.totalProvas)
+        : 0,
+  }));
+
+  let melhorAlunoGeral = null;
+  desempenhoAlunosMap.forEach((aluno) => {
+    if (
+      !melhorAlunoGeral ||
+      aluno.percentualMedio > melhorAlunoGeral.percentual
+    ) {
       melhorAlunoGeral = {
-        nome: r.nomeAluno || r.aluno,
-        turma: r.turma,
-        percentual,
-        nota: r.notaFinal || "0.0",
+        nome: aluno.nome,
+        turma: aluno.turma,
+        percentual: aluno.percentualMedio,
+        nota: aluno.ultimaNota,
       };
     }
   });
+
+  const setAnos = new Set();
+  turmas.forEach((t) => {
+    const nomeTurma = String(t.nome || "")
+      .trim()
+      .toUpperCase();
+    const match = nomeTurma.match(/^(\d+º?\s*(ANO|SÉRIE)?)/i);
+    if (match) {
+      setAnos.add(match[1].trim());
+    } else {
+      const primeiraPalavra = nomeTurma.split(" ")[0];
+      if (primeiraPalavra) setAnos.add(primeiraPalavra);
+    }
+  });
+  const anosDisponiveis = Array.from(setAnos).sort();
+
+  let melhorAlunoPorAno = null;
+  if (anoSelecionadoFiltro) {
+    const alunosDoAno = desempenhoAlunosMap.filter((aluno) =>
+      String(aluno.turma || "")
+        .toUpperCase()
+        .includes(anoSelecionadoFiltro.toUpperCase()),
+    );
+
+    alunosDoAno.forEach((aluno) => {
+      if (
+        !melhorAlunoPorAno ||
+        aluno.percentualMedio > melhorAlunoPorAno.percentual
+      ) {
+        melhorAlunoPorAno = {
+          nome: aluno.nome,
+          turma: aluno.turma,
+          percentual: aluno.percentualMedio,
+          nota: aluno.ultimaNota,
+        };
+      }
+    });
+  }
+
+  let melhorAlunoDaTurmaDestaque = null;
+  if (turmaDestaqueId) {
+    const turmaObj = turmas.find(
+      (t) => String(t.id) === String(turmaDestaqueId),
+    );
+    if (turmaObj) {
+      const alunosDaTurma = desempenhoAlunosMap.filter(
+        (aluno) =>
+          String(aluno.turma).trim().toUpperCase() ===
+          String(turmaObj.nome).trim().toUpperCase(),
+      );
+
+      alunosDaTurma.forEach((aluno) => {
+        if (
+          !melhorAlunoDaTurmaDestaque ||
+          aluno.percentualMedio > melhorAlunoDaTurmaDestaque.percentual
+        ) {
+          melhorAlunoDaTurmaDestaque = {
+            nome: aluno.nome,
+            percentual: aluno.percentualMedio,
+            nota: aluno.ultimaNota,
+          };
+        }
+      });
+    }
+  }
 
   const estatisticasPorTurma = turmas.map((t) => {
     const respTurmaValidas = respostasValidasParaMedia.filter(
@@ -188,35 +270,6 @@ export default function Estatisticas({
     }
   });
 
-  // Destaque da Turma específica selecionada no card
-  const turmaDestaqueObj = turmas.find(
-    (t) => String(t.id) === String(turmaDestaqueId),
-  );
-  let melhorAlunoDaTurmaDestaque = null;
-  if (turmaDestaqueObj) {
-    const respTurmaDestaqueValidas = respostasValidasParaMedia.filter(
-      (r) =>
-        String(r.turmaId) === String(turmaDestaqueObj.id) ||
-        String(r.turma).trim().toUpperCase() ===
-          String(turmaDestaqueObj.nome).trim().toUpperCase(),
-    );
-
-    respTurmaDestaqueValidas.forEach((r) => {
-      const perc = Number(r.percentualGeral || 0);
-      if (
-        !melhorAlunoDaTurmaDestaque ||
-        perc > melhorAlunoDaTurmaDestaque.percentual
-      ) {
-        melhorAlunoDaTurmaDestaque = {
-          nome: r.nomeAluno || r.aluno,
-          percentual: perc,
-          nota: r.notaFinal || "0.0",
-        };
-      }
-    });
-  }
-
-  // Estatísticas de Disciplinas proporcionais
   const disciplinasStats = {};
   respostasValidasParaMedia.forEach((r) => {
     if (r.detalhes) {
@@ -259,7 +312,6 @@ export default function Estatisticas({
       : 0;
   const mediaErrosTurma = 100 - mediaAcertosTurma;
 
-  // Função para calcular evolução comparativa com o bimestre anterior
   const calcularEvolucaoAluno = (nomeAluno, bimestreAtual, percentualAtual) => {
     const bimestreAntNum = Number(bimestreAtual) - 1;
     if (bimestreAntNum < 1) return null;
@@ -302,7 +354,6 @@ export default function Estatisticas({
 
   return (
     <div className="bg-white rounded-md shadow-sm p-3 sm:p-5 border border-[#dbc8b6] w-full max-w-7xl mx-auto font-sans antialiased space-y-4">
-      {/* Cabeçalho */}
       <div className="flex items-center justify-between pb-3 border-b border-[#dbc8b6] gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="p-1.5 bg-blue-500 text-white rounded-md flex-shrink-0">
@@ -315,7 +366,6 @@ export default function Estatisticas({
         </div>
       </div>
 
-      {/* BARRA DE FILTROS: BIMESTRE E FILTRO DE DADOS (4 OPÇÕES) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]">
         <div>
           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1">
@@ -353,7 +403,6 @@ export default function Estatisticas({
         </div>
       </div>
 
-      {/* SE ESTIVER NA VISÃO "POR TURMA", EXibe OS SELETORES DE TURMA E SIMULADO */}
       {visaoSelecionada === "turma" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-amber-50/50 p-3 rounded-md border border-amber-200">
           <div>
@@ -398,12 +447,8 @@ export default function Estatisticas({
         </div>
       )}
 
-      {/* =========================================================
-          EXIBIÇÃO DOS RESULTADOS ESTATÍSTICOS
-          ========================================================= */}
       <div className="space-y-4">
-        {/* CARDS DE DESTAQUE (Exibidos em todas as visões) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
@@ -470,16 +515,66 @@ export default function Estatisticas({
             )}
           </div>
 
-          {/* Destaque da Turma (Com seletor interno) */}
-          <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+          <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
-                Destaque da turma
+              <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
+                <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />{" "}
+                Destaque por Ano
               </span>
-              <Users className="w-4 h-4 text-amber-600" />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
+              <select
+                value={anoSelecionadoFiltro}
+                onChange={(e) => setAnoSelecionadoFiltro(e.target.value)}
+                className="w-full p-1 bg-white border border-indigo-300 rounded text-[11px] font-bold text-gray-800 uppercase focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer"
+              >
+                <option value="">Selecione o ano...</option>
+                {anosDisponiveis.map((ano) => (
+                  <option key={ano} value={ano}>
+                    {ano}
+                  </option>
+                ))}
+              </select>
+
+              {!anoSelecionadoFiltro ? (
+                <p className="text-[11px] text-gray-400 italic text-center py-1">
+                  Escolha um ano acima.
+                </p>
+              ) : melhorAlunoPorAno ? (
+                <div className="pt-1">
+                  <h4 className="font-bold text-gray-900 text-xs uppercase truncate">
+                    {melhorAlunoPorAno.nome}
+                  </h4>
+                  <p className="text-[10px] text-indigo-700 font-semibold uppercase">
+                    Turma: {melhorAlunoPorAno.turma}
+                  </p>
+                  <div className="mt-1 flex items-center justify-between text-[11px] font-bold">
+                    <span className="text-indigo-900">
+                      {melhorAlunoPorAno.percentual}%
+                    </span>
+                    <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px]">
+                      Nota: {melhorAlunoPorAno.nota}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400 italic text-center py-1">
+                  Sem dados para este ano.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-amber-600" /> Destaque por
+                Turma
+              </span>
+            </div>
+
+            <div className="space-y-2">
               <select
                 value={turmaDestaqueId}
                 onChange={(e) => setTurmaDestaqueId(e.target.value)}
@@ -493,7 +588,7 @@ export default function Estatisticas({
                 ))}
               </select>
 
-              {!turmaDestaqueObj ? (
+              {!turmaDestaqueId ? (
                 <p className="text-[11px] text-gray-400 italic text-center py-1">
                   Escolha uma turma acima.
                 </p>
@@ -520,7 +615,6 @@ export default function Estatisticas({
           </div>
         </div>
 
-        {/* MÉDIA POR TURMA (SE NÃO ESTIVER NA VISÃO "POR TURMA") */}
         {visaoSelecionada !== "turma" && (
           <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-gray-50 space-y-3">
             <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
@@ -562,7 +656,6 @@ export default function Estatisticas({
           </div>
         )}
 
-        {/* DETALHAMENTO CASO ESTEJA NA VISÃO "POR TURMA" */}
         {visaoSelecionada === "turma" && (
           <div className="space-y-4">
             {!turmaAtiva ? (
@@ -571,7 +664,6 @@ export default function Estatisticas({
               </div>
             ) : (
               <>
-                {/* Média Proporcional da Turma */}
                 <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-gray-50 space-y-2">
                   <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest">
                     Média proporcional ({turmaAtiva.nome})
@@ -598,7 +690,6 @@ export default function Estatisticas({
                   </div>
                 </div>
 
-                {/* Média de Desempenho dos Alunos */}
                 <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-white space-y-3">
                   <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
                     <Users className="w-4 h-4 text-blue-500" /> Média de
@@ -691,7 +782,6 @@ export default function Estatisticas({
           </div>
         )}
 
-        {/* Média por Disciplina (Exibida em todas as visões para detalhar as disciplinas daquele filtro) */}
         <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-white space-y-3">
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest">
             Média por disciplina (
