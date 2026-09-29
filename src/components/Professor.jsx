@@ -41,7 +41,7 @@ export default function Professor({
     (t) => String(t.id) === String(turmaSelecionadaId),
   );
 
-  const simuladoAtivo = simulados.find(
+  const simuladoPadraoAtivo = simulados.find(
     (s) => String(s.id) === String(simuladoSelecionadoId),
   );
 
@@ -52,6 +52,32 @@ export default function Professor({
   });
   const isAlunoAdaptado =
     typeof alunoObjAtivo === "object" && !!alunoObjAtivo.adaptado;
+
+  // Localiza o simulado adaptado correspondente vinculado a este simulado padrão (se houver)
+  const simuladoAdaptadoCorrespondente = simulados.find((s) => {
+    if (!simuladoPadraoAtivo) return false;
+    const isAdapt =
+      !!s.adaptado || (s.nome || "").toUpperCase().includes("ADAPTADO");
+    const sNomeBase = (s.nome || "")
+      .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+      .trim()
+      .toUpperCase();
+    const padraoNomeBase = (simuladoPadraoAtivo.nome || "")
+      .replace(/\s*-\s*ADAPTADO\s*$/i, "")
+      .trim()
+      .toUpperCase();
+    return (
+      isAdapt &&
+      (s.simuladoPadraoId === simuladoPadraoAtivo.id ||
+        sNomeBase === padraoNomeBase)
+    );
+  });
+
+  // O simulado efetivo: só usa o adaptado se o aluno for adaptado E se realmente existir a versão adaptada cadastrada para este simulado
+  const simuladoAtivo =
+    isAlunoAdaptado && simuladoAdaptadoCorrespondente
+      ? simuladoAdaptadoCorrespondente
+      : simuladoPadraoAtivo;
 
   const totalQuestoesSimulado =
     simuladoAtivo?.disciplinas?.reduce(
@@ -134,12 +160,12 @@ export default function Professor({
   };
 
   const encontrarRegistoAluno = (nomeAluno) => {
-    if (!simuladoAtivo || !turmaAtiva || !Array.isArray(respostasAlunos))
+    if (!simuladoPadraoAtivo || !turmaAtiva || !Array.isArray(respostasAlunos))
       return null;
 
-    const idSimuladoStr = String(simuladoAtivo.id).trim();
+    const idSimuladoStr = String(simuladoPadraoAtivo.id).trim();
     const nomeSimuladoStr = String(
-      simuladoAtivo.nome || simuladoAtivo.titulo || "",
+      simuladoPadraoAtivo.nome || simuladoPadraoAtivo.titulo || "",
     )
       .trim()
       .toUpperCase();
@@ -301,9 +327,9 @@ export default function Professor({
 
   const submeterRespostasAluno = async (e) => {
     e.preventDefault();
-    if (!alunoAtivo || !simuladoAtivo || !turmaAtiva) return;
+    if (!alunoAtivo || !simuladoPadraoAtivo || !turmaAtiva) return;
 
-    if (!temPermissaoEdicao(turmaAtiva, simuladoAtivo.id)) {
+    if (!temPermissaoEdicao(turmaAtiva, simuladoPadraoAtivo.id)) {
       return;
     }
 
@@ -320,8 +346,8 @@ export default function Professor({
         ...(registoExistenteAlunoAtivo?.id
           ? { id: registoExistenteAlunoAtivo.id }
           : {}),
-        simuladoId: simuladoAtivo.id,
-        simuladoNome: simuladoAtivo.nome || simuladoAtivo.titulo,
+        simuladoId: simuladoPadraoAtivo.id,
+        simuladoNome: simuladoPadraoAtivo.nome || simuladoPadraoAtivo.titulo,
         turmaId: turmaAtiva.id,
         turma: turmaAtiva.nome,
         nomeAluno: alunoAtivo,
@@ -464,7 +490,6 @@ export default function Professor({
                 const idsSimuladosDoBimestre =
                   turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
 
-                // FILTRA OS SIMULADOS REMOVENDO OS ADAPTADOS
                 const idsFiltradosPadrao = idsSimuladosDoBimestre.filter(
                   (simId) => {
                     const simObj = simulados.find((s) => s.id === simId);
@@ -597,14 +622,14 @@ export default function Professor({
           </div>
         )
       ) : (
-        /* LANÇAMENTO DE NOTAS DOS ALUNOS (QUANDO UM SIMULADO É SELECIONADO) */
+        /* LANÇAMENTO DE NOTAS DOS ALUNOS */
         <div className="space-y-3">
           <div className="border-b border-[#dbc8b6] pb-2 mb-2 space-y-1">
             <h3 className="text-lg sm:text-xl font-black text-gray-800 uppercase tracking-wide leading-tight">
               {turmaAtiva?.nome} - {bimestreSelecionado}º Bimestre
             </h3>
             <h4 className="text-base sm:text-lg font-black text-blue-600 uppercase tracking-wide leading-tight">
-              {simuladoAtivo?.nome}
+              {simuladoPadraoAtivo?.nome}
             </h4>
           </div>
 
@@ -625,7 +650,7 @@ export default function Professor({
                           Aluno
                         </th>
 
-                        {simuladoAtivo?.disciplinas.map((disc) => {
+                        {simuladoPadraoAtivo?.disciplinas.map((disc) => {
                           const qtdQ = disc.gabarito?.length || 0;
                           return (
                             <th
@@ -695,14 +720,14 @@ export default function Professor({
                                   </span>
                                 </div>
                                 {isAdaptado && (
-                                  <span className="bg-gray-100 text-gray-600 border border-[#dbc8b6] px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 flex-shrink-0">
+                                  <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1 flex-shrink-0">
                                     Adaptado
                                   </span>
                                 )}
                               </div>
                             </td>
 
-                            {simuladoAtivo?.disciplinas.map((disc) => {
+                            {simuladoPadraoAtivo?.disciplinas.map((disc) => {
                               const infoDisc =
                                 dadosCalculados?.detalhes?.[disc.nome];
                               return (
@@ -826,8 +851,10 @@ export default function Professor({
                     {alunoAtivo}
                   </h3>
                   {isAlunoAdaptado && (
-                    <span className="bg-gray-100 text-gray-600 border border-[#dbc8b6] px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1">
-                      Adaptado (A/B)
+                    <span className="bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1">
+                      {simuladoAdaptadoCorrespondente
+                        ? "ADAPTADO"
+                        : "(SEM ADAPTAÇÃO)"}
                     </span>
                   )}
                 </div>
@@ -938,11 +965,13 @@ export default function Professor({
                 </div>
               )}
 
-              {/* DISPOSIÇÃO DINÂMICA: 4 ALTERNATIVAS OU APENAS A/B SE ADAPTADO */}
+              {/* DISPOSIÇÃO DINÂMICA: 4 ALTERNATIVAS OU APENAS A/B SE ADAPTADO COM VERSÃO VINCULADA */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {simuladoAtivo?.disciplinas.map((d) => {
                   const gabaritoDisc = d.gabarito || [];
-                  const alternativas = isAlunoAdaptado
+                  const usarAlternativasAB =
+                    isAlunoAdaptado && !!simuladoAdaptadoCorrespondente;
+                  const alternativas = usarAlternativasAB
                     ? ["A", "B"]
                     : ["A", "B", "C", "D"];
 
@@ -955,7 +984,7 @@ export default function Professor({
                         <span>{d.nome}</span>
                         <span className="text-[10px] text-gray-500 font-normal">
                           ({gabaritoDisc.length}Q){" "}
-                          {isAlunoAdaptado && "• [Adaptado A/B]"}
+                          {usarAlternativasAB && "• [Adaptado A/B]"}
                         </span>
                       </div>
 
