@@ -75,6 +75,7 @@ export default function Relatorios({
       if (!simuladoAtual) return [];
 
       if (simuladoAtual === "GERAL") {
+        // Separa os simulados disponíveis entre Segunda-feira e Terça-feira
         const simuladosSegunda = simuladosDisponiveis.filter((s) => {
           const nome = String(s.nome || s.titulo || "").toUpperCase();
           return (
@@ -128,6 +129,7 @@ export default function Relatorios({
           });
         };
 
+        // Adiciona PRIMEIRO as disciplinas de Segunda e DEPOIS as de Terça
         processarListaSimulados(simuladosSegunda);
         processarListaSimulados(simuladosTerca);
 
