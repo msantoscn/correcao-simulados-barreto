@@ -163,28 +163,72 @@ export default function Estatisticas({
     }
   });
 
+  // Geração dos Anos/Séries formatados (tratando a EJA adequadamente)
   const setAnos = new Set();
   turmas.forEach((t) => {
     const nomeTurma = String(t.nome || "")
       .trim()
       .toUpperCase();
+
+    // Regras específicas para EJA
+    if (
+      nomeTurma.includes("EJA") ||
+      nomeTurma.includes("5") ||
+      nomeTurma.includes("7")
+    ) {
+      if (
+        nomeTurma.includes("5") &&
+        (nomeTurma.includes("6") || nomeTurma.includes("EJA"))
+      ) {
+        setAnos.add("5ª/6ª EJA");
+        return;
+      }
+      if (
+        nomeTurma.includes("7") &&
+        (nomeTurma.includes("8") || nomeTurma.includes("EJA"))
+      ) {
+        setAnos.add("7ª/8ª EJA");
+        return;
+      }
+    }
+
     const match = nomeTurma.match(/^(\d+º?\s*(ANO|SÉRIE)?)/i);
     if (match) {
-      setAnos.add(match[1].trim());
+      let val = match[1].trim();
+      if (val === "5") val = "5ª/6ª EJA";
+      if (val === "7") val = "7ª/8ª EJA";
+      setAnos.add(val);
     } else {
       const primeiraPalavra = nomeTurma.split(" ")[0];
-      if (primeiraPalavra) setAnos.add(primeiraPalavra);
+      if (primeiraPalavra === "5") {
+        setAnos.add("5ª/6ª EJA");
+      } else if (primeiraPalavra === "7") {
+        setAnos.add("7ª/8ª EJA");
+      } else if (primeiraPalavra) {
+        setAnos.add(primeiraPalavra);
+      }
     }
   });
   const anosDisponiveis = Array.from(setAnos).sort();
 
   let melhorAlunoPorAno = null;
   if (anoSelecionadoFiltro) {
-    const alunosDoAno = desempenhoAlunosMap.filter((aluno) =>
-      String(aluno.turma || "")
-        .toUpperCase()
-        .includes(anoSelecionadoFiltro.toUpperCase()),
-    );
+    const alunosDoAno = desempenhoAlunosMap.filter((aluno) => {
+      const turmaUpper = String(aluno.turma || "").toUpperCase();
+      if (anoSelecionadoFiltro.includes("EJA")) {
+        if (
+          anoSelecionadoFiltro.includes("5") &&
+          (turmaUpper.includes("5") || turmaUpper.includes("6"))
+        )
+          return true;
+        if (
+          anoSelecionadoFiltro.includes("7") &&
+          (turmaUpper.includes("7") || turmaUpper.includes("8"))
+        )
+          return true;
+      }
+      return turmaUpper.includes(anoSelecionadoFiltro.toUpperCase());
+    });
 
     alunosDoAno.forEach((aluno) => {
       if (
