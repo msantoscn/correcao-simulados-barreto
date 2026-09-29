@@ -33,14 +33,15 @@ export default function Relatorios({
     return simulados.filter((s) => idsSimuladosVinculados.includes(s.id));
   }, [simulados, idsSimuladosVinculados]);
 
+  // Blindagem: Se nenhum simulado foi escolhido, retorna null para evitar tela branca
   const simuladoAtual = useMemo(() => {
+    if (!simuladoSelecionadoId) return null;
     if (simuladoSelecionadoId === "GERAL") return "GERAL";
     return (
       simulados.find((s) => String(s.id) === String(simuladoSelecionadoId)) ||
-      simuladosDisponiveis[0] ||
       null
     );
-  }, [simulados, simuladoSelecionadoId, simuladosDisponiveis]);
+  }, [simulados, simuladoSelecionadoId]);
 
   const disciplinasDoSimulado = useMemo(() => {
     if (!simuladoAtual) return [];
@@ -56,6 +57,7 @@ export default function Relatorios({
             }));
 
         discList.forEach((d) => {
+          if (!d || !d.nome) return;
           const nomeDisc = String(d.nome).trim().toUpperCase();
           const qtd =
             d.gabarito?.length ||
@@ -81,7 +83,10 @@ export default function Relatorios({
     if (Array.isArray(simuladoAtual.disciplinas)) {
       return simuladoAtual.disciplinas;
     }
-    if (typeof simuladoAtual.disciplinas === "object") {
+    if (
+      simuladoAtual.disciplinas &&
+      typeof simuladoAtual.disciplinas === "object"
+    ) {
       return Object.entries(simuladoAtual.disciplinas).map(([nome, dados]) => ({
         nome,
         ...dados,
@@ -258,7 +263,6 @@ export default function Relatorios({
     const larguraUtil = 287;
     const totalColunasNotas = disciplinasDoSimulado.length + 1;
 
-    // Alocando espaço ideal para o nome do aluno caber inteiro e confortável, e o restante dividido igualmente para as notas
     let larguraAluno = 68;
     let larguraColunaNota = (larguraUtil - larguraAluno) / totalColunasNotas;
 
