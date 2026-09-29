@@ -25,14 +25,12 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 function MainContent() {
   const { user, logout, isProfessor, isGestao } = useAuth();
 
+  // Se for professor, a aba inicial ativa é diretamente "professor"
   const [abaAtiva, setAbaAtiva] = useState(() =>
     isProfessor ? "professor" : "inicio",
   );
 
-  const abaExibida =
-    isProfessor && abaAtiva !== "estatisticas" && abaAtiva !== "inicio"
-      ? "professor"
-      : abaAtiva;
+  const abaExibida = isProfessor ? "professor" : abaAtiva;
 
   // Estado para controlar o menu em lista (gaveta)
   const [menuAberto, setMenuAberto] = useState(false);
@@ -138,16 +136,18 @@ function MainContent() {
                   </span>
                 </div>
 
-                <MenuItem
-                  active={abaExibida === "inicio"}
-                  onClick={() => {
-                    setAbaAtiva("inicio");
-                    setMenuAberto(false);
-                  }}
-                  icon={LayoutDashboard}
-                >
-                  Início
-                </MenuItem>
+                {isGestao && (
+                  <MenuItem
+                    active={abaExibida === "inicio"}
+                    onClick={() => {
+                      setAbaAtiva("inicio");
+                      setMenuAberto(false);
+                    }}
+                    icon={LayoutDashboard}
+                  >
+                    Início
+                  </MenuItem>
+                )}
 
                 {isGestao && (
                   <>
@@ -186,16 +186,18 @@ function MainContent() {
                   Professor
                 </MenuItem>
 
-                <MenuItem
-                  active={abaExibida === "estatisticas"}
-                  onClick={() => {
-                    setAbaAtiva("estatisticas");
-                    setMenuAberto(false);
-                  }}
-                  icon={BarChart3}
-                >
-                  Estatísticas
-                </MenuItem>
+                {isGestao && (
+                  <MenuItem
+                    active={abaExibida === "estatisticas"}
+                    onClick={() => {
+                      setAbaAtiva("estatisticas");
+                      setMenuAberto(false);
+                    }}
+                    icon={BarChart3}
+                  >
+                    Estatísticas
+                  </MenuItem>
+                )}
 
                 {isGestao && (
                   <>
@@ -247,7 +249,7 @@ function MainContent() {
 
       {/* Conteúdo Principal */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 mt-4 sm:mt-8 w-full overflow-x-hidden">
-        {abaExibida === "inicio" && (
+        {abaExibida === "inicio" && isGestao && (
           <Inicio
             turmas={turmas}
             simulados={simulados}
@@ -272,7 +274,7 @@ function MainContent() {
           />
         )}
 
-        {abaExibida === "estatisticas" && (
+        {abaExibida === "estatisticas" && isGestao && (
           <Estatisticas
             turmas={turmas}
             simulados={simulados}
@@ -314,8 +316,8 @@ function MainContent() {
 }
 
 /* ========================================================================
-   SUB-COMPONENTE DE ITEM DO MENU EM LISTA
-   ======================================================================== */
+    SUB-COMPONENTE DE ITEM DO MENU EM LISTA
+    ======================================================================== */
 
 function MenuItem({ active, onClick, icon: Icon, children }) {
   return (
