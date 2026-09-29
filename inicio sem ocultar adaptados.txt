@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   LayoutDashboard,
-  BookOpen,
   Calendar,
   AlertTriangle,
   CalendarDays,
@@ -31,7 +30,7 @@ export default function Inicio({
     ? simuladosDoBimestre.length > 0
     : false;
 
-  // Separa os simulados entre Segunda-feira e Terça-feira com base no nome
+  // Separa os simulados entre Segunda-feira e Terça-feira com base no nome (ou divide em dois grupos)
   const simuladosSegunda = simuladosDoBimestre.filter((s) => {
     const nome = String(s.nome || s.titulo || "").toUpperCase();
     return (
@@ -53,8 +52,8 @@ export default function Inicio({
     );
   });
 
-  // Função auxiliar para calcular o status das turmas, desconsiderando alunos adaptados da contagem exigida
-  const calcularStatusTurmas = (simuladosDoDia, ignorarAdaptados = false) => {
+  // Função auxiliar para calcular o status das turmas para um dado conjunto de simulados
+  const calcularStatusTurmas = (simuladosDoDia) => {
     const idsSimuladosDia = simuladosDoDia.map((s) => String(s.id));
 
     const respostasFiltradas = respostasAlunos.filter((r) => {
@@ -64,16 +63,7 @@ export default function Inicio({
 
     return turmas.map((turma) => {
       const alunosDaTurma = turma.alunos || [];
-
-      // Filtra os alunos que realmente entram na contagem deste dia
-      // Se ignorarAdaptados for true (ex: Segunda-feira sem adaptados), remove os alunos com adaptado: true
-      const alunosValidosTurma = alunosDaTurma.filter((a) => {
-        const isAdapt = typeof a === "object" && !!a.adaptado;
-        if (ignorarAdaptados && isAdapt) return false;
-        return true;
-      });
-
-      const totalAlunosTurma = alunosValidosTurma.length;
+      const totalAlunosTurma = alunosDaTurma.length;
 
       const respTurma = respostasFiltradas.filter(
         (r) =>
@@ -82,7 +72,6 @@ export default function Inicio({
             String(turma.nome).trim().toUpperCase(),
       );
 
-      // Alunos únicos que já possuem lançamento
       const alunosAvaliadosUnicos = new Set(
         respTurma.map((r) =>
           String(r.nomeAluno || r.aluno)
@@ -116,11 +105,8 @@ export default function Inicio({
     });
   };
 
-  // Como na Segunda-feira não houve simulado adaptado, passamos true para ignorá-los na contagem de pendências/total
-  const statusSegunda = calcularStatusTurmas(simuladosSegunda, true);
-
-  // Na Terça-feira (ou dias normais), se houver adaptados ou se desejar o comportamento normal, pode ajustar conforme necessário
-  const statusTerca = calcularStatusTurmas(simuladosTerca, false);
+  const statusSegunda = calcularStatusTurmas(simuladosSegunda);
+  const statusTerca = calcularStatusTurmas(simuladosTerca);
 
   return (
     <div className="bg-white rounded-md shadow-sm p-3 sm:p-5 border border-[#dbc8b6] w-full max-w-7xl mx-auto font-sans antialiased space-y-4">
@@ -188,10 +174,6 @@ export default function Inicio({
               <h3 className="text-xs font-black text-blue-800 uppercase tracking-widest flex items-center gap-1.5">
                 <CalendarDays className="w-4 h-4 text-blue-600" /> Segunda-feira
               </h3>
-              <span className="text-[10px] font-bold text-gray-500 uppercase">
-                {simuladosSegunda.length}{" "}
-                {simuladosSegunda.length === 1 ? "simulado" : "simulados"}
-              </span>
             </div>
 
             {statusSegunda.length === 0 ? (
@@ -252,10 +234,7 @@ export default function Inicio({
                 <CalendarDays className="w-4 h-4 text-emerald-600" />{" "}
                 Terça-feira
               </h3>
-              <span className="text-[10px] font-bold text-gray-500 uppercase">
-                {simuladosTerca.length}{" "}
-                {simuladosTerca.length === 1 ? "simulado" : "simulados"}
-              </span>
+              <span className="text-[10px] font-bold text-gray-500 uppercase"></span>
             </div>
 
             {statusTerca.length === 0 ? (
