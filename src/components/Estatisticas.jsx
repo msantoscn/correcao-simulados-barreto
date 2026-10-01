@@ -51,14 +51,17 @@ export default function Estatisticas({
   const simuladosSegundaIds = simuladosDoBimestre
     .filter((s) => {
       const nome = String(s.nome || s.titulo || "").toUpperCase();
-      return (
+      const éTerca =
+        nome.includes("TERÇA") ||
+        nome.includes("DIA 2") ||
+        nome.includes("SIM II");
+      const éSegunda =
         nome.includes("SEGUNDA") ||
         nome.includes("DIA 1") ||
-        nome.includes("SIM I") ||
-        (!nome.includes("TERÇA") &&
-          !nome.includes("DIA 2") &&
-          !nome.includes("SIM II"))
-      );
+        nome.includes("SIM I");
+      if (éSegunda && !éTerca) return true;
+      if (!éSegunda && !éTerca) return true;
+      return false;
     })
     .map((s) => String(s.id));
 
@@ -91,33 +94,70 @@ export default function Estatisticas({
     (t) => String(t.id) === String(turmaSelecionadaId),
   );
 
+  const idsSimuladosVinculadosTurma =
+    turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
+
+  const simuladosVinculadosObj = simuladosDoBimestre
+    .filter((s) => {
+      const matchId = idsSimuladosVinculadosTurma.includes(String(s.id));
+      const matchTurmaNome = respostasAlunos.some((r) => {
+        const mesmaTurma =
+          String(r.turmaId) === String(turmaAtiva?.id) ||
+          String(r.turma).trim().toUpperCase() ===
+            String(turmaAtiva?.nome).trim().toUpperCase();
+        const mesmoSim = String(r.simuladoId || r.idSimulado) === String(s.id);
+        return mesmaTurma && mesmoSim;
+      });
+      return matchId || matchTurmaNome;
+    })
+    .sort((a, b) => {
+      const nomeA = String(a.nome || a.titulo || "").toUpperCase();
+      const nomeB = String(b.nome || b.titulo || "").toUpperCase();
+      const isA_Segunda =
+        nomeA.includes("SEGUNDA") ||
+        nomeA.includes("SIM I") ||
+        nomeA.includes("DIA 1");
+      const isB_Segunda =
+        nomeB.includes("SEGUNDA") ||
+        nomeB.includes("SIM I") ||
+        nomeB.includes("DIA 1");
+      if (isA_Segunda && !isB_Segunda) return -1;
+      if (!isA_Segunda && isB_Segunda) return 1;
+      return 0;
+    });
+
   if (visaoSelecionada === "turma" && turmaAtiva) {
-    respostasFiltradas = respostasFiltradas.filter(
+    const respostasDaTurma = respostasAlunos.filter(
       (r) =>
         String(r.turmaId) === String(turmaAtiva.id) ||
         String(r.turma).trim().toUpperCase() ===
           String(turmaAtiva.nome).trim().toUpperCase(),
     );
 
-    if (simuladoFiltroTurma !== "geral") {
-      respostasFiltradas = respostasFiltradas.filter(
+    if (simuladoFiltroTurma === "geral") {
+      const idsValidosTurma = simuladosVinculadosObj.map((s) => String(s.id));
+      respostasFiltradas = respostasDaTurma.filter((r) => {
+        const rSimId = String(r.simuladoId || r.idSimulado || "");
+        if (idsValidosTurma.length > 0) {
+          return idsValidosTurma.includes(rSimId);
+        }
+        return true;
+      });
+    } else if (simuladoFiltroTurma) {
+      respostasFiltradas = respostasDaTurma.filter(
         (r) =>
           String(r.simuladoId || r.idSimulado) === String(simuladoFiltroTurma),
       );
+    } else {
+      respostasFiltradas = [];
     }
   }
-
-  const idsSimuladosVinculadosTurma =
-    turmaAtiva?.simuladosVinculados?.[bimestreSelecionado] || [];
-  const simuladosVinculadosObj = simuladosDoBimestre.filter((s) =>
-    idsSimuladosVinculadosTurma.includes(s.id),
-  );
 
   const respostasValidasParaMedia = respostasFiltradas.filter(
     (r) => !isAlunoAdaptado(r.nomeAluno || r.aluno, r.turma),
   );
 
-  // Mapeamento e consolidação de desempenho dos alunos respeitando a visão selecionada (Geral, Segunda ou Terça)
+  // AGRUPAMENTO PRECISO POR ACUMULAÇÃO DE QUESTÕES (EVITA DISTORÇÃO DE MÉDIA DE PERCENTUAIS)
   const mapaAlunos = {};
   respostasValidasParaMedia.forEach((r) => {
     const nome = String(r.nomeAluno || r.aluno || "").trim();
@@ -129,21 +169,58 @@ export default function Estatisticas({
       mapaAlunos[chave] = {
         nome,
         turma,
-        somaPercentual: 0,
-        totalProvas: 0,
+        totalAcertos: 0,
+        totalQuestoes: 0,
+        detalhesAcumulados: {},
       };
     }
-    mapaAlunos[chave].somaPercentual += Number(r.percentualGeral || 0);
-    mapaAlunos[chave].totalProvas += 1;
+
+    // Soma acertos e questões totais brutas para o cálculo exato idêntico ao relatório
+    if (r.detalhes) {
+      Object.entries(r.detalhes).forEach(([discNome, info]) => {
+        if (info) {
+          const acertosDisc = Number(info.acertos || 0);
+          const totalDisc = Number(info.total || 0);
+
+          mapaAlunos[chave].totalAcertos += acertosDisc;
+          mapaAlunos[chave].totalQuestoes += totalDisc;
+
+          if (!mapaAlunos[chave].detalhesAcumulados[discNome]) {
+            mapaAlunos[chave].detalhesAcumulados[discNome] = {
+              acertos: 0,
+              total: 0,
+            };
+          }
+          mapaAlunos[chave].detalhesAcumulados[discNome].acertos += acertosDisc;
+          mapaAlunos[chave].detalhesAcumulados[discNome].total += totalDisc;
+        }
+      });
+    } else if (r.percentualGeral !== undefined) {
+      // Fallback caso não haja detalhes mas haja percentual
+      const totalQ = 50;
+      const acertosQ = Math.round((Number(r.percentualGeral) * totalQ) / 100);
+      mapaAlunos[chave].totalAcertos += acertosQ;
+      mapaAlunos[chave].totalQuestoes += totalQ;
+    }
   });
 
   const desempenhoAlunosMap = Object.values(mapaAlunos).map((item) => ({
     ...item,
     percentualMedio:
-      item.totalProvas > 0
-        ? Math.round(item.somaPercentual / item.totalProvas)
+      item.totalQuestoes > 0
+        ? Math.round((item.totalAcertos / item.totalQuestoes) * 100)
         : 0,
   }));
+
+  const listaAlunosTurmaExibicao = Object.values(mapaAlunos)
+    .sort((a, b) => a.nome.localeCompare(b.nome))
+    .map((item) => ({
+      nomeAluno: item.nome,
+      percentualGeral:
+        item.totalQuestoes > 0
+          ? Math.round((item.totalAcertos / item.totalQuestoes) * 100)
+          : 0,
+    }));
 
   let melhorAlunoGeral = null;
   desempenhoAlunosMap.forEach((aluno) => {
@@ -159,7 +236,6 @@ export default function Estatisticas({
     }
   });
 
-  // Geração dos Anos/Séries formatados
   const setAnos = new Set();
   turmas.forEach((t) => {
     const nomeTurma = String(t.nome || "")
@@ -300,21 +376,16 @@ export default function Estatisticas({
   });
 
   const disciplinasStats = {};
-  respostasValidasParaMedia.forEach((r) => {
-    if (r.detalhes) {
-      Object.entries(r.detalhes).forEach(([discNome, info]) => {
-        if (info) {
-          if (!disciplinasStats[discNome]) {
-            disciplinasStats[discNome] = {
-              acertosTotais: 0,
-              questoesTotais: 0,
-            };
-          }
-          disciplinasStats[discNome].acertosTotais += Number(info.acertos || 0);
-          disciplinasStats[discNome].questoesTotais += Number(info.total || 0);
+  Object.values(mapaAlunos).forEach((alunoItem) => {
+    Object.entries(alunoItem.detalhesAcumulados || {}).forEach(
+      ([discNome, info]) => {
+        if (!disciplinasStats[discNome]) {
+          disciplinasStats[discNome] = { acertosTotais: 0, questoesTotais: 0 };
         }
-      });
-    }
+        disciplinasStats[discNome].acertosTotais += info.acertos;
+        disciplinasStats[discNome].questoesTotais += info.total;
+      },
+    );
   });
 
   const disciplinasGrafico = Object.entries(disciplinasStats).map(
@@ -331,13 +402,13 @@ export default function Estatisticas({
     },
   );
 
-  const somaTurma = respostasValidasParaMedia.reduce(
-    (acc, r) => acc + Number(r.percentualGeral || 0),
+  const somaTurma = desempenhoAlunosMap.reduce(
+    (acc, item) => acc + item.percentualMedio,
     0,
   );
   const mediaAcertosTurma =
-    respostasValidasParaMedia.length > 0
-      ? Math.round(somaTurma / respostasValidasParaMedia.length)
+    desempenhoAlunosMap.length > 0
+      ? Math.round(somaTurma / desempenhoAlunosMap.length)
       : 0;
   const mediaErrosTurma = 100 - mediaAcertosTurma;
 
@@ -402,7 +473,10 @@ export default function Estatisticas({
           </label>
           <select
             value={bimestreSelecionado}
-            onChange={(e) => setBimestreSelecionado(e.target.value)}
+            onChange={(e) => {
+              setBimestreSelecionado(e.target.value);
+              setSimuladoFiltroTurma("geral");
+            }}
             className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
           >
             <option value="1">1º Bimestre</option>
@@ -465,7 +539,7 @@ export default function Estatisticas({
               disabled={!turmaAtiva}
               className="w-full p-2 bg-white border border-amber-300 rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none shadow-xs cursor-pointer disabled:bg-gray-100"
             >
-              <option value="geral">Geral da Turma</option>
+              <option value="geral">Geral</option>
               {simuladosVinculadosObj.map((sim) => (
                 <option key={sim.id} value={sim.id}>
                   {sim.nome || sim.titulo}
@@ -477,10 +551,8 @@ export default function Estatisticas({
       )}
 
       <div className="space-y-4">
-        {/* OS CARDS DE DESTAQUE SÓ APARECEM SE A VISÃO NÃO FOR "POR TURMA" */}
         {visaoSelecionada !== "turma" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* 1. Destaque Individual Geral */}
             <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
@@ -521,7 +593,6 @@ export default function Estatisticas({
               )}
             </div>
 
-            {/* 2. Turma com Melhor Média */}
             <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
@@ -556,7 +627,6 @@ export default function Estatisticas({
               )}
             </div>
 
-            {/* 3. Destaque por Ano/Série */}
             <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-1">
@@ -607,7 +677,6 @@ export default function Estatisticas({
               </div>
             </div>
 
-            {/* 4. Destaque por Turma Específica */}
             <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-md p-3.5 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
@@ -708,7 +777,10 @@ export default function Estatisticas({
               <>
                 <div className="border border-[#dbc8b6] rounded-md p-3 sm:p-4 bg-gray-50 space-y-2">
                   <h3 className="text-xs font-bold text-gray-700 uppercase tracking-widest">
-                    Média proporcional ({turmaAtiva.nome})
+                    Média proporcional ({turmaAtiva.nome}) -{" "}
+                    {simuladoFiltroTurma === "geral"
+                      ? "Geral"
+                      : "Simulado Específico"}
                   </h3>
                   <div className="bg-white p-3 rounded-md border border-[#dbc8b6] space-y-2">
                     <div className="w-full h-5 bg-gray-100 rounded-full overflow-hidden flex border border-[#dbc8b6] relative">
@@ -738,14 +810,14 @@ export default function Estatisticas({
                     desempenho dos alunos
                   </h3>
 
-                  {respostasFiltradas.length === 0 ? (
+                  {listaAlunosTurmaExibicao.length === 0 ? (
                     <div className="text-center py-6 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md">
-                      Nenhum lançamento encontrado para os filtros selecionados.
+                      Nenhum lançamento encontrado para a seleção atual.
                     </div>
                   ) : (
                     <div className="space-y-3 pt-1">
-                      {respostasFiltradas.map((resp, i) => {
-                        const nomeAluno = resp.nomeAluno || resp.aluno;
+                      {listaAlunosTurmaExibicao.map((resp, i) => {
+                        const nomeAluno = resp.nomeAluno;
                         const adaptado = isAlunoAdaptado(
                           nomeAluno,
                           turmaAtiva?.nome,
