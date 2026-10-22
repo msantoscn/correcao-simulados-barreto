@@ -14,11 +14,13 @@ import {
   Save,
   Check,
   CheckCircle2,
+  UserCheck,
 } from "lucide-react";
 
 export default function Turmas({
   turmas,
   simuladosDisponiveis = [],
+  usuarios = [],
   onSalvarTurmas,
   onDeletarTurma,
 }) {
@@ -28,30 +30,42 @@ export default function Turmas({
   const [modoVisualizacao, setModoVisualizacao] = useState("alunos");
   const [buscaTurma, setBuscaTurma] = useState("");
 
-  // Estados para Alunos
   const [novoAlunoUnico, setNovoAlunoUnico] = useState("");
   const [novoAlunoAdaptado, setNovoAlunoAdaptado] = useState(false);
   const [textoListaAlunos, setTextoListaAlunos] = useState("");
   const [mostrarAddAlunos, setMostrarAddAlunos] = useState(false);
   const [buscaAluno, setBuscaAluno] = useState("");
 
-  // Estado para Filtro de Simulados Disponíveis
   const [buscaSimuladoDisponivel, setBuscaSimuladoDisponivel] = useState("");
 
-  // Estado para Edição de Aluno
   const [alunoEmEdicao, setAlunoEmEdicao] = useState(null);
   const [nomeAlunoEditado, setNomeAlunoEditado] = useState("");
   const [alunoEditadoAdaptado, setAlunoEditadoAdaptado] = useState(false);
 
-  // Controle de Bimestre
   const [bimestre, setBimestre] = useState("3");
+
+  const [professorSelecionadoId, setProfessorSelecionadoId] = useState("");
+  const [disciplinaProfessorInput, setDisciplinaProfessorInput] = useState("");
+
+  const disciplinasPadrao = [
+    "Língua Portuguesa",
+    "História",
+    "Geografia",
+    "Arte",
+    "Língua Inglesa",
+    "Matemática",
+    "Ciências",
+    "Ensino Religioso",
+    "Educação Musical",
+    "Educação Física",
+  ];
 
   const atualizarEPersistir = async (novaLista) => {
     try {
       await onSalvarTurmas(novaLista);
     } catch (error) {
       console.error("Erro ao sincronizar turmas com o Firebase:", error);
-      alert("Erro ao guardar as alterações no Firebase. Verifique a consola.");
+      alert("Erro ao guardar as alterações no Firebase.");
     }
   };
 
@@ -95,6 +109,7 @@ export default function Turmas({
       id: idGerado,
       nome: nomeFormatado,
       alunos: [],
+      professoresVinculados: [],
       simuladosVinculados: { 1: [], 2: [], 3: [], 4: [] },
     };
 
@@ -293,6 +308,91 @@ export default function Turmas({
     cancelarEdicaoAluno();
   };
 
+  const adicionarProfessorTurma = async (e) => {
+    e.preventDefault();
+    if (
+      !professorSelecionadoId ||
+      !disciplinaProfessorInput.trim() ||
+      !turmaSelecionadaId
+    ) {
+      alert("Selecione o professor e informe a disciplina.");
+      return;
+    }
+
+    const profObj = usuarios.find(
+      (u) =>
+        String(u.id || "") === String(professorSelecionadoId) ||
+        String(u.codigo || "") === String(professorSelecionadoId) ||
+        String(u.uid || "") === String(professorSelecionadoId),
+    );
+
+    if (!profObj) {
+      alert(
+        "Erro: Professor selecionado não encontrado na lista de utilizadores.",
+      );
+      return;
+    }
+
+    const listaAtualizada = turmas.map((t) => {
+      if (String(t.id) === String(turmaSelecionadaId)) {
+        const profsAtuais = t.professoresVinculados || [];
+        const novoVinculo = {
+          professorId: String(profObj.id || profObj.codigo || profObj.uid),
+          nomeProfessor: profObj.nome || profObj.codigo,
+          codigoProfessor: profObj.codigo || "",
+          disciplina: disciplinaProfessorInput.trim().toUpperCase(),
+        };
+
+        const jaExiste = profsAtuais.some(
+          (p) =>
+            String(p.professorId) === String(novoVinculo.professorId) &&
+            String(p.disciplina).toUpperCase() ===
+              String(novoVinculo.disciplina).toUpperCase(),
+        );
+
+        if (jaExiste) {
+          alert(
+            "Este professor já está vinculado a esta disciplina nesta turma.",
+          );
+          return t;
+        }
+
+        return {
+          ...t,
+          professoresVinculados: [...profsAtuais, novoVinculo],
+        };
+      }
+      return t;
+    });
+
+    await atualizarEPersistir(listaAtualizada);
+    setProfessorSelecionadoId("");
+    setDisciplinaProfessorInput("");
+  };
+
+  const removerProfessorTurma = async (turmaId, professorId, disciplina) => {
+    if (!confirm("Remover este professor desta disciplina/turma?")) return;
+
+    const listaAtualizada = turmas.map((t) => {
+      if (String(t.id) === String(turmaId)) {
+        return {
+          ...t,
+          professoresVinculados: (t.professoresVinculados || []).filter(
+            (p) =>
+              !(
+                String(p.professorId) === String(professorId) &&
+                String(p.disciplina).toUpperCase() ===
+                  String(disciplina).toUpperCase()
+              ),
+          ),
+        };
+      }
+      return t;
+    });
+
+    await atualizarEPersistir(listaAtualizada);
+  };
+
   const vincularSimulado = async (simuladoId) => {
     if (!turmaSelecionadaId) {
       alert("Nenhuma turma selecionada!");
@@ -474,6 +574,21 @@ export default function Turmas({
       return nomeSim.includes(buscaSimuladoDisponivel.trim().toUpperCase());
     });
 
+  const professoresCadastrados = usuarios.filter((u) => {
+    const cargo = String(
+      u.cargo || u.tipo || u.perfil || u.funcao || "",
+    ).toUpperCase();
+    if (cargo) {
+      return (
+        cargo.includes("PROF") ||
+        cargo.includes("DOCENTE") ||
+        cargo.includes("PROFESSOR") ||
+        cargo.includes("USER")
+      );
+    }
+    return true;
+  });
+
   const formatarNomeTurmaBicolor = (nome) => {
     if (!nome) return "";
     const partes = nome.split("-");
@@ -494,7 +609,6 @@ export default function Turmas({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 font-sans antialiased">
-      {/* COLUNA ESQUERDA: LISTA DE TURMAS */}
       <div className="lg:col-span-4 bg-white rounded-md shadow-sm p-3 sm:p-4 border border-[#dbc8b6] h-fit">
         <div className="flex items-center gap-2.5 pb-3 border-b border-[#dbc8b6] mb-3.5">
           <div className="p-1.5 bg-blue-500 text-white rounded-md">
@@ -610,7 +724,8 @@ export default function Turmas({
                     {turma.nome}
                   </h4>
                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                    {turma.alunos?.length || 0} aluno(s)
+                    {turma.alunos?.length || 0} aluno(s) •{" "}
+                    {turma.professoresVinculados?.length || 0} prof(s)
                   </p>
                 </div>
 
@@ -618,6 +733,30 @@ export default function Turmas({
                   className="flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTurmaSelecionadaId(turma.id);
+                      setModoVisualizacao("professores");
+                      cancelarEdicaoAluno();
+                      if (window.innerWidth < 1024) {
+                        window.scrollTo({
+                          top: document.body.scrollHeight,
+                          behavior: "smooth",
+                        });
+                      }
+                    }}
+                    className={`p-1.5 rounded-md transition-all cursor-pointer shadow-xs ${
+                      String(turmaSelecionadaId) === String(turma.id) &&
+                      modoVisualizacao === "professores"
+                        ? "bg-purple-600 text-white shadow-sm"
+                        : "bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200"
+                    }`}
+                    title="Vincular Professores e Disciplinas"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -667,7 +806,6 @@ export default function Turmas({
         )}
       </div>
 
-      {/* COLUNA DIREITA: GESTÃO EXCLUSIVA */}
       <div className="lg:col-span-8 bg-white rounded-md shadow-sm border border-[#dbc8b6] overflow-hidden flex flex-col h-fit lg:min-h-[460px]">
         {!turmaAtiva ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-gray-50/50 min-h-[260px]">
@@ -675,7 +813,8 @@ export default function Turmas({
               <BookOpen className="w-6 h-6 text-gray-300" />
             </div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest max-w-xs leading-relaxed">
-              Selecione ou crie uma turma para gerir alunos e simulados.
+              Selecione ou crie uma turma para gerir alunos, professores e
+              simulados.
             </p>
           </div>
         ) : (
@@ -712,7 +851,132 @@ export default function Turmas({
               </div>
             </div>
 
-            {modoVisualizacao === "simulados" ? (
+            {modoVisualizacao === "professores" ? (
+              <div className="p-3 sm:p-4 bg-white flex-1 flex flex-col space-y-4">
+                <div className="flex items-center justify-between bg-purple-50 p-3 rounded-md border border-purple-200">
+                  <h4 className="text-xs font-bold text-purple-900 uppercase tracking-widest flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-purple-600" /> Vínculo de
+                    Professores e Disciplinas ({turmaAtiva.nome})
+                  </h4>
+                </div>
+
+                <form
+                  onSubmit={adicionarProfessorTurma}
+                  className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]"
+                >
+                  <div className="sm:col-span-5">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                      Professor (Cadastrado)
+                    </label>
+                    <select
+                      value={professorSelecionadoId}
+                      onChange={(e) =>
+                        setProfessorSelecionadoId(e.target.value)
+                      }
+                      className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-purple-500 shadow-xs"
+                      required
+                    >
+                      <option value="">
+                        {professoresCadastrados.length === 0
+                          ? "Nenhum professor encontrado..."
+                          : "Selecione o professor..."}
+                      </option>
+                      {professoresCadastrados.map((prof) => (
+                        <option
+                          key={prof.id || prof.codigo || prof.uid}
+                          value={prof.id || prof.codigo || prof.uid}
+                        >
+                          {prof.nome || prof.codigo || "Utilizador sem nome"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-5">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+                      Disciplina
+                    </label>
+                    <input
+                      type="text"
+                      list="disciplinas-sugestoes"
+                      placeholder="Ex: Matemática"
+                      value={disciplinaProfessorInput}
+                      onChange={(e) =>
+                        setDisciplinaProfessorInput(
+                          e.target.value.toUpperCase(),
+                        )
+                      }
+                      className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-purple-500 shadow-xs"
+                      required
+                    />
+                    <datalist id="disciplinas-sugestoes">
+                      {disciplinasPadrao.map((d, i) => (
+                        <option key={i} value={d} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div className="sm:col-span-2 flex items-end">
+                    <button
+                      type="submit"
+                      className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold uppercase tracking-wider rounded-md text-xs transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" /> Vincular
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-2 flex-1">
+                  <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Professores Titulares Vinculados (
+                    {turmaAtiva.professoresVinculados?.length || 0})
+                  </h4>
+
+                  {!turmaAtiva.professoresVinculados ||
+                  turmaAtiva.professoresVinculados.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 text-xs font-bold uppercase border border-dashed border-[#dbc8b6] rounded-md bg-gray-50">
+                      Nenhum professor vinculado a esta turma ainda.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#dbc8b6] border border-[#dbc8b6] rounded-md bg-white overflow-hidden">
+                      {turmaAtiva.professoresVinculados.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2.5 hover:bg-purple-50/20 transition-colors"
+                        >
+                          <div>
+                            <h5 className="font-bold text-xs uppercase text-gray-800">
+                              {item.nomeProfessor}
+                            </h5>
+                            <p className="text-[10px] font-bold text-purple-700 uppercase tracking-wider">
+                              Disciplina:{" "}
+                              <span className="text-gray-800">
+                                {item.disciplina}
+                              </span>{" "}
+                              • Código: {item.codigoProfessor}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removerProfessorTurma(
+                                turmaAtiva.id,
+                                item.professorId,
+                                item.disciplina,
+                              )
+                            }
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors border border-[#dbc8b6] cursor-pointer"
+                            title="Remover Vínculo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : modoVisualizacao === "simulados" ? (
               <div className="p-3 sm:p-4 bg-white flex-1 flex flex-col">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]">
                   <h4 className="text-xs font-bold text-gray-700 uppercase tracking-widest flex items-center gap-2">
@@ -744,7 +1008,6 @@ export default function Turmas({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* VINCULADOS NO BIMESTRE */}
                   <div className="bg-gray-50 p-3 rounded-md border border-orange-300 shadow-sm flex flex-col">
                     <span className="text-[11px] font-bold text-orange-800 uppercase tracking-wider block mb-2.5 border-b border-orange-200 pb-1.5">
                       Vinculados no {bimestre}º Bimestre (
@@ -830,7 +1093,6 @@ export default function Turmas({
                     </div>
                   </div>
 
-                  {/* DISPONÍVEIS PARA VINCULAR */}
                   <div className="bg-gray-50 p-3 rounded-md border border-[#dbc8b6] shadow-sm flex flex-col">
                     <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider block mb-2 border-b border-[#dbc8b6] pb-1.5">
                       Disponíveis para Vincular ({bimestre}º Bimestre)

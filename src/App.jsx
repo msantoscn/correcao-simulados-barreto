@@ -10,6 +10,7 @@ import {
   BarChart3,
   Menu,
   LayoutDashboard,
+  AlertTriangle,
 } from "lucide-react";
 import Inicio from "./components/Inicio.jsx";
 import Admin from "./components/Admin.jsx";
@@ -18,6 +19,7 @@ import Professor from "./components/Professor.jsx";
 import Relatorios from "./components/Relatorios.jsx";
 import Usuarios from "./components/Usuarios.jsx";
 import Estatisticas from "./components/Estatisticas.jsx";
+import RiscoReprovacao from "./components/RiscoReprovacao.jsx";
 import Login from "./components/Login.jsx";
 import { useFirebase } from "./useFirebase.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
@@ -31,7 +33,10 @@ function MainContent() {
   );
 
   const abaExibida =
-    isProfessor && abaAtiva !== "estatisticas" && abaAtiva !== "inicio"
+    isProfessor &&
+    abaAtiva !== "estatisticas" &&
+    abaAtiva !== "inicio" &&
+    abaAtiva !== "risco"
       ? "professor"
       : abaAtiva;
 
@@ -189,6 +194,18 @@ function MainContent() {
                   Professor
                 </MenuItem>
 
+                {/* Nova Aba de Alunos em Risco / Previsão de Reprovação */}
+                <MenuItem
+                  active={abaExibida === "risco"}
+                  onClick={() => {
+                    setAbaAtiva("risco");
+                    setMenuAberto(false);
+                  }}
+                  icon={AlertTriangle}
+                >
+                  Risco de Reprovação
+                </MenuItem>
+
                 {/* Estatísticas liberadas tanto para Gestão quanto para Professor */}
                 <MenuItem
                   active={abaExibida === "estatisticas"}
@@ -271,6 +288,7 @@ function MainContent() {
           <Turmas
             turmas={turmas}
             simuladosDisponiveis={simulados}
+            usuarios={usuarios || []}
             onSalvarTurmas={salvarTurma}
             onDeletarTurma={deletarTurma}
           />
@@ -282,6 +300,10 @@ function MainContent() {
             simulados={simulados}
             respostasAlunos={respostasAlunos}
           />
+        )}
+
+        {abaExibida === "risco" && (
+          <RiscoReprovacao turmas={turmas} usuarioLogado={user} />
         )}
 
         {abaExibida === "professor" && (

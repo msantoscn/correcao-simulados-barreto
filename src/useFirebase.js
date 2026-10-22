@@ -23,15 +23,24 @@ export function useFirebase() {
       (snapshot) => {
         setSimulados(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
       },
+      (error) => console.error("Erro ao carregar simulados:", error),
     );
 
-    const unsubTurmas = onSnapshot(collection(db, "turmas"), (snapshot) => {
-      setTurmas(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsubTurmas = onSnapshot(
+      collection(db, "turmas"),
+      (snapshot) => {
+        setTurmas(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+      (error) => console.error("Erro ao carregar turmas:", error),
+    );
 
-    const unsubUsuarios = onSnapshot(collection(db, "usuarios"), (snapshot) => {
-      setUsuarios(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsubUsuarios = onSnapshot(
+      collection(db, "usuarios"),
+      (snapshot) => {
+        setUsuarios(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+      (error) => console.error("Erro ao carregar usuários:", error),
+    );
 
     const unsubRespostas = onSnapshot(
       collection(db, "respostas_alunos"),
@@ -39,6 +48,10 @@ export function useFirebase() {
         setRespostasAlunos(
           snapshot.docs.map((d) => ({ id: d.id, ...d.data() })),
         );
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Erro ao carregar respostas dos alunos:", error);
         setLoading(false);
       },
     );
@@ -52,28 +65,43 @@ export function useFirebase() {
   }, []);
 
   const salvarSimulado = async (simulado) => {
-    if (simulado.id) {
-      await setDoc(doc(db, "simulados", simulado.id), simulado, {
-        merge: true,
-      });
-    } else {
-      await addDoc(collection(db, "simulados"), simulado);
+    try {
+      if (simulado.id) {
+        await setDoc(doc(db, "simulados", String(simulado.id)), simulado, {
+          merge: true,
+        });
+      } else {
+        await addDoc(collection(db, "simulados"), simulado);
+      }
+    } catch (error) {
+      console.error("Erro ao salvar simulado:", error);
+      throw error;
     }
   };
 
   const deletarSimulado = async (id) => {
-    await deleteDoc(doc(db, "simulados", id));
+    try {
+      await deleteDoc(doc(db, "simulados", String(id)));
+    } catch (error) {
+      console.error("Erro ao deletar simulado:", error);
+      throw error;
+    }
   };
 
   const salvarTurma = async (turmasAtualizadas) => {
-    if (Array.isArray(turmasAtualizadas)) {
-      for (const turma of turmasAtualizadas) {
-        const turmaRef = doc(db, "turmas", String(turma.id));
-        await setDoc(
-          turmaRef,
-          {
-            nome: turma.nome,
+    try {
+      const listaTurmas = Array.isArray(turmasAtualizadas)
+        ? turmasAtualizadas
+        : [turmasAtualizadas];
+
+      const promessas = listaTurmas
+        .filter((turma) => turma && turma.id)
+        .map(async (turma) => {
+          const turmaRef = doc(db, "turmas", String(turma.id));
+          const dadosTurma = {
+            nome: turma.nome || "",
             alunos: turma.alunos || [],
+            professoresVinculados: turma.professoresVinculados || [],
             aplicadoresPorSimulado: turma.aplicadoresPorSimulado || {},
             simuladosVinculados: turma.simuladosVinculados || {
               1: [],
@@ -81,38 +109,22 @@ export function useFirebase() {
               3: [],
               4: [],
             },
-          },
-          { merge: true },
-        );
-      }
-    } else if (turmasAtualizadas && turmasAtualizadas.id) {
-      const turmaRef = doc(db, "turmas", String(turmasAtualizadas.id));
-      await setDoc(
-        turmaRef,
-        {
-          nome: turmasAtualizadas.nome,
-          alunos: turmasAtualizadas.alunos || [],
-          aplicadoresPorSimulado:
-            turmasAtualizadas.aplicadoresPorSimulado || {},
-          simuladosVinculados: turmasAtualizadas.simuladosVinculados || {
-            1: [],
-            2: [],
-            3: [],
-            4: [],
-          },
-        },
-        { merge: true },
-      );
+          };
+          await setDoc(turmaRef, dadosTurma, { merge: true });
+        });
+
+      await Promise.all(promessas);
+    } catch (error) {
+      console.error("Erro ao salvar turma(s):", error);
+      throw error;
     }
   };
 
-  // Vincula ou Desvincula o aplicador especificamente à Turma + Simulado
   const vincularTurmaSimulado = async (turmaId, simuladoId, professor) => {
     try {
       const turmaRef = doc(db, "turmas", String(turmaId));
 
       if (!professor) {
-        // Se professor for null ou indefinido, desvincula utilizando deleteField() do Firestore
         await setDoc(
           turmaRef,
           {
@@ -122,11 +134,7 @@ export function useFirebase() {
           },
           { merge: true },
         );
-        console.log(
-          `Simulado ${simuladoId} desvinculado com sucesso da turma ${turmaId}`,
-        );
       } else {
-        // Se for para vincular um professor
         const turmaAtual = turmas.find((t) => String(t.id) === String(turmaId));
         const aplicadoresAtuais = turmaAtual?.aplicadoresPorSimulado || {};
 
@@ -145,60 +153,59 @@ export function useFirebase() {
           },
           { merge: true },
         );
-        console.log(
-          `Turma ${turmaId} vinculada no simulado ${simuladoId} ao aplicador ${professor.nome}`,
-        );
       }
     } catch (error) {
-      console.error(
-        "Erro ao vincular/desvincular aplicador ao simulado:",
-        error,
-      );
+      console.error("Erro ao vincular/desvincular aplicador:", error);
       throw error;
     }
   };
 
   const deletarTurma = async (id) => {
-    await deleteDoc(doc(db, "turmas", String(id)));
+    try {
+      await deleteDoc(doc(db, "turmas", String(id)));
+    } catch (error) {
+      console.error("Erro ao deletar turma:", error);
+      throw error;
+    }
   };
 
   const salvarUsuarios = async (usuariosAtualizados) => {
-    if (Array.isArray(usuariosAtualizados)) {
-      for (const usuario of usuariosAtualizados) {
-        const userRef = doc(db, "usuarios", String(usuario.id));
-        await setDoc(
-          userRef,
-          {
+    try {
+      const listaUsuarios = Array.isArray(usuariosAtualizados)
+        ? usuariosAtualizados
+        : [usuariosAtualizados];
+
+      const promessas = listaUsuarios
+        .filter((usuario) => usuario && usuario.id)
+        .map(async (usuario) => {
+          const userRef = doc(db, "usuarios", String(usuario.id));
+          const dadosUsuario = {
             codigo: usuario.codigo,
             nome: usuario.nome || "",
             cargo: usuario.cargo || "PROFESSOR",
             senha: usuario.senha || "",
-          },
-          { merge: true },
-        );
-      }
-    } else if (usuariosAtualizados && usuariosAtualizados.id) {
-      const userRef = doc(db, "usuarios", String(usuariosAtualizados.id));
-      await setDoc(
-        userRef,
-        {
-          codigo: usuariosAtualizados.codigo,
-          nome: usuariosAtualizados.nome || "",
-          cargo: usuariosAtualizados.cargo || "PROFESSOR",
-          senha: usuariosAtualizados.senha || "",
-        },
-        { merge: true },
-      );
+          };
+          await setDoc(userRef, dadosUsuario, { merge: true });
+        });
+
+      await Promise.all(promessas);
+    } catch (error) {
+      console.error("Erro ao salvar usuário(s):", error);
+      throw error;
     }
   };
 
   const deletarUsuario = async (id) => {
-    await deleteDoc(doc(db, "usuarios", String(id)));
+    try {
+      await deleteDoc(doc(db, "usuarios", String(id)));
+    } catch (error) {
+      console.error("Erro ao deletar usuário:", error);
+      throw error;
+    }
   };
 
   const salvarRespostaAluno = async (registo, userLogado, turmasAtuais) => {
     try {
-      // Verificação inteligente e flexível do cargo de gestão/administração
       const cargoUpper = String(userLogado?.cargo || "")
         .trim()
         .toUpperCase();
@@ -242,14 +249,10 @@ export function useFirebase() {
           .toLowerCase();
 
       const dadosSanitizados = JSON.parse(JSON.stringify(registo));
-
       const docRef = doc(db, "respostas_alunos", idLimpo);
       await setDoc(docRef, dadosSanitizados, { merge: true });
-
-      console.log("Sucesso absoluto! Gravado no Firestore com ID:", idLimpo);
     } catch (error) {
-      console.error("Erro de permissão ao salvar no Firebase:", error);
-      alert("Operação bloqueada: " + error.message);
+      console.error("Erro de permissão ou salvamento:", error);
       throw error;
     }
   };
