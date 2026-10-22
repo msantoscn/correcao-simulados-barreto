@@ -61,6 +61,7 @@ export default function Turmas({
     "Ensino Religioso",
     "Educação Musical",
     "Educação Física",
+    "Filosofia",
   ];
 
   const atualizarEPersistir = async (novaLista) => {
