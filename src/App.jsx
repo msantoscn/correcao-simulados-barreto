@@ -27,24 +27,27 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 function MainContent() {
   const { user, logout, isProfessor, isGestao } = useAuth();
 
-  // Se for professor, a aba inicial ativa é diretamente "professor"
   const [abaAtiva, setAbaAtiva] = useState(() =>
     isProfessor ? "professor" : "inicio",
   );
 
-  const abaExibida =
-    isProfessor &&
-    abaAtiva !== "estatisticas" &&
-    abaAtiva !== "inicio" &&
-    abaAtiva !== "risco"
-      ? "professor"
-      : abaAtiva;
+  const abaExibida = (() => {
+    if (isProfessor) {
+      if (
+        abaAtiva === "estatisticas" ||
+        abaAtiva === "risco" ||
+        abaAtiva === "professor"
+      ) {
+        return abaAtiva;
+      }
+      return "professor";
+    }
+    return abaAtiva;
+  })();
 
-  // Estado para controlar o menu em lista (gaveta)
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef(null);
 
-  // Fecha o menu ao clicar fora dele
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -55,7 +58,6 @@ function MainContent() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Dados e funções do Firebase
   const {
     simulados,
     turmas,
@@ -73,12 +75,10 @@ function MainContent() {
     deletarUsuario,
   } = useFirebase();
 
-  // 1. Se não estiver autenticado, exibe a Tela de Login imediatamente
   if (!user) {
     return <Login />;
   }
 
-  // 2. A carregar dados do Firebase
   if (loading) {
     return (
       <div className="min-h-screen w-full bg-slate-50 flex flex-col items-center justify-center gap-4 p-4">
@@ -94,10 +94,8 @@ function MainContent() {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-800 font-sans pb-12 overflow-x-hidden selection:bg-blue-100">
-      {/* Cabeçalho Limpo e Otimizado */}
       <header className="bg-white border-b border-slate-200/80 shadow-sm sticky top-0 z-50 w-full">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 flex justify-between items-center gap-3">
-          {/* Logo e Info do Usuário */}
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2.5 bg-blue-50 rounded-2xl border border-blue-100 flex-shrink-0 shadow-xs">
               <Award className="w-6 h-6 sm:w-7 sm:h-7 text-[#4b82f6]" />
@@ -118,7 +116,6 @@ function MainContent() {
             </div>
           </div>
 
-          {/* Botão de Menu em Lista (Gaveta) */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuAberto(!menuAberto)}
@@ -135,7 +132,6 @@ function MainContent() {
               </span>
             </button>
 
-            {/* Lista Dropdown do Menu */}
             {menuAberto && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-fadeIn">
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
@@ -194,7 +190,7 @@ function MainContent() {
                   Professor
                 </MenuItem>
 
-                {/* Nova Aba de Alunos em Risco / Previsão de Reprovação */}
+                {/* Nome atualizado para Prev. de Reprovação */}
                 <MenuItem
                   active={abaExibida === "risco"}
                   onClick={() => {
@@ -203,10 +199,9 @@ function MainContent() {
                   }}
                   icon={AlertTriangle}
                 >
-                  Risco de Reprovação
+                  Prev. de Reprovação
                 </MenuItem>
 
-                {/* Estatísticas liberadas tanto para Gestão quanto para Professor */}
                 <MenuItem
                   active={abaExibida === "estatisticas"}
                   onClick={() => {
@@ -266,7 +261,6 @@ function MainContent() {
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
       <main className="max-w-6xl mx-auto px-3 sm:px-4 mt-4 sm:mt-8 w-full overflow-x-hidden">
         {abaExibida === "inicio" && isGestao && (
           <Inicio
@@ -338,10 +332,6 @@ function MainContent() {
     </div>
   );
 }
-
-/* ========================================================================
-    SUB-COMPONENTE DE ITEM DO MENU EM LISTA
-    ======================================================================== */
 
 function MenuItem({ active, onClick, icon: Icon, children }) {
   return (
