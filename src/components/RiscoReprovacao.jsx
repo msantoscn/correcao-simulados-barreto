@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AlertTriangle, Save, Filter, BarChart2, Eye } from "lucide-react";
 import { db } from "../firebase";
 import {
@@ -9,6 +9,19 @@ import {
   query,
   where,
 } from "firebase/firestore";
+
+const todasDisciplinas = [
+  "Língua Portuguesa",
+  "História",
+  "Geografia",
+  "Arte",
+  "Língua Inglesa",
+  "Matemática",
+  "Ciências",
+  "Ensino Religioso",
+  "Educação Musical",
+  "Educação Física",
+];
 
 export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState("");
@@ -32,47 +45,36 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
 
   const [modoRelatorioCruzado, setModoRelatorioCruzado] = useState(isGestao);
 
-  const todasDisciplinas = [
-    "Língua Portuguesa",
-    "História",
-    "Geografia",
-    "Arte",
-    "Língua Inglesa",
-    "Matemática",
-    "Ciências",
-    "Ensino Religioso",
-    "Educação Musical",
-    "Educação Física",
-  ];
+  const turmasDisponiveisParaUsuario = useMemo(() => {
+    return isGestao
+      ? turmas
+      : turmas.filter((t) => {
+          const profsVinculados = t.professoresVinculados || [];
+          return profsVinculados.some(
+            (p) =>
+              String(p.professorId) ===
+                String(
+                  usuarioLogado.id || usuarioLogado.codigo || usuarioLogado.uid,
+                ) ||
+              String(p.codigoProfessor).trim().toUpperCase() ===
+                String(usuarioLogado.codigo).trim().toUpperCase(),
+          );
+        });
+  }, [isGestao, turmas, usuarioLogado]);
 
-  const turmasDisponiveisParaUsuario = isGestao
-    ? turmas
-    : turmas.filter((t) => {
-        const profsVinculados = t.professoresVinculados || [];
-        return profsVinculados.some(
-          (p) =>
-            String(p.professorId) ===
-              String(
-                usuarioLogado.id || usuarioLogado.codigo || usuarioLogado.uid,
-              ) ||
-            String(p.codigoProfessor).trim().toUpperCase() ===
-              String(usuarioLogado.codigo).trim().toUpperCase(),
-        );
-      });
+  const turmaAtiva = useMemo(() => {
+    return turmas.find((t) => String(t.id) === String(turmaSelecionadaId));
+  }, [turmas, turmaSelecionadaId]);
 
-  const turmaAtiva = turmas.find(
-    (t) => String(t.id) === String(turmaSelecionadaId),
-  );
+  const listaAlunos = useMemo(() => {
+    if (!turmaAtiva || !Array.isArray(turmaAtiva.alunos)) return [];
+    return turmaAtiva.alunos
+      .map((a) => (typeof a === "string" ? a : a.nome))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+  }, [turmaAtiva]);
 
-  const listaAlunos =
-    turmaAtiva && Array.isArray(turmaAtiva.alunos)
-      ? turmaAtiva.alunos
-          .map((a) => (typeof a === "string" ? a : a.nome))
-          .filter(Boolean)
-          .sort((a, b) => a.localeCompare(b))
-      : [];
-
-  const disciplinasDaTurmaSelecionada = (() => {
+  const disciplinasDaTurmaSelecionada = useMemo(() => {
     if (!turmaAtiva) return [];
     if (isGestao) return todasDisciplinas;
 
@@ -95,16 +97,22 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
     });
 
     return minhasDiscs;
-  })();
+  }, [turmaAtiva, isGestao, usuarioLogado]);
 
-  const disciplinaSelecionada = (() => {
+  const disciplinaSelecionada = useMemo(() => {
     if (!turmaSelecionadaId) return "";
     if (!isGestao && disciplinasDaTurmaSelecionada.length === 1) {
       return disciplinasDaTurmaSelecionada[0];
     }
     return disciplinaManual;
-  })();
+  }, [
+    turmaSelecionadaId,
+    isGestao,
+    disciplinasDaTurmaSelecionada,
+    disciplinaManual,
+  ]);
 
+  // Carrega os dados de risco salvos para a turma e disciplina selecionada
   useEffect(() => {
     async function carregarDadosRisco() {
       if (
@@ -120,7 +128,6 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
         const q = query(
           collection(db, "alunosRisco"),
           where("turmaId", "==", String(turmaSelecionadaId)),
-          where("disciplina", "==", String(disciplinaSelecionada)),
         );
 
         const querySnapshot = await getDocs(q);
@@ -130,9 +137,17 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
           mapRisco[nome] = false;
         });
 
+        const discSelecionadaUpper = String(disciplinaSelecionada)
+          .trim()
+          .toUpperCase();
+
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data();
-          if (data.alunos) {
+          const discDocUpper = String(data.disciplina || "")
+            .trim()
+            .toUpperCase();
+
+          if (discDocUpper === discSelecionadaUpper && data.alunos) {
             Object.keys(data.alunos).forEach((nome) => {
               if (data.alunos[nome] === true) {
                 mapRisco[nome] = true;
@@ -148,12 +163,12 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
     }
 
     carregarDadosRisco();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [turmaSelecionadaId, disciplinaSelecionada, listaAlunos.length]);
+  }, [turmaSelecionadaId, disciplinaSelecionada, listaAlunos]);
 
+  // Carrega todos os registros de risco da turma para a Visão Geral
   useEffect(() => {
     async function carregarCruzamentoTurma() {
-      if (!isGestao || !turmaSelecionadaId) {
+      if (!turmaSelecionadaId) {
         setTodosDadosRiscoTurma([]);
         return;
       }
@@ -176,7 +191,7 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
     }
 
     carregarCruzamentoTurma();
-  }, [turmaSelecionadaId, isGestao, salvando]);
+  }, [turmaSelecionadaId, salvando]);
 
   const handleToggleAluno = (nomeAluno) => {
     if (isGestao) return;
@@ -221,6 +236,7 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
 
       await setDoc(doc(db, "alunosRisco", docId), dadosParaSalvar);
 
+      // Reseta os campos para ocultar a lista e retornar à seleção de turma
       setTurmaSelecionadaId("");
       setDisciplinaManual("");
       setAlunosRisco({});
@@ -239,23 +255,29 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
       ? ((totalRiscoCount / totalAlunosTurma) * 100).toFixed(1)
       : "0.0";
 
-  const relatorioCruzadoAlunos = isGestao
-    ? listaAlunos
-        .map((nomeAluno) => {
-          const disciplinasEmRisco = [];
-          todosDadosRiscoTurma.forEach((reg) => {
-            if (reg.alunos && reg.alunos[nomeAluno] === true) {
-              disciplinasEmRisco.push(reg.disciplina);
-            }
-          });
-          return {
-            nome: nomeAluno,
-            totalRisco: disciplinasEmRisco.length,
-            disciplinas: disciplinasEmRisco,
-          };
-        })
-        .sort((a, b) => b.totalRisco - a.totalRisco)
-    : [];
+  const relatorioCruzadoAlunos = useMemo(() => {
+    return listaAlunos.map((nomeAluno) => {
+      const disciplinasEmRisco = [];
+      todosDadosRiscoTurma.forEach((reg) => {
+        if (reg.alunos && reg.alunos[nomeAluno] === true) {
+          disciplinasEmRisco.push(reg.disciplina);
+        }
+      });
+      return {
+        nome: nomeAluno,
+        totalRisco: disciplinasEmRisco.length,
+        disciplinas: disciplinasEmRisco,
+      };
+    });
+  }, [listaAlunos, todosDadosRiscoTurma]);
+
+  const totalAlunosComRiscoGeral = relatorioCruzadoAlunos.filter(
+    (a) => a.totalRisco > 0,
+  ).length;
+  const percentualRiscoGeralTurma =
+    totalAlunosTurma > 0
+      ? ((totalAlunosComRiscoGeral / totalAlunosTurma) * 100).toFixed(1)
+      : "0.0";
 
   return (
     <div className="bg-white rounded-md shadow-sm p-3 sm:p-5 border border-[#dbc8b6] w-full max-w-7xl mx-auto font-sans antialiased space-y-4">
@@ -366,8 +388,8 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
               Previsão de Reprovação — Turma: {turmaAtiva?.nome}
             </span>
             <span className="text-[11px] font-bold text-purple-700 bg-white px-2 py-1 rounded border border-purple-200 uppercase">
-              Alunos em risco em 2+ disciplinas:{" "}
-              {relatorioCruzadoAlunos.filter((a) => a.totalRisco >= 2).length}
+              Alunos em risco: {totalAlunosComRiscoGeral} / {totalAlunosTurma} (
+              {percentualRiscoGeralTurma}%)
             </span>
           </div>
 
@@ -454,7 +476,6 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
                 </span>
               </div>
 
-              {/* Lista sem restrição de altura e sem barra de rolagem */}
               <div className="divide-y divide-[#dbc8b6]">
                 {listaAlunos.map((nomeAluno, index) => {
                   const emRisco = !!alunosRisco[nomeAluno];
@@ -463,7 +484,7 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
                       key={index}
                       onClick={() => handleToggleAluno(nomeAluno)}
                       className={`flex items-center justify-between p-3 transition-colors ${
-                        !isGestao ? "cursor-pointer" : "cursor-default"
+                        isGestao ? "cursor-default" : "cursor-pointer"
                       } ${
                         emRisco
                           ? "bg-red-50/70 hover:bg-red-100/70"
@@ -488,7 +509,11 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
                           disabled={isGestao}
                           onChange={() => handleToggleAluno(nomeAluno)}
                           onClick={(e) => e.stopPropagation()}
-                          className={`w-5 h-5 text-red-600 rounded focus:ring-red-500 ${isGestao ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                          className={`w-5 h-5 text-red-600 rounded focus:ring-red-500 ${
+                            isGestao
+                              ? "opacity-75 cursor-not-allowed"
+                              : "cursor-pointer"
+                          }`}
                         />
                       </div>
                     </div>

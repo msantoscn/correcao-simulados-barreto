@@ -385,6 +385,7 @@ export default function Relatorios({
     [turmas, turmaRiscoId],
   );
 
+  // Mantém estritamente a ordem alfabética original da turma
   const listaAlunosRisco = useMemo(() => {
     if (!turmaRiscoAtiva || !Array.isArray(turmaRiscoAtiva.alunos)) return [];
     return turmaRiscoAtiva.alunos
@@ -442,27 +443,26 @@ export default function Relatorios({
     carregarDadosRiscoGeral();
   }, [tipoEscopoRisco]);
 
+  // Mapeamento cruzado preservando estritamente a ordem alfabética da lista da turma
   const relatorioCruzadoAlunos = useMemo(() => {
-    return listaAlunosRisco
-      .map((nomeAluno, idx) => {
-        const disciplinasEmRisco = [];
-        todosDadosRiscoTurma.forEach((reg) => {
-          if (reg.alunos && reg.alunos[nomeAluno] === true) {
-            disciplinasEmRisco.push(reg.disciplina);
-          }
-        });
-        return {
-          id: String(idx + 1).padStart(2, "0"),
-          nome: nomeAluno,
-          temRisco: disciplinasEmRisco.length > 0,
-          totalRisco: disciplinasEmRisco.length,
-          disciplinasStr:
-            disciplinasEmRisco.length === 0
-              ? "Nenhum risco apontado"
-              : disciplinasEmRisco.join(", "),
-        };
-      })
-      .sort((a, b) => b.totalRisco - a.totalRisco);
+    return listaAlunosRisco.map((nomeAluno, idx) => {
+      const disciplinasEmRisco = [];
+      todosDadosRiscoTurma.forEach((reg) => {
+        if (reg.alunos && reg.alunos[nomeAluno] === true) {
+          disciplinasEmRisco.push(reg.disciplina);
+        }
+      });
+      return {
+        id: String(idx + 1).padStart(2, "0"),
+        nome: nomeAluno,
+        temRisco: disciplinasEmRisco.length > 0,
+        totalRisco: disciplinasEmRisco.length,
+        disciplinasStr:
+          disciplinasEmRisco.length === 0
+            ? "Nenhum risco apontado"
+            : disciplinasEmRisco.join(", "),
+      };
+    });
   }, [listaAlunosRisco, todosDadosRiscoTurma]);
 
   // Percentual de risco da turma ativa
@@ -474,7 +474,7 @@ export default function Relatorios({
     return ((totalAlunosComRisco / listaAlunosRisco.length) * 100).toFixed(1);
   }, [listaAlunosRisco, relatorioCruzadoAlunos]);
 
-  // Estrutura de turmas agrupadas para o modo GERAL na tela
+  // Estrutura de turmas agrupadas para o modo GERAL na tela (mantendo ordem alfabética dos alunos em cada turma)
   const dadosGeralAgrupados = useMemo(() => {
     if (tipoEscopoRisco !== "geral") return [];
 
@@ -487,6 +487,7 @@ export default function Relatorios({
         ? turma.alunos
             .map((a) => (typeof a === "string" ? a : a.nome))
             .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b))
         : [];
 
       const regsTurma = todosDadosRiscoGeral.filter(
@@ -519,9 +520,7 @@ export default function Relatorios({
         resultado.push({
           turmaNome,
           percentual: percentTurma,
-          alunos: alunosEmRiscoNessaTurma.sort(
-            (a, b) => b.totalRisco - a.totalRisco,
-          ),
+          alunos: alunosEmRiscoNessaTurma, // Já preserva a ordem alfabética da turma
         });
       }
     });
@@ -1175,7 +1174,7 @@ export default function Relatorios({
               </div>
             </div>
           ) : (
-            /* MODO GERAL (EXIBE NA TELA TODOS OS ALUNOS EM RISCO AGRUPADOS POR TURMA) */
+            /* MODO GERAL (EXIBE NA TELA TODOS OS ALUNOS EM RISCO AGRUPados POR TURMA EM ORDEM ALFABÉTICA) */
             <div className="space-y-4">
               {carregandoGeralRisco ? (
                 <div className="bg-white p-8 rounded-md border border-[#dbc8b6] text-center shadow-sm">
