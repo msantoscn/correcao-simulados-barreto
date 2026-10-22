@@ -15,6 +15,7 @@ import {
   Check,
   CheckCircle2,
   UserCheck,
+  ChevronDown,
 } from "lucide-react";
 
 export default function Turmas({
@@ -45,6 +46,8 @@ export default function Turmas({
   const [bimestre, setBimestre] = useState("3");
 
   const [professorSelecionadoId, setProfessorSelecionadoId] = useState("");
+  const [buscaProfessorText, setBuscaProfessorText] = useState("");
+  const [dropdownProfessorAberto, setDropdownProfessorAberto] = useState(false);
   const [disciplinaProfessorInput, setDisciplinaProfessorInput] = useState("");
 
   const disciplinasPadrao = [
@@ -367,6 +370,7 @@ export default function Turmas({
 
     await atualizarEPersistir(listaAtualizada);
     setProfessorSelecionadoId("");
+    setBuscaProfessorText("");
     setDisciplinaProfessorInput("");
   };
 
@@ -587,6 +591,11 @@ export default function Turmas({
       );
     }
     return true;
+  });
+
+  const professoresFiltrados = professoresCadastrados.filter((prof) => {
+    const nome = String(prof.nome || prof.codigo || "").toUpperCase();
+    return nome.includes(buscaProfessorText.trim().toUpperCase());
   });
 
   const formatarNomeTurmaBicolor = (nome) => {
@@ -864,32 +873,69 @@ export default function Turmas({
                   onSubmit={adicionarProfessorTurma}
                   className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-gray-50 p-3 rounded-md border border-[#dbc8b6]"
                 >
-                  <div className="sm:col-span-5">
+                  <div className="sm:col-span-5 relative">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                       Professor (Cadastrado)
                     </label>
-                    <select
-                      value={professorSelecionadoId}
-                      onChange={(e) =>
-                        setProfessorSelecionadoId(e.target.value)
-                      }
-                      className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-purple-500 shadow-xs"
-                      required
-                    >
-                      <option value="">
-                        {professoresCadastrados.length === 0
-                          ? "Nenhum professor encontrado..."
-                          : "Selecione o professor..."}
-                      </option>
-                      {professoresCadastrados.map((prof) => (
-                        <option
-                          key={prof.id || prof.codigo || prof.uid}
-                          value={prof.id || prof.codigo || prof.uid}
-                        >
-                          {prof.nome || prof.codigo || "Utilizador sem nome"}
-                        </option>
-                      ))}
-                    </select>
+
+                    {/* Campo de Busca Interativo de Professor */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Buscar professor..."
+                        value={buscaProfessorText}
+                        onChange={(e) => {
+                          setBuscaProfessorText(e.target.value);
+                          setProfessorSelecionadoId("");
+                          setDropdownProfessorAberto(true);
+                        }}
+                        onFocus={() => setDropdownProfessorAberto(true)}
+                        className="w-full p-2 pr-8 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-purple-500 shadow-xs cursor-text"
+                      />
+                      <ChevronDown
+                        className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                        onClick={() =>
+                          setDropdownProfessorAberto(!dropdownProfessorAberto)
+                        }
+                      />
+                    </div>
+
+                    {/* Menu Dropdown de Seleção */}
+                    {dropdownProfessorAberto && (
+                      <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-[#dbc8b6] rounded-md shadow-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
+                        {professoresFiltrados.length === 0 ? (
+                          <div className="p-2 text-xs font-medium text-gray-400 text-center">
+                            Nenhum professor encontrado...
+                          </div>
+                        ) : (
+                          professoresFiltrados.map((prof) => {
+                            const profId = prof.id || prof.codigo || prof.uid;
+                            const profNome =
+                              prof.nome || prof.codigo || "Utilizador sem nome";
+                            const isSelected =
+                              String(professorSelecionadoId) === String(profId);
+
+                            return (
+                              <div
+                                key={profId}
+                                onClick={() => {
+                                  setProfessorSelecionadoId(profId);
+                                  setBuscaProfessorText(profNome);
+                                  setDropdownProfessorAberto(false);
+                                }}
+                                className={`p-2 text-xs font-bold uppercase cursor-pointer hover:bg-purple-50 transition-colors ${
+                                  isSelected
+                                    ? "bg-purple-100 text-purple-900"
+                                    : "text-gray-800"
+                                }`}
+                              >
+                                {profNome}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="sm:col-span-5">
