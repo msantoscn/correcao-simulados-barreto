@@ -896,24 +896,21 @@ export default function Turmas({
                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                       Disciplina
                     </label>
-                    <input
-                      type="text"
-                      list="disciplinas-sugestoes"
-                      placeholder="Ex: Matemática"
+                    <select
                       value={disciplinaProfessorInput}
                       onChange={(e) =>
-                        setDisciplinaProfessorInput(
-                          e.target.value.toUpperCase(),
-                        )
+                        setDisciplinaProfessorInput(e.target.value)
                       }
-                      className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-purple-500 shadow-xs"
+                      className="w-full p-2 bg-white border border-[#dbc8b6] rounded-md text-xs font-bold text-gray-800 uppercase focus:outline-none focus:border-purple-500 shadow-xs cursor-pointer"
                       required
-                    />
-                    <datalist id="disciplinas-sugestoes">
+                    >
+                      <option value="">Selecione a disciplina...</option>
                       {disciplinasPadrao.map((d, i) => (
-                        <option key={i} value={d} />
+                        <option key={i} value={d}>
+                          {d}
+                        </option>
                       ))}
-                    </datalist>
+                    </select>
                   </div>
 
                   <div className="sm:col-span-2 flex items-end">
@@ -998,7 +995,7 @@ export default function Turmas({
                         className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
                           bimestre === b
                             ? "bg-blue-500 text-white shadow-sm"
-                            : "bg-white text-gray-600 border border-[#dbc8b6] hover:bg-gray-100"
+                            : "bg-white text-gray-600 border border-[#dbc8b6] hover:bg-gray-150"
                         }`}
                       >
                         {b}º
