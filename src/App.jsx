@@ -27,6 +27,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 function MainContent() {
   const { user, logout, isProfessor, isGestao } = useAuth();
 
+  // Inicializa a aba ativa corretamente de acordo com o perfil
   const [abaAtiva, setAbaAtiva] = useState(() =>
     isProfessor ? "professor" : "inicio",
   );
@@ -190,7 +191,6 @@ function MainContent() {
                   Professor
                 </MenuItem>
 
-                {/* Nome atualizado para Prev. de Reprovação */}
                 <MenuItem
                   active={abaExibida === "risco"}
                   onClick={() => {
