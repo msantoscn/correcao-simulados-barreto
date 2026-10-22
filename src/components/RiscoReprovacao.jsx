@@ -224,7 +224,6 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
       setTurmaSelecionadaId("");
       setDisciplinaManual("");
       setAlunosRisco({});
-      alert("Previsão salva com sucesso!");
     } catch (error) {
       console.error("Erro detalhado ao salvar no Firebase:", error);
       alert("Erro ao salvar no servidor: " + (error.message || error));
@@ -455,7 +454,8 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
                 </span>
               </div>
 
-              <div className="divide-y divide-[#dbc8b6] max-h-[450px] overflow-y-auto">
+              {/* Lista sem restrição de altura e sem barra de rolagem */}
+              <div className="divide-y divide-[#dbc8b6]">
                 {listaAlunos.map((nomeAluno, index) => {
                   const emRisco = !!alunosRisco[nomeAluno];
                   return (
@@ -497,16 +497,11 @@ export default function RiscoReprovacao({ turmas = [], usuarioLogado }) {
               </div>
 
               {!isGestao && (
-                <div className="p-3 bg-gray-50 border-t border-[#dbc8b6] flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500 uppercase font-semibold">
-                    Marque a caixa ao lado do aluno para indicar risco de
-                    reprovação.
-                  </span>
-
+                <div className="p-3 bg-gray-50 border-t border-[#dbc8b6] flex justify-end">
                   <button
                     onClick={handleSalvar}
                     disabled={salvando}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold uppercase transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold uppercase transition-colors shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     <Save className="w-4 h-4" />{" "}
                     {salvando ? "A salvar..." : "Salvar Previsão"}
